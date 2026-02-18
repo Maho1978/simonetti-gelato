@@ -1,0 +1,130 @@
+[00:00:01.608] Server  LOG     ✓ Ready in 1114ms
+[00:00:03.415] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-17T21:27:57.032Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[00:00:04.023] Browser WARN    You may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
+[00:00:06.321] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-17T21:27:59.939Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[00:00:29.499] Server  ERROR   Error fetching orders: {}
+[00:01:29.455] Server  ERROR   Error fetching orders: {}
+[00:02:29.360] Server  ERROR   Error fetching orders: {}
+[00:03:29.313] Server  ERROR   Error fetching orders: {}
+[00:04:29.397] Server  ERROR   Error fetching orders: {}
+[00:05:29.329] Server  ERROR   Error fetching orders: {}
+[00:06:29.290] Server  ERROR   Error fetching orders: {}
+[00:07:07.689] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-17T21:35:01.303Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[00:07:29.333] Server  ERROR   Error fetching orders: {}
+[00:07:33.236] Browser WARN    You may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
+[00:08:29.330] Server  ERROR   Error fetching orders: {}
+[00:09:29.286] Server  ERROR   Error fetching orders: {}
+[00:10:29.416] Server  ERROR   Error fetching orders: {}
+[00:11:29.342] Server  ERROR   Error fetching orders: {}
+[00:12:29.399] Server  ERROR   Error fetching orders: {}
+[00:13:29.295] Server  ERROR   Error fetching orders: {}
+[00:14:29.381] Server  ERROR   Error fetching orders: {}
+[08:44:39.780] Browser ERROR   {}
+[08:44:41.107] Server  ERROR   Error fetching orders: {}
+[08:45:29.489] Server  ERROR   Error fetching orders: {}
+[08:46:31.085] Server  ERROR   Error fetching orders: {}
+[08:47:29.364] Server  ERROR   Error fetching orders: {}
+[08:48:29.359] Server  ERROR   Error fetching orders: {}
+[08:49:29.322] Server  ERROR   Error fetching orders: {}
+[08:50:29.255] Server  ERROR   Error fetching orders: {}
+[08:51:29.283] Server  ERROR   Error fetching orders: {}
+[08:52:29.297] Server  ERROR   Error fetching orders: {}
+[08:53:29.425] Server  ERROR   Error fetching orders: {}
+[08:54:29.364] Server  ERROR   Error fetching orders: {}
+[08:55:29.373] Server  ERROR   Error fetching orders: {}
+[08:56:29.354] Server  ERROR   Error fetching orders: {}
+[08:57:29.366] Server  ERROR   Error fetching orders: {}
+[08:58:29.704] Server  ERROR   Error fetching orders: {}
+[08:59:29.523] Server  ERROR   Error fetching orders: {}
+[09:00:29.378] Server  ERROR   Error fetching orders: {}
+[09:01:29.311] Server  ERROR   Error fetching orders: {}
+[09:36:47.804] Server  ERROR   Error fetching orders: {}
+[10:00:33.399] Server  ERROR   Error fetching orders: {}
+[10:00:34.013] Browser ERROR   {}
+[10:01:29.397] Server  ERROR   Error fetching orders: {}
+[10:02:29.386] Server  ERROR   Error fetching orders: {}
+[10:03:29.460] Server  ERROR   Error fetching orders: {}
+[10:04:29.484] Server  ERROR   Error fetching orders: {}
+[10:05:29.373] Server  ERROR   Error fetching orders: {}
+[10:06:01.039] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-18T07:33:52.205Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[10:06:29.356] Server  ERROR   Error fetching orders: {}
+[10:06:54.803] Browser WARN    You may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
+[10:07:20.606] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-18T07:35:11.747Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[10:07:29.383] Server  ERROR   Error fetching orders: {}
+[10:08:29.596] Server  ERROR   Error fetching orders: {}
+[10:09:29.350] Server  ERROR   Error fetching orders: {}
+[10:10:29.320] Server  ERROR   Error fetching orders: {}
+[10:11:29.341] Server  ERROR   Error fetching orders: {}
+[10:12:29.390] Server  ERROR   Error fetching orders: {}
+[10:12:59.197] Browser WARN    You may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
+[10:13:29.836] Server  ERROR   Error fetching orders: {}
+[11:26:33.932] Server  ERROR   Error fetching orders: {}
+[11:26:34.079] Browser ERROR   {}
+[11:26:36.012] Browser ERROR   {}
+[11:46:44.163] Browser ERROR   {}
+[11:46:45.364] Server  ERROR   Error fetching orders: {}
+[11:47:29.374] Server  ERROR   Error fetching orders: {}
+[11:48:29.545] Server  ERROR   Error fetching orders: {}
+[11:49:29.393] Server  ERROR   Error fetching orders: {}
+[11:50:29.560] Server  ERROR   Error fetching orders: {}
+[11:51:29.534] Server  ERROR   Error fetching orders: {}
+[11:52:29.390] Server  ERROR   Error fetching orders: {}
+[11:53:29.332] Server  ERROR   Error fetching orders: {}
+[11:54:29.580] Server  ERROR   Error fetching orders: {}
+[11:55:29.418] Server  ERROR   Error fetching orders: {}
+[11:56:29.450] Server  ERROR   Error fetching orders: {}
+[11:57:29.384] Server  ERROR   Error fetching orders: {}
+[11:58:29.309] Server  ERROR   Error fetching orders: {}
+[11:59:29.354] Server  ERROR   Error fetching orders: {}
+[12:00:29.334] Server  ERROR   Error fetching orders: {}
+[12:01:29.325] Server  ERROR   Error fetching orders: {}
+[12:02:29.367] Server  ERROR   Error fetching orders: {}
+[12:03:29.358] Server  ERROR   Error fetching orders: {}
+[12:04:29.446] Server  ERROR   Error fetching orders: {}
+[12:05:29.712] Server  ERROR   Error fetching orders: {}
+[12:06:29.379] Server  ERROR   Error fetching orders: {}
+[12:07:29.430] Server  ERROR   Error fetching orders: {}
+[12:08:29.435] Server  ERROR   Error fetching orders: {}
+[12:09:29.461] Server  ERROR   Error fetching orders: {}
+[12:10:29.556] Server  ERROR   Error fetching orders: {}
+[12:11:29.482] Server  ERROR   Error fetching orders: {}
+[12:12:29.416] Server  ERROR   Error fetching orders: {}
+[12:13:29.399] Server  ERROR   Error fetching orders: {}
+[12:14:29.325] Server  ERROR   Error fetching orders: {}
+[12:15:29.371] Server  ERROR   Error fetching orders: {}
+[12:16:29.452] Server  ERROR   Error fetching orders: {}
+[12:17:29.297] Server  ERROR   Error fetching orders: {}
+[12:19:11.773] Server  ERROR   Error fetching orders: {}
+[12:19:31.690] Server  ERROR   Error fetching orders: {}
+[12:20:29.367] Server  ERROR   Error fetching orders: {}
+[12:21:29.375] Server  ERROR   Error fetching orders: {}
+[12:22:29.382] Server  ERROR   Error fetching orders: {}
+[13:07:30.212] Server  ERROR   Error fetching orders: {}
+[13:08:29.773] Server  ERROR   Error fetching orders: {}
+[13:09:37.110] Server  ERROR   Error fetching orders: {}
+[13:10:30.118] Server  ERROR   Error fetching orders: {}
+[13:11:29.521] Server  ERROR   Error fetching orders: {}
+[13:12:29.404] Server  ERROR   Error fetching orders: {}
+[13:13:29.603] Server  ERROR   Error fetching orders: {}
+[13:14:29.455] Server  ERROR   Error fetching orders: {}
+[13:15:29.766] Server  ERROR   Error fetching orders: {}
+[13:16:29.464] Server  ERROR   Error fetching orders: {}
+[13:17:29.986] Server  ERROR   Error fetching orders: {}
+[13:18:29.423] Server  ERROR   Error fetching orders: {}
+[13:19:29.447] Server  ERROR   Error fetching orders: {}
+[13:23:42.917] Server  ERROR   Error fetching orders: {}
+[13:24:29.396] Server  ERROR   Error fetching orders: {}
+[13:25:29.398] Server  ERROR   Error fetching orders: {}
+[13:26:29.708] Server  ERROR   Error fetching orders: {}
+[13:27:29.698] Server  ERROR   Error fetching orders: {}
+[13:28:29.439] Server  ERROR   Error fetching orders: {}
+[13:29:29.365] Server  ERROR   Error fetching orders: {}
+[13:30:29.467] Server  ERROR   Error fetching orders: {}
+[13:31:29.340] Server  ERROR   Error fetching orders: {}
+[13:32:29.637] Server  ERROR   Error fetching orders: {}
+[13:33:29.405] Server  ERROR   Error fetching orders: {}
+[13:34:29.412] Server  ERROR   Error fetching orders: {}
+[13:35:29.390] Server  ERROR   Error fetching orders: {}
+[13:36:29.395] Server  ERROR   Error fetching orders: {}
+[13:37:29.686] Server  ERROR   Error fetching orders: {}
+[13:38:29.369] Server  ERROR   Error fetching orders: {}
