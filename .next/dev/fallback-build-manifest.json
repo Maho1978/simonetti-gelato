@@ -12,6 +12,19 @@
       "static/chunks/OneDrive_Desktop_simonetti-hybrid_styles_globals_5ada8c95.css",
       "static/chunks/OneDrive_Desktop_simonetti-hybrid_pages__app_2da965e7._.js",
       "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages__app_5c7756a2._.js"
+    ],
+    "/_error": [
+      "static/chunks/dbe97_next_dist_compiled_bff24fde._.js",
+      "static/chunks/dbe97_next_dist_shared_lib_23b81427._.js",
+      "static/chunks/dbe97_next_dist_client_4150c15c._.js",
+      "static/chunks/dbe97_next_dist_bcdf1bee._.js",
+      "static/chunks/dbe97_next_error_afc7d85a.js",
+      "static/chunks/[next]_entry_page-loader_ts_a6fe2cd0._.js",
+      "static/chunks/dbe97_react-dom_65ca1d60._.js",
+      "static/chunks/dbe97_033fd379._.js",
+      "static/chunks/[root-of-the-server]__ba496247._.js",
+      "static/chunks/OneDrive_Desktop_simonetti-hybrid_pages__error_2da965e7._.js",
+      "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages__error_329dfbf4._.js"
     ]
   },
   "devFiles": [],

@@ -1,81 +1,6 @@
-[00:00:01.205] Server  LOG     ✓ Ready in 777ms
-[00:00:01.795] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-20T21:58:06.481Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-[00:00:02.164] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-20T21:58:06.855Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-[00:00:02.815] Browser WARN    You may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
-[00:00:11.407] Server  LOG     🔍 Payment Intent Request: {}
-[00:00:11.896] Server  LOG     ✅ PaymentIntent created: "pi_3T31iHIKYKwGm2Bo0IMMOav2"
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:00:14.649] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:02:57.280] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-20T22:01:01.969Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-[00:14:29.811] Browser WARN    You may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
-[00:14:30.500] Server  LOG     ✓ Compiled in 906ms
-[00:15:36.590] Server  LOG     ✓ Compiled in 73ms
-[00:21:26.046] Server  LOG     ✓ Compiled in 63ms
-[00:30:53.831] Server  LOG     ✓ Compiled in 277ms
-[00:36:15.493] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-20T22:34:20.168Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:36:16.917] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[00:52:52.026] Browser LOG     Refreshing page data due to server-side change
-[00:52:52.043] Browser LOG     Refreshing page data due to server-side change
-[00:52:52.539] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-20T22:50:57.219Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-[00:52:52.586] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-20T22:50:57.251Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
-[00:53:25.660] Server  LOG     ✓ Compiled in 1116ms
-[00:53:25.812] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/styles/globals.css
-Error evaluating Node.js code
-CssSyntaxError: C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\styles\globals.css:15:5: The `hover:bg-primary-dark` class does not exist. If `hover:bg-primary-dark` is a custom class, make sure it is defined within a `@layer` directive.
-    [at Input.error (turbopack:///[project]/OneDrive/Desktop/simonetti-hybrid/node_modules/postcss/lib/input.js:135:16)]
-    [at AtRule.error (turbopack:///[project]/OneDrive/Desktop/simonetti-hybrid/node_modules/postcss/lib/node.js:146:32)]
-    [at processApply (C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)]
-    [at C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9]
-    [at C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50]
-    [at async plugins (C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\node_modules\tailwindcss\lib\plugin.js:38:17)]
-    [at async LazyResult.runAsync (turbopack:///[project]/OneDrive/Desktop/simonetti-hybrid/node_modules/postcss/lib/lazy-result.js:293:11)]
-    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
-    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
-
-Import trace:
-  Browser:
-    ./OneDrive/Desktop/simonetti-hybrid/styles/globals.css
-    ./OneDrive/Desktop/simonetti-hybrid/pages/_app.tsx
-[00:53:25.813] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/styles/globals.css
-Error evaluating Node.js code
-CssSyntaxError: C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\styles\globals.css:15:5: The `hover:bg-primary-dark` class does not exist. If `hover:bg-primary-dark` is a custom class, make sure it is defined within a `@layer` directive.
-    [at Input.error (turbopack:///[project]/OneDrive/Desktop/simonetti-hybrid/node_modules/postcss/lib/input.js:135:16)]
-    [at AtRule.error (turbopack:///[project]/OneDrive/Desktop/simonetti-hybrid/node_modules/postcss/lib/node.js:146:32)]
-    [at processApply (C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:380:29)]
-    [at C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\node_modules\tailwindcss\lib\lib\expandApplyAtRules.js:551:9]
-    [at C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\node_modules\tailwindcss\lib\processTailwindFeatures.js:55:50]
-    [at async plugins (C:\Users\mahmu\OneDrive\Desktop\simonetti-hybrid\node_modules\tailwindcss\lib\plugin.js:38:17)]
-    [at async LazyResult.runAsync (turbopack:///[project]/OneDrive/Desktop/simonetti-hybrid/node_modules/postcss/lib/lazy-result.js:293:11)]
-    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
-    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
-
-Import trace:
-  Browser:
-    ./OneDrive/Desktop/simonetti-hybrid/styles/globals.css
-    ./OneDrive/Desktop/simonetti-hybrid/pages/_app.tsx
-[00:54:13.424] Server  LOG     ✓ Compiled in 730ms
-[00:55:06.593] Server  LOG     ✓ Compiled in 83ms
-[00:55:51.978] Server  LOG     ✓ Compiled in 56ms
-[00:56:49.911] Server  LOG     ✓ Compiled in 55ms
-[01:02:03.616] Server  LOG     ✓ Compiled in 159ms
-[01:02:03.815] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+[00:00:01.038] Server  LOG     ✓ Ready in 721ms
+[00:00:10.549] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-20T23:16:54.683Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[00:00:10.560] Browser ERROR   uncaughtError: Error: ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
 Export ProductCard doesn't exist in target module
   2 | import Navbar from '@/components/Navbar'
   3 | import HeroSection from '@/components/HeroSection'
@@ -88,20 +13,9 @@ Export ProductCard doesn't exist in target module
 The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
 Did you mean to import ProductGrid?
 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
-[01:02:03.816] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
-Export ProductCard doesn't exist in target module
-  2 | import Navbar from '@/components/Navbar'
-  3 | import HeroSection from '@/components/HeroSection'
-> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
-    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  5 | import { supabase } from '@/lib/supabase'
-  6 |
-  7 | export default function Home() {
 
-The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
-Did you mean to import ProductGrid?
-All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
-[01:02:08.806] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+
+[00:00:10.821] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
 Export ProductCard doesn't exist in target module
   2 | import Navbar from '@/components/Navbar'
   3 | import HeroSection from '@/components/HeroSection'
@@ -114,7 +28,7 @@ Export ProductCard doesn't exist in target module
 The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
 Did you mean to import ProductGrid?
 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
-[01:02:08.806] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+[00:00:10.821] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
 Export ProductCard doesn't exist in target module
   2 | import Navbar from '@/components/Navbar'
   3 | import HeroSection from '@/components/HeroSection'
@@ -127,62 +41,7 @@ Export ProductCard doesn't exist in target module
 The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
 Did you mean to import ProductGrid?
 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
-[01:02:15.910] Browser ERROR   uncaughtError: Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
-
-- A server/client branch `if (typeof window !== 'undefined')`.
-- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
-- Date formatting in a user's locale which doesn't match the server.
-- External changing data without sending a snapshot of it along with the HTML.
-- Invalid HTML tag nesting.
-
-It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
-
-https://react.dev/link/hydration-mismatch
-
-  ...
-    <Container fn={function fn}>
-      <PagesDevOverlayBridge>
-        <PagesDevOverlayErrorBoundary>
-          <PathnameContextProviderAdapter router={{sdc:{},sbc:{}, ...}} isAutoExport={true}>
-            <App pageProps={{}} Component={function Home} err={undefined} router={{sdc:{},sbc:{}, ...}}>
-              <Home session={null}>
-                <div style={{...}} className="min-h-screen">
-                  <Navbar session={null} cartCount={0} onCartClick={function onCartClick}>
-                    <nav
-+                     className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm"
--                     className="sticky top-0 z-50 animate-slide-down"
--                     style={{background-color:"rgb(253, 2...",border-bottom-width:"1px",border-bottom-style:"solid", ...}}
-                    >
-                      <div className="max-w-7xl ...">
-                        <div className="flex justi...">
-                          <LinkComponent href="/" className="flex items...">
-                            <a
-+                             className="flex items-center space-x-4 group"
--                             className="flex items-center space-x-3 group"
-                              ref={function}
-                              onClick={function onClick}
-                              onMouseEnter={function onMouseEnter}
-                              onTouchStart={function onTouchStart}
-                              href="/"
-                            >
-+                             <div className="text-3xl transition-transform group-hover:scale-105">
--                             <span className="text-4xl group-hover:scale-110 transition-transform duration-300">
-                              ...
-                          ...
-                  ...
-            ...
-
-[01:02:17.369] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:17.369] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:18.056] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:18.056] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:18.056] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:18.056] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:18.056] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:18.056] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:18.056] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:18.056] Browser LOG     Loaded global extras: [{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍫","id":"c428b6d3-a2f1-4b1f-b02c-5fd39a650855","name":"Sosse","price":1,"sort_order":1},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"✨","id":"50fa22b5-1050-4e5c-85fb-b12e6e3b8db5","name":"Streusel","price":0.5,"sort_order":2},{"available":true,"categories":["Eisportionen","Eisbecher"],"created_at":"2026-02-18T22:49:51.402185+00:00","icon":"🍦","id":"7cbb6229-c81b-4f0f-86c2-328cb2dec370","name":"Sahne","price":1.5,"sort_order":3}]
-[01:02:20.890] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+[00:00:10.821] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
 Export ProductCard doesn't exist in target module
   2 | import Navbar from '@/components/Navbar'
   3 | import HeroSection from '@/components/HeroSection'
@@ -195,7 +54,7 @@ Export ProductCard doesn't exist in target module
 The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
 Did you mean to import ProductGrid?
 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
-[01:02:20.890] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+[00:00:10.821] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
 Export ProductCard doesn't exist in target module
   2 | import Navbar from '@/components/Navbar'
   3 | import HeroSection from '@/components/HeroSection'
@@ -208,7 +67,7 @@ Export ProductCard doesn't exist in target module
 The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
 Did you mean to import ProductGrid?
 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
-[01:02:20.890] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+[00:00:11.099] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
 Export ProductCard doesn't exist in target module
   2 | import Navbar from '@/components/Navbar'
   3 | import HeroSection from '@/components/HeroSection'
@@ -221,7 +80,7 @@ Export ProductCard doesn't exist in target module
 The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
 Did you mean to import ProductGrid?
 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
-[01:02:20.890] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+[00:00:11.099] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
 Export ProductCard doesn't exist in target module
   2 | import Navbar from '@/components/Navbar'
   3 | import HeroSection from '@/components/HeroSection'
@@ -234,4 +93,410 @@ Export ProductCard doesn't exist in target module
 The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
 Did you mean to import ProductGrid?
 All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
-[01:02:21.817] Browser WARN    Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+[00:00:16.612] Browser WARN    GoTrueClient@sb-flydacnsbsnpwpqezuof-auth-token:1 (2.95.3) 2026-02-20T23:17:00.785Z Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[00:00:16.612] Browser ERROR   uncaughtError: Error: ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+
+[00:00:16.814] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:00:16.814] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:00:16.814] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:00:16.814] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:04:03.307] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:04:03.307] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:04:04.302] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:04:04.302] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:04:50.304] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:04:50.304] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:04:54.309] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:04:54.309] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:05:13.302] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:05:13.302] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:05:14.315] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:05:14.315] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:05:43.314] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:05:43.314] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:05:45.299] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:05:45.300] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:08:11.303] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:08:11.304] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:08:12.305] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:08:12.305] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:08:40.303] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:08:40.303] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:09:05.699] Server  LOG     ✓ Compiled in 827ms
+[00:09:06.306] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:09:06.306] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:09:06.306] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [client] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+[00:09:06.306] Browser ERROR   ./OneDrive/Desktop/simonetti-hybrid/pages/index.tsx:4:1
+Export ProductCard doesn't exist in target module
+  2 | import Navbar from '@/components/Navbar'
+  3 | import HeroSection from '@/components/HeroSection'
+> 4 | import { ProductGrid, ProductCard, CategoryHeader } from '@/components/ProductCard'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { supabase } from '@/lib/supabase'
+  6 |
+  7 | export default function Home() {
+
+The export ProductCard was not found in module [project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx [ssr] (ecmascript).
+Did you mean to import ProductGrid?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
