@@ -4,7 +4,7 @@ import Image from 'next/image'
 export default function HeroSection() {
   return (
     <>
-      {/* Hero - Groß & Eindrucksvoll wie Riffys */}
+      {/* Hero - Groß & Eindrucksvoll */}
       <section className="relative h-[70vh] flex items-center justify-center overflow-hidden bg-gray-900">
         {/* Background Image */}
         <div className="absolute inset-0">
@@ -34,7 +34,7 @@ export default function HeroSection() {
         </div>
       </section>
 
-      {/* Features - 3 Spalten wie Riffys */}
+      {/* Features - 3 Spalten */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-12">
