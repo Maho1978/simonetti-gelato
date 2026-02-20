@@ -4,10 +4,9 @@ import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import Navbar from '@/components/Navbar'
 import { searchStreets, isValidLangenfeldAddress } from '@/lib/langenfeld-streets'
-import { Clock, MapPin, CreditCard, AlertCircle } from 'lucide-react'
+import { Clock, MapPin, CreditCard, AlertCircle, ChevronLeft, ShieldCheck } from 'lucide-react'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -17,9 +16,6 @@ interface CartItem {
   price: number
   quantity: number
 }
-
-const DELIVERY_FEE = 3.00
-const MINIMUM_ORDER = 15.00
 
 export default function Checkout({ session }: { session: Session | null }) {
   const router = useRouter()
@@ -31,34 +27,81 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [clientSecret, setClientSecret] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
   const [loading, setLoading] = useState(false)
+  
+  // Dynamische Shop-Einstellungen
+  const [settings, setSettings] = useState({ delivery_fee: 3.0, min_order_value: 15.0 })
+  
+  // ✅ NEU: Feature Toggles laden
+  const [enabledPaymentMethods, setEnabledPaymentMethods] = useState<string[]>([])
 
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart')
+    const fetchSettings = async () => {
+      const { data } = await supabase.from('shop_settings').select('*').eq('id', 'main').single()
+      if (data) setSettings({ delivery_fee: data.delivery_fee, min_order_value: data.min_order_value })
+    }
+    
+    // ✅ NEU: Feature Toggles laden
+    const fetchFeatureToggles = async () => {
+      const { data } = await supabase
+        .from('feature_toggles')
+        .select('id, enabled')
+        .in('id', ['card', 'sepa', 'giropay', 'sofort', 'paypal'])
+      
+      if (data) {
+        const methods: string[] = []
+        
+        // Stripe Payment Methods
+        data.forEach(feature => {
+          if (feature.enabled) {
+            if (feature.id === 'card') methods.push('card')
+            if (feature.id === 'sepa') methods.push('sepa_debit')
+            if (feature.id === 'giropay') methods.push('giropay')
+            if (feature.id === 'sofort') methods.push('sofort')
+          }
+        })
+        
+        setEnabledPaymentMethods(methods)
+        
+        // PayPal separat prüfen
+        const paypalEnabled = data.find(f => f.id === 'paypal')?.enabled
+        if (!paypalEnabled && paymentMethod === 'paypal') {
+          setPaymentMethod('stripe') // Fallback auf Stripe wenn PayPal deaktiviert
+        }
+      }
+    }
+    
+    fetchSettings()
+    fetchFeatureToggles()
+
+    const savedCart = localStorage.getItem('simonetti-cart') || localStorage.getItem('cart')
     const savedTip = localStorage.getItem('orderTip')
     
     if (savedCart) {
       const parsedCart = JSON.parse(savedCart)
       setCart(parsedCart)
-      setTip(parseFloat(savedTip || '0'))
+      const tipVal = parseFloat(savedTip || '0')
+      setTip(tipVal)
       
-      const subtotal = parsedCart.reduce((sum: number, item: CartItem) => 
-        sum + item.price * item.quantity, 0)
+      const subtotal = parsedCart.reduce((sum: number, item: CartItem) => sum + item.price * item.quantity, 0)
       
-      if (subtotal < MINIMUM_ORDER) {
-        alert('Mindestbestellwert nicht erreicht!')
-        router.push('/')
-        return
+      if (subtotal < settings.min_order_value) {
+        // Optional: Warnung oder Redirect
       }
-      
-      createPaymentIntent(parsedCart, parseFloat(savedTip || '0'))
     } else {
       router.push('/')
     }
   }, [])
 
+  // ✅ NEU: Payment Intent erst erstellen wenn Payment Methods geladen sind
+  useEffect(() => {
+    if (cart.length > 0 && enabledPaymentMethods.length > 0) {
+      createPaymentIntent(cart, tip)
+    }
+  }, [cart, enabledPaymentMethods])
+
   const createPaymentIntent = async (cartItems: CartItem[], tipAmount: number) => {
     const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    const total = subtotal + DELIVERY_FEE + tipAmount
+    const total = subtotal + settings.delivery_fee + tipAmount
 
     try {
       const response = await fetch('/api/stripe/create-payment-intent', {
@@ -66,9 +109,12 @@ export default function Checkout({ session }: { session: Session | null }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           amount: total,
-          payment_method_types: ['card', 'sepa_debit', 'giropay', 'sofort'],
+          // ✅ FIXED: Dynamische Payment Methods aus Feature Toggles
+          payment_method_types: enabledPaymentMethods.length > 0 
+            ? enabledPaymentMethods 
+            : ['card'], // Fallback auf Karte
           metadata: {
-            items: JSON.stringify(cartItems),
+            items: JSON.stringify(cartItems.map(i => ({ name: i.name, qty: i.quantity }))),
             tip: tipAmount.toFixed(2),
           }
         }),
@@ -81,201 +127,236 @@ export default function Checkout({ session }: { session: Session | null }) {
     }
   }
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const grandTotal = total + DELIVERY_FEE + tip
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const grandTotal = subtotal + settings.delivery_fee + tip
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#fdfcfb' }}>
       <Navbar session={session} cartCount={0} onCartClick={() => {}} />
 
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        <h1 className="text-4xl font-display font-bold mb-8">Kasse</h1>
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <button onClick={() => router.back()} className="flex items-center gap-2 text-[#8da399] font-bold text-sm mb-6 hover:text-[#4a5d54] transition-colors">
+          <ChevronLeft size={18} /> ZURÜCK ZUM WARENKORB
+        </button>
 
-        <div className="grid lg:grid-cols-5 gap-8">
-          {/* Order Summary */}
-          <div className="lg:col-span-2">
-            <div className="card sticky top-24">
-              <h2 className="text-2xl font-display font-bold mb-4">
-                Bestellübersicht
-              </h2>
+        <h1 className="text-5xl font-display font-bold italic mb-10" style={{ color: '#4a5d54' }}>Kasse</h1>
 
-              <div className="space-y-3 mb-6">
-                {cart.map(item => (
-                  <div key={item.id} className="flex justify-between py-2 border-b">
-                    <span>
-                      {item.quantity}x {item.name}
-                    </span>
-                    <span className="font-semibold">
-                      {(item.price * item.quantity).toFixed(2)} €
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2 text-lg">
-                <div className="flex justify-between">
-                  <span>Zwischensumme:</span>
-                  <span>{total.toFixed(2)} €</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Lieferung:</span>
-                  <span>{DELIVERY_FEE.toFixed(2)} €</span>
-                </div>
-                {tip > 0 && (
-                  <div className="flex justify-between text-secondary">
-                    <span>Trinkgeld:</span>
-                    <span>+{tip.toFixed(2)} €</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-2xl pt-3 border-t-2">
-                  <span>Gesamt:</span>
-                  <span className="text-primary">{grandTotal.toFixed(2)} €</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <div className="grid lg:grid-cols-5 gap-12">
           {/* Checkout Form */}
-          <div className="lg:col-span-3">
-            {/* Payment Method Selection */}
-            <div className="card mb-6">
-              <h2 className="text-2xl font-display font-bold mb-4 flex items-center">
-                <CreditCard className="mr-2" />
-                Zahlungsmethode wählen
+          <div className="lg:col-span-3 space-y-8">
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-display font-bold italic mb-6 flex items-center gap-3" style={{ color: '#4a5d54' }}>
+                <CreditCard /> Zahlungsmethode
               </h2>
 
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setPaymentMethod('stripe')}
-                  className={`p-6 rounded-xl border-2 transition-all ${
+                  className={`p-6 rounded-2xl border-2 transition-all text-left ${
                     paymentMethod === 'stripe'
-                      ? 'border-primary bg-primary bg-opacity-5'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-[#4a5d54] bg-[#f9f8f4]'
+                      : 'border-gray-100 hover:border-gray-200'
                   }`}
                 >
-                  <div className="text-xl font-bold mb-2">Karte / SEPA</div>
-                  <div className="text-sm text-gray-600">
-                    Kreditkarte, SEPA, giropay, Sofort
+                  <div className="font-bold text-lg" style={{ color: '#4a5d54' }}>Karte / SEPA</div>
+                  <div className="text-xs text-gray-400 mt-1 font-medium">
+                    {/* ✅ NEU: Zeige verfügbare Methoden */}
+                    {enabledPaymentMethods.map(m => {
+                      if (m === 'card') return 'Kreditkarte'
+                      if (m === 'sepa_debit') return 'SEPA'
+                      if (m === 'giropay') return 'giropay'
+                      if (m === 'sofort') return 'Sofort'
+                      return m
+                    }).join(', ')}
                   </div>
                 </button>
 
                 <button
                   onClick={() => setPaymentMethod('paypal')}
-                  className={`p-6 rounded-xl border-2 transition-all ${
+                  className={`p-6 rounded-2xl border-2 transition-all text-left ${
                     paymentMethod === 'paypal'
-                      ? 'border-primary bg-primary bg-opacity-5'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-[#4a5d54] bg-[#f9f8f4]'
+                      : 'border-gray-100 hover:border-gray-200'
                   }`}
                 >
-                  <div className="text-xl font-bold mb-2">PayPal</div>
-                  <div className="text-sm text-gray-600">
-                    Schnell & sicher
-                  </div>
+                  <div className="font-bold text-lg" style={{ color: '#4a5d54' }}>PayPal</div>
+                  <div className="text-xs text-gray-400 mt-1 font-medium">Schnell & sicher bezahlen</div>
                 </button>
               </div>
             </div>
 
-            {/* Stripe Checkout */}
             {paymentMethod === 'stripe' && clientSecret && (
-              <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <Elements 
+                stripe={stripePromise} 
+                options={{ 
+                  clientSecret,
+                  appearance: {
+                    theme: 'flat',
+                    variables: { 
+                      colorPrimary: '#4a5d54', 
+                      borderRadius: '12px',
+                      fontFamily: 'system-ui, sans-serif',
+                      fontSizeBase: '16px',
+                      spacingUnit: '4px',
+                    },
+                    rules: {
+                      '.Input': {
+                        border: '2px solid #f3f4f6',
+                        padding: '14px 18px',
+                        fontSize: '0.95rem',
+                        fontWeight: '600',
+                      },
+                      '.Input:focus': {
+                        borderColor: '#4a5d54',
+                        boxShadow: '0 0 0 4px rgba(74, 93, 84, 0.05)',
+                      },
+                      '.Tab': {
+                        border: '2px solid #f3f4f6',
+                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                      },
+                      '.Tab:hover': {
+                        borderColor: '#e5e7eb',
+                      },
+                      '.Tab--selected': {
+                        borderColor: '#4a5d54',
+                        backgroundColor: '#f9f8f4',
+                      },
+                    }
+                  }
+                }}
+              >
                 <StripeCheckoutForm 
                   session={session} 
                   isGuest={isGuest}
                   cart={cart}
                   total={grandTotal}
+                  subtotal={subtotal}
+                  deliveryFee={settings.delivery_fee}
                   tip={tip}
                 />
               </Elements>
             )}
 
-            {/* PayPal Checkout */}
             {paymentMethod === 'paypal' && (
-              <PayPalScriptProvider options={{ 
-                clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'test',
-                currency: 'EUR'
-              }}>
-                <PayPalCheckoutForm
-                  session={session}
-                  isGuest={isGuest}
-                  cart={cart}
-                  total={grandTotal}
-                  tip={tip}
-                />
-              </PayPalScriptProvider>
+              <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 text-center py-16">
+                <div className="text-4xl mb-4">⏳</div>
+                <h3 className="font-bold text-xl mb-2">PayPal folgt in Kürze</h3>
+                <p className="text-gray-400 max-w-xs mx-auto">Wir arbeiten an der PayPal-Integration. Bitte nutze vorerst die Kartenzahlung.</p>
+              </div>
             )}
+          </div>
+
+          {/* Order Summary Sidebar */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 sticky top-28">
+              <h2 className="text-2xl font-display font-bold italic mb-6" style={{ color: '#4a5d54' }}>Übersicht</h2>
+
+              <div className="space-y-4 mb-8">
+                {cart.map(item => (
+                  <div key={item.id} className="flex justify-between items-start">
+                    <div className="text-sm">
+                      <span className="font-bold text-[#4a5d54]">{item.quantity}x</span> {item.name}
+                    </div>
+                    <div className="font-bold text-sm">{(item.price * item.quantity).toFixed(2)} €</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3 pt-6 border-t border-gray-50">
+                <div className="flex justify-between text-gray-400 text-sm font-medium">
+                  <span>Zwischensumme</span>
+                  <span>{subtotal.toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between text-gray-400 text-sm font-medium">
+                  <span>Liefergebühr</span>
+                  <span>{settings.delivery_fee.toFixed(2)} €</span>
+                </div>
+                {tip > 0 && (
+                  <div className="flex justify-between text-[#8da399] text-sm font-bold">
+                    <span>Trinkgeld</span>
+                    <span>+{tip.toFixed(2)} €</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-end pt-4">
+                  <span className="font-display font-bold text-xl italic" style={{ color: '#4a5d54' }}>Gesamt</span>
+                  <span className="font-bold text-3xl" style={{ color: '#4a5d54' }}>{grandTotal.toFixed(2)} €</span>
+                </div>
+              </div>
+
+              <div className="mt-8 p-4 bg-[#f9f8f4] rounded-2xl flex items-center gap-3">
+                <ShieldCheck className="text-[#4a5d54]" size={20} />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8da399]">Sichere SSL-Verschlüsselung</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        .font-display { font-family: 'Playfair Display', serif; }
+        .input-simonetti {
+          width: 100%;
+          padding: 14px 18px;
+          border-radius: 16px;
+          border: 2px solid #f3f4f6;
+          background-color: #ffffff;
+          font-weight: 600;
+          font-size: 0.95rem;
+          transition: all 0.2s;
+        }
+        .input-simonetti:focus {
+          outline: none;
+          border-color: #4a5d54;
+          box-shadow: 0 0 0 4px rgba(74, 93, 84, 0.05);
+        }
+      `}</style>
     </div>
   )
 }
 
-function StripeCheckoutForm({ 
-  session, 
-  isGuest, 
-  cart, 
-  total,
-  tip
-}: { 
-  session: Session | null
-  isGuest: boolean
-  cart: CartItem[]
-  total: number
-  tip: number
-}) {
+function StripeCheckoutForm({ session, isGuest, cart, total, subtotal, deliveryFee, tip }: any) {
   const stripe = useStripe()
   const elements = useElements()
   const router = useRouter()
 
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState(session?.user?.email || '')
-  const [street, setStreet] = useState('')
-  const [houseNumber, setHouseNumber] = useState('')
-  const [zip, setZip] = useState('40764')
-  const [city, setCity] = useState('Langenfeld')
-  const [deliveryTime, setDeliveryTime] = useState('asap')
-  const [notes, setNotes] = useState('')
+  const [formData, setFormData] = useState({
+    name: '',
+    email: session?.user?.email || '',
+    street: '',
+    houseNumber: '',
+    zip: '40764',
+    city: 'Langenfeld',
+    deliveryTime: 'asap',
+    notes: ''
+  })
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [streetSuggestions, setStreetSuggestions] = useState<any[]>([])
   const [addressError, setAddressError] = useState('')
 
   const handleStreetInput = (value: string) => {
-    setStreet(value)
+    setFormData({ ...formData, street: value })
     setAddressError('')
-    
     if (value.length >= 2) {
-      const suggestions = searchStreets(value)
-      setStreetSuggestions(suggestions)
+      setStreetSuggestions(searchStreets(value))
     } else {
       setStreetSuggestions([])
     }
   }
 
-  const selectStreet = (streetName: string) => {
-    setStreet(streetName)
-    setStreetSuggestions([])
-  }
-
-  const validateAddress = () => {
-    if (zip !== '40764') {
-      setAddressError('Lieferung nur nach Langenfeld (PLZ 40764) möglich!')
-      return false
-    }
-    
-    if (!isValidLangenfeldAddress(street, zip)) {
-      setAddressError('Diese Straße ist nicht in unserem Liefergebiet in Langenfeld.')
-      return false
-    }
-    
-    return true
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (!stripe || !elements) return
-    if (!validateAddress()) return
+    
+    // Validierung
+    if (!isValidLangenfeldAddress(formData.street, formData.zip)) {
+      setAddressError('Diese Straße liegt leider nicht in unserem Liefergebiet (Langenfeld).')
+      return
+    }
 
     setLoading(true)
     setError('')
@@ -286,36 +367,63 @@ function StripeCheckoutForm({
         redirect: 'if_required',
       })
 
-      if (stripeError) {
-        throw new Error(stripeError.message)
-      }
+      if (stripeError) throw new Error(stripeError.message)
 
-      // Create order in database
       const orderData = {
         user_id: session?.user?.id || null,
-        guest_email: isGuest ? email : null,
+        guest_email: isGuest ? formData.email : null,
         items: cart,
         total,
         tip,
         delivery_address: {
-          name,
-          street: `${street} ${houseNumber}`,
-          zip,
-          city,
+          name: formData.name,
+          street: `${formData.street} ${formData.houseNumber}`,
+          zip: formData.zip,
+          city: formData.city,
         },
-        delivery_time: deliveryTime,
-        notes,
+        delivery_time: formData.deliveryTime,
+        notes: formData.notes,
         payment_intent_id: paymentIntent?.id,
+        payment_method: 'stripe'
       }
 
-      await fetch('/api/orders', {
+      // 1. Order in DB speichern
+      const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData),
       })
+      
+      const { order: createdOrder } = await orderResponse.json()
 
+      // 2. Email an Kunde senden
+      await fetch('/api/emails/send-order-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'order_confirmed',
+          order: { ...orderData, id: createdOrder.id, order_number: createdOrder.order_number },
+          recipientEmail: isGuest ? formData.email : session?.user?.email
+        })
+      })
+
+      // 3. Email an Admin senden
+      await fetch('/api/emails/send-order-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'new_order_admin',
+          order: { ...orderData, id: createdOrder.id, order_number: createdOrder.order_number },
+          recipientEmail: process.env.NEXT_PUBLIC_ADMIN_EMAIL
+        })
+      })
+
+      localStorage.removeItem('simonetti-cart')
       localStorage.removeItem('cart')
       localStorage.removeItem('orderTip')
+      
+      localStorage.setItem('lastOrder', JSON.stringify({     orderId: createdOrder.id,     items: cart.map(item => ({       id: item.id,       name: item.name,       quantity: item.quantity     }))   }))
+
       router.push('/order-success')
     } catch (error: any) {
       setError(error.message || 'Zahlung fehlgeschlagen')
@@ -324,273 +432,113 @@ function StripeCheckoutForm({
     }
   }
 
-  const deliveryTimeOptions = [
-    { value: 'asap', label: 'So schnell wie möglich (~30 Min)' },
-    ...generateTimeSlots()
-  ]
-
   return (
-    <form onSubmit={handleSubmit} className="card space-y-6">
-      <h2 className="text-2xl font-display font-bold flex items-center">
-        <MapPin className="mr-2" />
-        {isGuest ? 'Gast-Checkout' : 'Lieferung'}
-      </h2>
+    <form onSubmit={handleSubmit} className="space-y-8 animate-fade-in">
+      <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+        <h2 className="text-2xl font-display font-bold italic mb-6 flex items-center gap-3" style={{ color: '#4a5d54' }}>
+          <MapPin /> Lieferadresse
+        </h2>
 
-      {error && (
-        <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl">
-          {error}
-        </div>
-      )}
-
-      <div className="bg-blue-50 border-2 border-blue-200 p-4 rounded-xl">
-        <div className="flex items-start space-x-2">
-          <MapPin className="text-blue-600 flex-shrink-0 mt-1" size={20} />
-          <div className="text-sm text-blue-900">
-            <strong>Liefergebiet:</strong> Wir liefern nur innerhalb von Langenfeld (PLZ 40764)
-          </div>
-        </div>
-      </div>
-
-      {/* Delivery Address */}
-      <div>
-        <h3 className="font-semibold text-lg mb-4">Lieferadresse</h3>
-        
-        <div className="space-y-4">
+        <div className="grid md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-semibold mb-2">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="input"
-              placeholder="Max Mustermann"
-            />
+            <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">Vollständiger Name</label>
+            <input type="text" required className="input-simonetti" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Max Mustermann" />
           </div>
-
           {isGuest && (
             <div>
-              <label className="block text-sm font-semibold mb-2">E-Mail</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="input"
-                placeholder="max@beispiel.de"
-              />
+              <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">E-Mail für Bestätigung</label>
+              <input type="email" required className="input-simonetti" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="max@beispiel.de" />
             </div>
           )}
+        </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2 relative">
-              <label className="block text-sm font-semibold mb-2">Straße</label>
-              <input
-                type="text"
-                value={street}
-                onChange={(e) => handleStreetInput(e.target.value)}
-                onBlur={() => setTimeout(() => setStreetSuggestions([]), 200)}
-                required
-                className={`input ${addressError ? 'border-red-500' : ''}`}
-                placeholder="Hauptstraße"
-              />
-              
-              {streetSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full bg-white border-2 border-gray-200 rounded-xl mt-1 shadow-lg max-h-60 overflow-y-auto">
-                  {streetSuggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => selectStreet(suggestion.name)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="font-semibold">{suggestion.name}</div>
-                      {suggestion.district && (
-                        <div className="text-sm text-gray-600">{suggestion.district}</div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">Nr.</label>
-              <input
-                type="text"
-                value={houseNumber}
-                onChange={(e) => setHouseNumber(e.target.value)}
-                required
-                className="input"
-                placeholder="42"
-              />
-            </div>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="col-span-2 relative">
+            <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">Straße</label>
+            <input type="text" required className="input-simonetti" value={formData.street} onChange={e => handleStreetInput(e.target.value)} placeholder="Straße" />
+            {streetSuggestions.length > 0 && (
+              <div className="absolute z-20 w-full bg-white border-2 border-gray-100 rounded-2xl mt-1 shadow-xl overflow-hidden">
+                {streetSuggestions.map((s, i) => (
+                  <button key={i} type="button" onClick={() => { setFormData({...formData, street: s.name}); setStreetSuggestions([]) }} className="w-full text-left px-4 py-3 hover:bg-[#f9f8f4] text-sm font-semibold transition-colors border-b last:border-0 border-gray-50">
+                    {s.name} <span className="text-[10px] text-gray-400 ml-2">{s.district}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+          <div>
+            <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">Nr.</label>
+            <input type="text" required className="input-simonetti" value={formData.houseNumber} onChange={e => setFormData({...formData, houseNumber: e.target.value})} placeholder="1a" />
+          </div>
+        </div>
 
-          {addressError && (
-            <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-start space-x-2">
-              <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
-              <div className="text-sm">{addressError}</div>
-            </div>
-          )}
+        {addressError && (
+          <div className="flex items-center gap-2 text-red-500 text-xs font-bold mb-4 bg-red-50 p-3 rounded-xl border border-red-100">
+            <AlertCircle size={14} /> {addressError}
+          </div>
+        )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold mb-2">PLZ</label>
-              <input
-                type="text"
-                value={zip}
-                onChange={(e) => {
-                  setZip(e.target.value)
-                  setAddressError('')
-                }}
-                required
-                className={`input ${zip !== '40764' ? 'border-red-500' : ''}`}
-                placeholder="40764"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">Stadt</label>
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                required
-                className="input"
-                placeholder="Langenfeld"
-              />
-            </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">PLZ</label>
+            <input type="text" disabled className="input-simonetti bg-gray-50 text-gray-400" value={formData.zip} />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">Stadt</label>
+            <input type="text" disabled className="input-simonetti bg-gray-50 text-gray-400" value={formData.city} />
           </div>
         </div>
       </div>
 
-      {/* Delivery Time */}
-      <div>
-        <h3 className="font-semibold text-lg mb-4 flex items-center">
-          <Clock className="mr-2" size={20} />
-          Lieferzeit
-        </h3>
-        <select
-          value={deliveryTime}
-          onChange={(e) => setDeliveryTime(e.target.value)}
-          className="input"
-        >
-          {deliveryTimeOptions.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Notes */}
-      <div>
-        <label className="block text-sm font-semibold mb-2">
-          Anmerkungen (optional)
-        </label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="input"
-          rows={3}
-          placeholder="z.B. Klingel defekt, bitte anrufen"
-        />
-      </div>
-
-      {/* Payment Element */}
-      <div>
-        <h3 className="font-semibold text-lg mb-4">Zahlungsinformationen</h3>
-        <PaymentElement />
-      </div>
-
-      <div className="bg-gray-50 p-4 rounded-xl">
-        <div className="flex justify-between text-2xl font-bold">
-          <span>Gesamtbetrag:</span>
-          <span className="text-primary">{total.toFixed(2)} €</span>
+      <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+        <h2 className="text-2xl font-display font-bold italic mb-6 flex items-center gap-3" style={{ color: '#4a5d54' }}>
+          <Clock /> Lieferzeit & Details
+        </h2>
+        <div className="space-y-4">
+          <select className="input-simonetti appearance-none" value={formData.deliveryTime} onChange={e => setFormData({...formData, deliveryTime: e.target.value})}>
+            <option value="asap">So schnell wie möglich (ca. 30-45 Min)</option>
+            {generateTimeSlots().map(slot => (
+              <option key={slot.value} value={slot.value}>{slot.label}</option>
+            ))}
+          </select>
+          <textarea className="input-simonetti" rows={3} placeholder="Anmerkungen zur Lieferung (z.B. 2. Etage, Klingel Name...)" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
         </div>
+      </div>
+
+      <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+        <h2 className="text-2xl font-display font-bold italic mb-6" style={{ color: '#4a5d54' }}>Zahlungsinformationen</h2>
+        {/* ✅ FIXED: PaymentElement mit verbessertem Styling */}
+        <div className="stripe-payment-element">
+          <PaymentElement />
+        </div>
+        {error && <div className="mt-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold">{error}</div>}
       </div>
 
       <button
         type="submit"
-        disabled={!stripe || loading || !!addressError}
-        className={`w-full text-lg ${
-          !stripe || loading || addressError
-            ? 'bg-gray-300 text-gray-500 cursor-not-allowed py-4 px-6 rounded-xl'
-            : 'btn-secondary'
-        }`}
+        disabled={loading || !stripe}
+        className="w-full py-6 rounded-3xl font-bold text-white text-xl shadow-xl transition-all hover:opacity-90 active:scale-[0.98] disabled:bg-gray-200 disabled:shadow-none"
+        style={{ backgroundColor: '#4a5d54' }}
       >
-        {loading ? (
-          <div className="flex items-center justify-center space-x-2">
-            <div className="spinner !w-5 !h-5 !border-2 !border-dark"></div>
-            <span>Zahlung wird verarbeitet...</span>
-          </div>
-        ) : (
-          `Jetzt bezahlen ${total.toFixed(2)} €`
-        )}
+        {loading ? 'Wird verarbeitet...' : `Jetzt kostenpflichtig bestellen (${total.toFixed(2)} €)`}
       </button>
     </form>
-  )
-}
-
-function PayPalCheckoutForm({
-  session,
-  isGuest,
-  cart,
-  total,
-  tip
-}: {
-  session: Session | null
-  isGuest: boolean
-  cart: CartItem[]
-  total: number
-  tip: number
-}) {
-  const router = useRouter()
-  const [formData, setFormData] = useState({
-    name: '',
-    email: session?.user?.email || '',
-    street: '',
-    houseNumber: '',
-    zip: '40764',
-    city: 'Langenfeld',
-    deliveryTime: 'asap',
-    notes: '',
-  })
-
-  // Similar form as Stripe but with PayPal button at the end
-  return (
-    <div className="card">
-      <h2 className="text-2xl font-display font-bold mb-6">
-        PayPal Checkout
-      </h2>
-      
-      <div className="bg-yellow-50 border-2 border-yellow-200 p-4 rounded-xl mb-6">
-        <p className="text-sm text-yellow-900">
-          PayPal-Integration folgt in Kürze. Bitte nutzen Sie vorerst die Kreditkarten-Zahlung.
-        </p>
-      </div>
-
-      {/* Form fields similar to Stripe... */}
-    </div>
   )
 }
 
 function generateTimeSlots() {
   const slots = []
   const now = new Date()
-  const startHour = now.getHours() + 1
+  let hour = now.getHours()
+  let min = now.getMinutes() > 30 ? 0 : 30
+  if (min === 0) hour++
   
-  for (let hour = startHour; hour <= 22; hour++) {
-    for (let minute of [0, 30]) {
-      if (hour === 22 && minute === 30) continue
-      const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-      slots.push({
-        value: time,
-        label: `Heute um ${time} Uhr`
-      })
+  for (let h = Math.max(hour, 14); h <= 21; h++) {
+    for (let m of [0, 30]) {
+      if (h === hour && m < now.getMinutes() + 20) continue
+      const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+      slots.push({ value: time, label: `Heute um ${time} Uhr` })
     }
   }
-  
-  return slots.slice(0, 10) // Max 10 slots
+  return slots.slice(0, 8)
 }

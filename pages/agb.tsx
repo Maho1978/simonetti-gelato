@@ -16,7 +16,7 @@ export default function AGB() {
             <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>1. Geltungsbereich</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
               Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für alle Bestellungen über den Online-Shop 
-              von Simonetti Gelateria, Langenfeld. Mit der Bestellung erkennen Sie diese Bedingungen an.
+              von Eiscafe Simonetti, Langenfeld. Mit der Bestellung erkennen Sie diese Bedingungen an.
             </p>
           </section>
 
@@ -24,8 +24,8 @@ export default function AGB() {
             <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>2. Vertragspartner</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
               Der Vertrag kommt zustande mit:<br />
-              <strong>Simonetti Gelateria</strong><br />
-              Musterstraße 123<br />
+              <strong>Eiscafe Simonetti</strong><br />
+              Konrad-Adenauer-Platz 2<br />
               40764 Langenfeld<br />
               Deutschland
             </p>
