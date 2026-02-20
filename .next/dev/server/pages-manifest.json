@@ -3,8 +3,11 @@
   "/_app": "pages/_app.js",
   "/_document": "pages/_document.js",
   "/admin": "pages/admin.js",
-  "/api/orders": "pages/api/orders.js",
-  "/api/settings": "pages/api/settings.js",
+  "/admin/calendar": "pages/admin/calendar.js",
+  "/admin/customers": "pages/admin/customers.js",
+  "/admin/kanban": "pages/admin/kanban.js",
+  "/admin/reports": "pages/admin/reports.js",
+  "/api/stripe/create-payment-intent": "pages/api/stripe/create-payment-intent.js",
   "/auth/login": "pages/auth/login.js",
   "/checkout": "pages/checkout.js"
 }

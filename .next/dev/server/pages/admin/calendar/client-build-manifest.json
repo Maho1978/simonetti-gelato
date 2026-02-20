@@ -1,0 +1,5 @@
+{
+  "/admin/calendar": [
+    "static/chunks/pages/admin/calendar.js"
+  ]
+}

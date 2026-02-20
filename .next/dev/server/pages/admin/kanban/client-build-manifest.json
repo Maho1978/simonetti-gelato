@@ -1,0 +1,5 @@
+{
+  "/admin/kanban": [
+    "static/chunks/pages/admin/kanban.js"
+  ]
+}

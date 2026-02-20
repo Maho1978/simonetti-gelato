@@ -1,0 +1,5 @@
+{
+  "/admin/vouchers": [
+    "static/chunks/pages/admin/vouchers.js"
+  ]
+}
