@@ -62,12 +62,12 @@ export default function Footer() {
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">Mo - Fr:</span>
-                <span>14:00 - 22:00</span>
+                <span className="text-gray-400">Mo - Sa:</span>
+                <span>09:00 - 19:00</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Sa - So:</span>
-                <span>12:00 - 22:00</span>
+                <span className="text-gray-400">So - Feiertage:</span>
+                <span>13:00 - 19:00</span>
               </div>
             </div>
           </div>
