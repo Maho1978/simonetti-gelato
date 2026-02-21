@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { label: 'Reports', href: '/admin/reports', icon: BarChart2 },
   { label: 'Gutscheine', href: '/admin/gutscheine', icon: Ticket },
   { label: 'Favoriten', href: '/admin/favorites', icon: Heart },
-  { label: 'Setup', href: '/admin/setup', icon: Settings },
+  { label: 'Setup', href: '/admin/settings', icon: Settings },
 ]
 
 // API Helper - nutzt Service Role Key serverseitig
