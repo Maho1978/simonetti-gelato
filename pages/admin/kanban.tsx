@@ -1,220 +1,202 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ChevronLeft, ChevronRight, User, MapPin, Clock, Printer, LayoutDashboard, ShoppingBag, Package, Tag, BarChart2, Ticket, Heart, Settings, LogOut, Bell, BellOff, X, Check, Phone } from 'lucide-react'
+import AdminLayout from '@/components/AdminLayout'
+import {
+  ChevronLeft, ChevronRight, User, MapPin, Clock,
+  Printer, Bell, BellOff, X, Check, Phone, Package
+} from 'lucide-react'
 import { useRouter } from 'next/router'
 
+// ── Konstanten ────────────────────────────────────────────────
 const COLUMNS = [
-  { id: 'OFFEN', title: 'Offen', color: 'bg-gray-100', icon: '🔔' },
-  { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-100', icon: '👨‍🍳' },
-  { id: 'AN_FAHRER', title: 'An Fahrer', color: 'bg-orange-100', icon: '🚗' },
-  { id: 'GELIEFERT', title: 'Geliefert', color: 'bg-green-100', icon: '✅' }
+  { id: 'OFFEN',          title: 'Offen',          color: 'bg-red-50',    border: 'border-red-200',    icon: '🔔' },
+  { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-50',   border: 'border-blue-200',   icon: '👨‍🍳' },
+  { id: 'AN_FAHRER',      title: 'An Fahrer',      color: 'bg-orange-50', border: 'border-orange-200', icon: '🚗' },
+  { id: 'GELIEFERT',      title: 'Geliefert',      color: 'bg-green-50',  border: 'border-green-200',  icon: '✅' },
 ]
 
-const NAV_ITEMS = [
-  { label: 'Bestellungen', href: '/admin/orders', icon: ShoppingBag },
-  { label: 'Produkte', href: '/admin/products', icon: Package },
-  { label: 'Extras', href: '/admin/extras', icon: Tag },
-  { label: 'Kategorien', href: '/admin/categories', icon: LayoutDashboard },
-  { label: 'Kanban', href: '/admin/kanban', icon: LayoutDashboard },
-  { label: 'Reports', href: '/admin/reports', icon: BarChart2 },
-  { label: 'Gutscheine', href: '/admin/gutscheine', icon: Ticket },
-  { label: 'Favoriten', href: '/admin/favorites', icon: Heart },
-  { label: 'Setup', href: '/admin/settings', icon: Settings },
-]
-
-// ── API ──────────────────────────────────────────────────────
-async function updateOrder(orderId: string, data: any) {
-  const response = await fetch(`/api/orders/${orderId}`, {
+// ── API ───────────────────────────────────────────────────────
+async function apiUpdateOrder(orderId: string, data: any) {
+  const res = await fetch(`/api/orders/${orderId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   })
-  if (!response.ok) {
-    const err = await response.json()
+  if (!res.ok) {
+    const err = await res.json()
     console.error('Order update error:', err)
     return false
   }
   return true
 }
 
-async function sendEmailNotification(type: string, order: any) {
+async function sendEmail(type: string, order: any) {
   const email = order?.customer_email
   if (!email) return
   try {
     await fetch('/api/emails/send-order-notification', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, order, recipientEmail: email })
+      body: JSON.stringify({ type, order, recipientEmail: email }),
     })
-  } catch (e) { console.error('Email error:', e) }
+  } catch (e) {
+    console.log('Email error (non-critical):', e)
+  }
 }
 
-// ── Lauterer Ton ─────────────────────────────────────────────
-function playNotificationSound(loud = false) {
+// ── Lauterer Ton ──────────────────────────────────────────────
+function playSound(loud = false) {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-
     if (loud) {
-      // Lautes, dringendes Klingeln - 5x wiederholt
-      const playBell = (startTime: number) => {
-        const notes = [880, 1100, 880, 1100]
-        notes.forEach((freq, i) => {
-          const osc = ctx.createOscillator()
-          const gain = ctx.createGain()
-          osc.connect(gain)
-          gain.connect(ctx.destination)
-          osc.frequency.value = freq
-          osc.type = 'square'
-          const t = startTime + i * 0.12
-          gain.gain.setValueAtTime(0, t)
-          gain.gain.linearRampToValueAtTime(0.6, t + 0.01)
-          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25)
-          osc.start(t)
-          osc.stop(t + 0.25)
-        })
-      }
-      // 4x klingeln mit Pause
+      // 4x dringendes Klingeln
       for (let i = 0; i < 4; i++) {
+        const playBell = (t: number) => {
+          ;[880, 1100, 880, 1100].forEach((freq, j) => {
+            const osc = ctx.createOscillator()
+            const gain = ctx.createGain()
+            osc.connect(gain)
+            gain.connect(ctx.destination)
+            osc.frequency.value = freq
+            osc.type = 'square'
+            const start = t + j * 0.12
+            gain.gain.setValueAtTime(0, start)
+            gain.gain.linearRampToValueAtTime(0.7, start + 0.01)
+            gain.gain.exponentialRampToValueAtTime(0.01, start + 0.28)
+            osc.start(start)
+            osc.stop(start + 0.28)
+          })
+        }
         playBell(ctx.currentTime + i * 0.7)
       }
     } else {
-      // Normaler sanfter Ton
-      const notes = [523, 659, 784]
-      notes.forEach((freq, i) => {
+      ;[523, 659, 784].forEach((freq, i) => {
         const osc = ctx.createOscillator()
         const gain = ctx.createGain()
         osc.connect(gain)
         gain.connect(ctx.destination)
         osc.frequency.value = freq
         osc.type = 'sine'
-        const startTime = ctx.currentTime + i * 0.15
-        gain.gain.setValueAtTime(0.3, startTime)
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3)
-        osc.start(startTime)
-        osc.stop(startTime + 0.3)
+        const t = ctx.currentTime + i * 0.15
+        gain.gain.setValueAtTime(0.3, t)
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3)
+        osc.start(t)
+        osc.stop(t + 0.3)
       })
     }
-  } catch (e) {
-    console.log('Audio not available')
-  }
+  } catch (e) {}
 }
 
-// ── Timer ────────────────────────────────────────────────────
+// ── Timer ─────────────────────────────────────────────────────
 function OrderTimer({ createdAt }: { createdAt: string }) {
-  const [elapsed, setElapsed] = useState(0)
+  const [mins, setMins] = useState(0)
   useEffect(() => {
-    const calc = () => setElapsed(Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000))
+    const calc = () => setMins(Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000))
     calc()
-    const interval = setInterval(calc, 10000)
-    return () => clearInterval(interval)
+    const iv = setInterval(calc, 30000)
+    return () => clearInterval(iv)
   }, [createdAt])
 
-  const minutes = Math.floor(elapsed / 60)
-  const hours = Math.floor(minutes / 60)
-  let color = 'text-green-600'
-  if (minutes >= 30) color = 'text-red-600 font-bold'
-  else if (minutes >= 15) color = 'text-orange-500 font-semibold'
-  else if (minutes >= 10) color = 'text-yellow-600'
-  return <span className={`text-xs ${color}`}>⏱ {hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`}</span>
+  const hours = Math.floor(mins / 60)
+  const label = hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`
+  const color = mins >= 30 ? 'text-red-600 font-bold animate-pulse' : mins >= 15 ? 'text-orange-500 font-semibold' : mins >= 10 ? 'text-yellow-600' : 'text-green-600'
+  return <span className={`text-xs ${color}`}>⏱ {label}</span>
 }
 
-// ── Print ────────────────────────────────────────────────────
+// ── Print ─────────────────────────────────────────────────────
 function printOrder(order: any) {
-  const items = order.items?.map((item: any) =>
-    `${item.quantity}x ${item.name}${item.flavors?.length ? ' (' + item.flavors.join(', ') + ')' : item.selectedFlavors?.length ? ' (' + item.selectedFlavors.join(', ') + ')' : ''} - ${(item.price * item.quantity).toFixed(2)}€`
-  ).join('\n') || ''
-  const printContent = `
-    <html><head><title>Bestellung #${order.order_number || order.id.substring(0, 6).toUpperCase()}</title>
-    <style>
-      body { font-family: monospace; font-size: 14px; padding: 20px; max-width: 400px; }
-      h2 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
-      .row { display: flex; justify-content: space-between; margin: 4px 0; }
-      .total { border-top: 2px solid #000; margin-top: 10px; padding-top: 10px; font-weight: bold; font-size: 16px; }
-      .section { margin: 10px 0; padding: 8px; background: #f5f5f5; }
-      pre { white-space: pre-wrap; font-family: monospace; }
-    </style></head>
-    <body>
-      <h2>🍦 Simonetti Gelateria</h2>
-      <div class="row"><span>Bestellung:</span><span><b>#${order.order_number || order.id.substring(0, 6).toUpperCase()}</b></span></div>
-      <div class="row"><span>Zeit:</span><span>${new Date(order.created_at).toLocaleString('de-DE')}</span></div>
-      <div class="section">
-        <b>Kunde:</b><br/>
-        ${order.customer_name}<br/>
-        ${order.customer_phone || ''}<br/>
-        ${order.delivery_address || 'Abholung'}
-      </div>
-      <div class="section"><b>Bestellung:</b><br/><pre>${items}</pre></div>
-      ${order.notes ? `<div class="section"><b>Notizen:</b><br/>${order.notes}</div>` : ''}
-      <div class="total row"><span>GESAMT:</span><span>${order.total?.toFixed(2)}€</span></div>
-    </body></html>
-  `
+  const items = (order.items || []).map((item: any) => {
+    const flavors = (item.flavors || item.selectedFlavors || []).join(', ')
+    const extras = (item.extras || item.selectedExtras || []).map((e: any) => e.name || e).join(', ')
+    return `${item.quantity}x ${item.name}${flavors ? ' (' + flavors + ')' : ''}${extras ? ' + ' + extras : ''} — ${((item.price || 0) * item.quantity).toFixed(2)}€`
+  }).join('\n')
+
   const win = window.open('', '_blank')
-  if (win) { win.document.write(printContent); win.document.close(); win.print() }
+  if (!win) return
+  win.document.write(`
+    <html><head><title>Bestellung</title>
+    <style>
+      body{font-family:monospace;font-size:14px;padding:20px;max-width:380px}
+      h2{text-align:center;border-bottom:2px solid #000;padding-bottom:8px}
+      .row{display:flex;justify-content:space-between;margin:4px 0}
+      .section{margin:10px 0;padding:8px;background:#f5f5f5;border-radius:4px}
+      .total{border-top:2px solid #000;margin-top:10px;padding-top:10px;font-weight:bold;font-size:16px}
+      pre{white-space:pre-wrap;font-family:monospace;margin:0}
+    </style></head><body>
+    <h2>🍦 Simonetti Gelateria</h2>
+    <div class="row"><span>Bestellung:</span><span><b>#${order.order_number || order.id?.slice(-6).toUpperCase()}</b></span></div>
+    <div class="row"><span>Zeit:</span><span>${new Date(order.created_at).toLocaleString('de-DE')}</span></div>
+    <div class="section">
+      <b>Kunde:</b><br/>
+      ${order.customer_name || ''}<br/>
+      ${order.customer_phone || ''}<br/>
+      ${order.delivery_address || 'Abholung'}
+    </div>
+    <div class="section"><b>Bestellung:</b><br/><pre>${items}</pre></div>
+    ${order.notes ? `<div class="section"><b>Notizen:</b><br/>${order.notes}</div>` : ''}
+    <div class="total row"><span>GESAMT:</span><span>${(order.total || 0).toFixed(2)}€</span></div>
+    </body></html>
+  `)
+  win.document.close()
+  win.print()
 }
 
-// ── NEUE BESTELLUNG POPUP ────────────────────────────────────
-function NewOrderPopup({ order, onAccept, onLater }: {
-  order: any
-  onAccept: () => void
-  onLater: () => void
-}) {
-  const items = order.items || []
-
+// ── Neue Bestellung Popup ─────────────────────────────────────
+function NewOrderPopup({ order, onAccept, onLater }: { order: any; onAccept: () => void; onLater: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
-      {/* Pulsierender Rand */}
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-bounce-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden" style={{ animation: 'popIn 0.35s ease-out' }}>
 
-        {/* Roter Header */}
+        {/* Header */}
         <div className="bg-red-500 text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-3xl animate-pulse">🔔</span>
+            <span className="text-3xl" style={{ animation: 'pulse 1s infinite' }}>🔔</span>
             <div>
               <h2 className="font-bold text-xl">NEUE BESTELLUNG!</h2>
               <p className="text-red-100 text-sm">#{order.order_number || order.id?.slice(-6).toUpperCase()}</p>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold">{order.total?.toFixed(2)}€</div>
+            <div className="text-2xl font-bold">{(order.total || 0).toFixed(2)}€</div>
             <div className="text-red-200 text-xs">{new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</div>
           </div>
         </div>
 
         <div className="p-6">
           {/* Kunde */}
-          <div className="bg-gray-50 rounded-xl p-4 mb-4">
-            <div className="flex items-center gap-2 mb-1">
-              <User size={16} className="text-gray-500" />
+          <div className="bg-gray-50 rounded-xl p-4 mb-4 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <User size={15} className="text-gray-400" />
               <span className="font-bold text-gray-800">{order.customer_name}</span>
             </div>
             {order.customer_phone && (
-              <div className="flex items-center gap-2 mb-1">
-                <Phone size={16} className="text-gray-500" />
-                <a href={`tel:${order.customer_phone}`} className="text-blue-600 font-semibold text-sm">{order.customer_phone}</a>
+              <div className="flex items-center gap-2">
+                <Phone size={15} className="text-gray-400" />
+                <a href={`tel:${order.customer_phone}`} className="text-blue-600 font-semibold text-sm hover:underline">{order.customer_phone}</a>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <MapPin size={16} className="text-gray-500" />
+              <MapPin size={15} className="text-gray-400" />
               <span className="text-gray-600 text-sm">{order.delivery_address}</span>
             </div>
           </div>
 
-          {/* Bestellte Artikel */}
+          {/* Artikel */}
           <div className="mb-4">
-            <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide mb-2">Bestellung</h3>
+            <h3 className="font-bold text-xs text-gray-400 uppercase tracking-wide mb-2">Bestellung</h3>
             <div className="space-y-1.5">
-              {items.map((item: any, i: number) => (
-                <div key={i} className="flex justify-between items-start text-sm">
+              {(order.items || []).map((item: any, i: number) => (
+                <div key={i} className="flex justify-between text-sm">
                   <div>
-                    <span className="font-bold text-gray-800">{item.quantity}x {item.name}</span>
+                    <span className="font-bold">{item.quantity}x {item.name}</span>
                     {(item.flavors?.length > 0 || item.selectedFlavors?.length > 0) && (
-                      <div className="text-xs text-gray-500 ml-2">🍦 {(item.flavors || item.selectedFlavors).join(', ')}</div>
+                      <div className="text-xs text-gray-400 ml-2">🍦 {(item.flavors || item.selectedFlavors).join(', ')}</div>
                     )}
                     {(item.extras?.length > 0 || item.selectedExtras?.length > 0) && (
-                      <div className="text-xs text-gray-500 ml-2">➕ {(item.extras || item.selectedExtras).map((e: any) => e.name || e).join(', ')}</div>
+                      <div className="text-xs text-gray-400 ml-2">➕ {(item.extras || item.selectedExtras).map((e: any) => e.name || e).join(', ')}</div>
                     )}
                   </div>
-                  <span className="font-semibold text-gray-600">{(item.price * item.quantity).toFixed(2)}€</span>
+                  <span className="text-gray-500 font-medium">{((item.price || 0) * item.quantity).toFixed(2)}€</span>
                 </div>
               ))}
             </div>
@@ -222,199 +204,212 @@ function NewOrderPopup({ order, onAccept, onLater }: {
 
           {order.notes && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm">
-              <strong>💬 Notiz:</strong> {order.notes}
+              <strong>💬</strong> {order.notes}
             </div>
           )}
 
           {/* Buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={onLater}
-              className="py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition flex items-center justify-center gap-2"
-            >
-              <X size={18} /> Später
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <button onClick={onLater}
+              className="py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition flex items-center justify-center gap-2">
+              <X size={16} /> Später
             </button>
-            <button
-              onClick={onAccept}
-              className="py-3 rounded-xl bg-green-500 text-white font-bold text-sm hover:bg-green-600 transition flex items-center justify-center gap-2 shadow-lg"
-            >
-              <Check size={18} /> Akzeptieren
+            <button onClick={onAccept}
+              className="py-3 rounded-xl bg-green-500 text-white font-bold text-sm hover:bg-green-600 transition flex items-center justify-center gap-2 shadow-lg">
+              <Check size={16} /> Akzeptieren
             </button>
           </div>
-
-          {/* Drucken */}
-          <button
-            onClick={() => printOrder(order)}
-            className="w-full mt-3 py-2 rounded-xl bg-gray-800 text-white text-xs font-bold hover:bg-gray-900 transition"
-          >
-            🖨️ Sofort drucken
+          <button onClick={() => printOrder(order)}
+            className="w-full py-2.5 rounded-xl bg-gray-800 text-white text-sm font-bold hover:bg-gray-900 transition">
+            🖨️ Drucken
           </button>
         </div>
       </div>
 
       <style jsx>{`
-        @keyframes bounce-in {
-          0% { transform: scale(0.5); opacity: 0; }
-          70% { transform: scale(1.05); opacity: 1; }
+        @keyframes popIn {
+          0%   { transform: scale(0.6); opacity: 0; }
+          70%  { transform: scale(1.04); opacity: 1; }
           100% { transform: scale(1); }
         }
-        .animate-bounce-in {
-          animation: bounce-in 0.4s ease-out forwards;
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50%       { transform: scale(1.3); }
         }
       `}</style>
     </div>
   )
 }
 
-// ── Order Card ───────────────────────────────────────────────
-function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onAccept, drivers, onClick }: any) {
-  const status = COLUMNS[columnIndex].id
+// ── Order Card ────────────────────────────────────────────────
+function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onAccept, drivers }: any) {
+  const status = COLUMNS[colIdx].id
   const isDelivered = status === 'GELIEFERT'
-  const canMoveLeft = columnIndex > 0 && !isDelivered
-  const canMoveRight = columnIndex < 2 && !isDelivered
+  const isOffen = status === 'OFFEN'
 
   return (
-    <div className={`bg-white rounded-lg p-2 shadow-sm border-2 hover:shadow-md transition mb-2 text-xs ${isDelivered ? 'opacity-70' : ''} ${status === 'OFFEN' ? 'border-red-200' : 'border-gray-200'}`}>
+    <div className={`bg-white rounded-xl p-3 shadow-sm border-2 hover:shadow-md transition mb-2 text-xs
+      ${isOffen ? 'border-red-300' : isDelivered ? 'border-green-200 opacity-75' : 'border-gray-200'}`}>
+
+      {/* Pfeil-Navigation */}
       <div className="flex items-center justify-between mb-2">
-        <button onClick={(e) => { e.stopPropagation(); onMoveLeft() }} disabled={!canMoveLeft}
-          className={`p-1 rounded transition ${canMoveLeft ? 'hover:bg-gray-200 text-gray-700' : 'text-gray-300 cursor-not-allowed'}`}>
+        <button
+          onClick={onMoveLeft}
+          disabled={colIdx === 0 || isDelivered}
+          className={`p-1.5 rounded-lg transition font-bold
+            ${colIdx > 0 && !isDelivered ? 'hover:bg-gray-100 text-gray-700 cursor-pointer' : 'text-gray-200 cursor-not-allowed'}`}
+        >
           <ChevronLeft size={16} />
         </button>
-        <div className="flex-1 text-center cursor-pointer hover:bg-gray-50 rounded px-2 py-1" onClick={onClick}>
-          <div className="font-bold text-xs">#{order.order_number || order.id.substring(0, 6).toUpperCase()}</div>
-          <div className="font-bold text-base">{order.total?.toFixed(2)}€</div>
+
+        <div className="flex-1 text-center px-2">
+          <div className="font-bold text-xs text-gray-500">#{order.order_number || order.id?.slice(-6).toUpperCase()}</div>
+          <div className="font-bold text-lg text-gray-900">{(order.total || 0).toFixed(2)}€</div>
         </div>
-        <button onClick={(e) => { e.stopPropagation(); onMoveRight() }} disabled={!canMoveRight}
-          className={`p-1 rounded transition ${canMoveRight ? 'hover:bg-gray-200 text-gray-700' : 'text-gray-300 cursor-not-allowed'}`}>
+
+        <button
+          onClick={onMoveRight}
+          disabled={colIdx >= 2 || isDelivered}
+          className={`p-1.5 rounded-lg transition font-bold
+            ${colIdx < 2 && !isDelivered ? 'hover:bg-gray-100 text-gray-700 cursor-pointer' : 'text-gray-200 cursor-not-allowed'}`}
+        >
           <ChevronRight size={16} />
         </button>
       </div>
 
-      <div className="space-y-1 cursor-pointer hover:bg-gray-50 rounded p-2" onClick={onClick}>
-        <div className="flex items-center gap-1 truncate">
-          <User size={12} className="text-gray-400 flex-shrink-0" />
-          <span className="font-semibold truncate">{order.customer_name}</span>
+      {/* Infos */}
+      <div className="space-y-1 px-1 mb-2">
+        <div className="flex items-center gap-1.5 truncate">
+          <User size={11} className="text-gray-400 flex-shrink-0" />
+          <span className="font-semibold truncate text-gray-800">{order.customer_name}</span>
         </div>
-        <div className="flex items-center gap-1 truncate">
-          <MapPin size={12} className="text-gray-400 flex-shrink-0" />
-          <span className="truncate text-gray-600">{order.delivery_address?.split(',')[0]}</span>
+        <div className="flex items-center gap-1.5 truncate">
+          <MapPin size={11} className="text-gray-400 flex-shrink-0" />
+          <span className="truncate text-gray-500">{order.delivery_address?.split(',')[0]}</span>
         </div>
-        <div className="flex items-center justify-between gap-1">
-          <div className="flex items-center gap-1">
-            <Clock size={12} className="text-gray-400 flex-shrink-0" />
-            <span className="text-gray-600">{new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Clock size={11} className="text-gray-400 flex-shrink-0" />
+            <span className="text-gray-500">{new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           {!isDelivered && <OrderTimer createdAt={order.created_at} />}
         </div>
+        <div className="flex items-center gap-1.5">
+          <Package size={11} className="text-gray-400 flex-shrink-0" />
+          <span className="text-gray-500">{(order.items || []).reduce((s: number, i: any) => s + i.quantity, 0)} Artikel</span>
+        </div>
       </div>
 
-      <div className="text-center py-1 bg-gray-50 rounded mt-2">
-        <span className="text-gray-600">{order.items?.reduce((s: number, i: any) => s + i.quantity, 0)} Artikel</span>
-      </div>
-
-      {/* AKZEPTIEREN Button in OFFEN Spalte */}
-      {status === 'OFFEN' && (
-        <button onClick={(e) => { e.stopPropagation(); onAccept() }}
-          className="w-full mt-2 py-1.5 bg-green-500 text-white rounded text-xs font-bold hover:bg-green-600 transition flex items-center justify-center gap-1">
+      {/* Akzeptieren (nur OFFEN) */}
+      {isOffen && (
+        <button onClick={onAccept}
+          className="w-full py-1.5 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600 transition flex items-center justify-center gap-1 mb-1.5">
           <Check size={12} /> Akzeptieren
         </button>
       )}
 
-      <button onClick={(e) => { e.stopPropagation(); printOrder(order) }}
-        className="w-full mt-2 py-1.5 bg-gray-700 text-white rounded text-xs font-bold hover:bg-gray-900 transition flex items-center justify-center gap-1">
-        <Printer size={12} /> Drucken
+      {/* Drucken */}
+      <button onClick={() => printOrder(order)}
+        className="w-full py-1.5 bg-gray-800 text-white rounded-lg text-xs font-bold hover:bg-gray-900 transition flex items-center justify-center gap-1 mb-1.5">
+        🖨️ Drucken
       </button>
 
+      {/* Fahrer zuweisen (AN_FAHRER) */}
       {status === 'AN_FAHRER' && (
-        <>
-          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-            {order.driver_id ? (
-              <div className="text-xs bg-blue-50 rounded px-2 py-1 text-center">
-                🚗 {drivers.find((d: any) => d.id === order.driver_id)?.name || 'Zugewiesen'}
-              </div>
-            ) : (
-              <select onChange={(e) => onAssignDriver(order.id, e.target.value)}
-                className="text-xs w-full border rounded px-2 py-1" onClick={(e) => e.stopPropagation()}>
-                <option value="">Fahrer...</option>
-                {drivers.map((driver: any) => (
-                  <option key={driver.id} value={driver.id}>{driver.name}</option>
-                ))}
-              </select>
-            )}
-          </div>
-          <button onClick={(e) => { e.stopPropagation(); onMarkDelivered() }}
-            className="w-full mt-2 py-1.5 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 transition">
-            ✅ Geliefert
+        <div className="mt-1 space-y-1.5">
+          {order.driver_id ? (
+            <div className="bg-blue-50 rounded-lg px-2 py-1.5 text-center text-blue-700 font-semibold text-xs">
+              🚗 {drivers.find((d: any) => d.id === order.driver_id)?.name || 'Fahrer zugewiesen'}
+            </div>
+          ) : (
+            <select onChange={e => onAssignDriver(order.id, e.target.value)}
+              className="w-full text-xs border-2 border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:outline-none">
+              <option value="">Fahrer auswählen...</option>
+              {drivers.map((d: any) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          )}
+          <button onClick={onMarkDelivered}
+            className="w-full py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition">
+            ✅ Als geliefert markieren
           </button>
-        </>
+        </div>
       )}
 
+      {/* Lieferzeit */}
       {isDelivered && order.delivered_at && (
-        <div className="text-center mt-2 text-green-600 font-semibold">
-          ✅ {new Date(order.delivered_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+        <div className="text-center text-green-600 text-xs font-semibold mt-1">
+          ✅ Geliefert um {new Date(order.delivered_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
         </div>
       )}
     </div>
   )
 }
 
-// ── Main Page ────────────────────────────────────────────────
+// ── Hauptseite ────────────────────────────────────────────────
 export default function KanbanPage() {
   const router = useRouter()
-  const [orders, setOrders] = useState<any>({ OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] })
+  const [orders, setOrders] = useState<Record<string, any[]>>({
+    OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: []
+  })
   const [loading, setLoading] = useState(true)
   const [drivers, setDrivers] = useState<any[]>([])
   const [showAllDays, setShowAllDays] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [newOrderAlert, setNewOrderAlert] = useState(false)
-  const [popupOrder, setPopupOrder] = useState<any>(null) // Neue Bestellung Popup
-  const knownOrderIds = useRef<Set<string>>(new Set())
-  const isFirstLoad = useRef(true)
-  const popupQueue = useRef<any[]>([]) // Warteschlange für mehrere neue Bestellungen
+  const [newOrderBanner, setNewOrderBanner] = useState(false)
+  const [popupOrder, setPopupOrder] = useState<any>(null)
 
+  const knownIds = useRef<Set<string>>(new Set())
+  const isFirstLoad = useRef(true)
+  const popupQueue = useRef<any[]>([])
+
+  // ── Orders laden ──────────────────────────────────────────
   const loadOrders = useCallback(async () => {
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
+
     let query = supabase.from('orders').select('*').order('created_at', { ascending: false })
     if (!showAllDays) query = query.gte('created_at', todayStart.toISOString())
-    const { data } = await query
 
-    if (data) {
-      if (!isFirstLoad.current) {
-        const newOrders = data.filter((o: any) => !knownOrderIds.current.has(o.id) && o.status === 'OFFEN')
-        if (newOrders.length > 0) {
-          if (soundEnabled) playNotificationSound(true) // Lauter Ton!
-          setNewOrderAlert(true)
-          setTimeout(() => setNewOrderAlert(false), 5000)
+    const { data, error } = await query
+    if (error) { console.error('Load orders error:', error); return }
+    if (!data) return
 
-          // Erste neue Bestellung als Popup zeigen
-          if (!popupOrder) {
-            setPopupOrder(newOrders[0])
-          }
-          // Restliche in Warteschlange
-          if (newOrders.length > 1) {
-            popupQueue.current = [...popupQueue.current, ...newOrders.slice(1)]
-          }
+    // Neue Bestellungen erkennen
+    if (!isFirstLoad.current) {
+      const newOnes = data.filter(o => !knownIds.current.has(o.id) && o.status === 'OFFEN')
+      if (newOnes.length > 0) {
+        if (soundEnabled) playSound(true)
+        setNewOrderBanner(true)
+        setTimeout(() => setNewOrderBanner(false), 5000)
+
+        if (!popupOrder) {
+          setPopupOrder(newOnes[0])
+          if (newOnes.length > 1) popupQueue.current = [...popupQueue.current, ...newOnes.slice(1)]
+        } else {
+          popupQueue.current = [...popupQueue.current, ...newOnes]
         }
       }
-      data.forEach((o: any) => knownOrderIds.current.add(o.id))
-      isFirstLoad.current = false
-
-      const grouped: any = { OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] }
-      data.forEach((order: any) => {
-        const status = order.status || 'OFFEN'
-        if (grouped[status] !== undefined) grouped[status].push(order)
-      })
-      setOrders(grouped)
     }
+
+    data.forEach(o => knownIds.current.add(o.id))
+    isFirstLoad.current = false
+
+    const grouped: Record<string, any[]> = { OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] }
+    data.forEach(o => {
+      const s = o.status || 'OFFEN'
+      if (grouped[s]) grouped[s].push(o)
+    })
+    setOrders(grouped)
     setLoading(false)
   }, [showAllDays, soundEnabled, popupOrder])
 
   useEffect(() => {
     loadOrders()
     loadDrivers()
-    const interval = setInterval(loadOrders, 15000)
-    return () => clearInterval(interval)
+    const iv = setInterval(loadOrders, 15000)
+    return () => clearInterval(iv)
   }, [loadOrders])
 
   const loadDrivers = async () => {
@@ -422,9 +417,9 @@ export default function KanbanPage() {
     if (data) setDrivers(data)
   }
 
+  // ── Popup schließen ───────────────────────────────────────
   const closePopup = () => {
     setPopupOrder(null)
-    // Nächste in Warteschlange zeigen
     if (popupQueue.current.length > 0) {
       const next = popupQueue.current[0]
       popupQueue.current = popupQueue.current.slice(1)
@@ -432,187 +427,198 @@ export default function KanbanPage() {
     }
   }
 
-  const acceptOrderFromPopup = async (order: any) => {
-    const ok = await updateOrder(order.id, { status: 'IN_BEARBEITUNG' })
+  // ── Bestellung akzeptieren (aus Popup) ───────────────────
+  const acceptFromPopup = async (order: any) => {
+    const ok = await apiUpdateOrder(order.id, { status: 'IN_BEARBEITUNG' })
     if (ok) {
-      await sendEmailNotification('order_confirmed', order)
+      await sendEmail('order_confirmed', order)
       closePopup()
       loadOrders()
     }
   }
 
+  // ── Akzeptieren (aus Karte) ───────────────────────────────
   const acceptOrder = async (orderId: string) => {
-    const order = orders['OFFEN'].find((o: any) => o.id === orderId)
-    const ok = await updateOrder(orderId, { status: 'IN_BEARBEITUNG' })
+    const order = orders['OFFEN'].find(o => o.id === orderId)
+    const ok = await apiUpdateOrder(orderId, { status: 'IN_BEARBEITUNG' })
     if (ok) {
-      await sendEmailNotification('order_confirmed', order)
+      if (order) await sendEmail('order_confirmed', order)
       loadOrders()
     }
   }
 
-  const moveOrder = async (orderId: string, currentColumnIndex: number, direction: number) => {
-    const newColumnIndex = currentColumnIndex + direction
-    if (newColumnIndex < 0 || newColumnIndex >= COLUMNS.length) return
-    const currentStatus = COLUMNS[currentColumnIndex].id
-    const newStatus = COLUMNS[newColumnIndex].id
+  // ── Pfeil links/rechts ────────────────────────────────────
+  const moveOrder = async (orderId: string, colIdx: number, dir: number) => {
+    const newColIdx = colIdx + dir
+    if (newColIdx < 0 || newColIdx > 2) return
+
+    const currentStatus = COLUMNS[colIdx].id
+    const newStatus = COLUMNS[newColIdx].id
+    const order = orders[currentStatus]?.find(o => o.id === orderId)
+    if (!order) return
+
     const updateData: any = { status: newStatus }
-    if (newStatus === 'AN_FAHRER') {
-      const order = orders[currentStatus].find((o: any) => o.id === orderId)
-      if (order && !order.assigned_at) updateData.assigned_at = new Date().toISOString()
+    if (newStatus === 'AN_FAHRER' && !order.assigned_at) {
+      updateData.assigned_at = new Date().toISOString()
     }
-    const ok = await updateOrder(orderId, updateData)
+
+    const ok = await apiUpdateOrder(orderId, updateData)
     if (ok) {
-      const order = orders[currentStatus].find((o: any) => o.id === orderId)
-      if (newStatus === 'IN_BEARBEITUNG') await sendEmailNotification('order_confirmed', order)
-      if (newStatus === 'AN_FAHRER') await sendEmailNotification('order_out_for_delivery', order)
+      if (newStatus === 'IN_BEARBEITUNG') await sendEmail('order_confirmed', order)
+      if (newStatus === 'AN_FAHRER') await sendEmail('order_out_for_delivery', order)
       loadOrders()
     }
   }
 
+  // ── Geliefert ─────────────────────────────────────────────
   const markDelivered = async (orderId: string) => {
-    if (!confirm('Als geliefert markieren?')) return
-    const ok = await updateOrder(orderId, { status: 'GELIEFERT', delivered_at: new Date().toISOString() })
+    if (!confirm('Bestellung als geliefert markieren?')) return
+    const order = Object.values(orders).flat().find(o => o.id === orderId)
+    const ok = await apiUpdateOrder(orderId, {
+      status: 'GELIEFERT',
+      delivered_at: new Date().toISOString()
+    })
     if (ok) {
-      const order = Object.values(orders).flat().find((o: any) => o.id === orderId)
-      await sendEmailNotification('order_delivered', order)
+      if (order) await sendEmail('order_delivered', order)
       loadOrders()
     }
   }
 
+  // ── Fahrer zuweisen ───────────────────────────────────────
   const assignDriver = async (orderId: string, driverId: string) => {
-    const ok = await updateOrder(orderId, { driver_id: driverId, status: 'AN_FAHRER', assigned_at: new Date().toISOString() })
+    if (!driverId) return
+    const order = orders['AN_FAHRER']?.find(o => o.id === orderId) ||
+                  orders['IN_BEARBEITUNG']?.find(o => o.id === orderId)
+    const ok = await apiUpdateOrder(orderId, {
+      driver_id: driverId,
+      status: 'AN_FAHRER',
+      assigned_at: new Date().toISOString()
+    })
     if (ok) {
-      const order = Object.values(orders).flat().find((o: any) => o.id === orderId)
-      await sendEmailNotification('order_out_for_delivery', order)
+      if (order) await sendEmail('order_out_for_delivery', order)
       loadOrders()
     }
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/admin')
-  }
-
-  const todayTotal = Object.values(orders).flat().reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+  // ── Stats ─────────────────────────────────────────────────
+  const allOrders = Object.values(orders).flat()
+  const todayTotal = allOrders.reduce((sum, o) => sum + (o.total || 0), 0)
   const deliveredCount = orders['GELIEFERT']?.length || 0
+  const openCount = orders['OFFEN']?.length || 0
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-4xl animate-pulse">🍦</div>
-    </div>
+    <AdminLayout>
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-5xl animate-pulse">🍦</div>
+      </div>
+    </AdminLayout>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AdminLayout>
 
-      {/* NEUE BESTELLUNG POPUP */}
+      {/* POPUP neue Bestellung */}
       {popupOrder && (
         <NewOrderPopup
           order={popupOrder}
-          onAccept={() => acceptOrderFromPopup(popupOrder)}
+          onAccept={() => acceptFromPopup(popupOrder)}
           onLater={closePopup}
         />
       )}
 
-      {/* BANNER ALERT */}
-      {newOrderAlert && !popupOrder && (
-        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-full shadow-xl font-bold text-sm animate-bounce">
+      {/* BANNER */}
+      {newOrderBanner && !popupOrder && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-full shadow-xl font-bold text-sm animate-bounce">
           🔔 Neue Bestellung eingegangen!
         </div>
       )}
 
-      {/* NAVBAR */}
-      <nav className="bg-gray-900 text-white px-4 py-2 flex items-center gap-1 flex-wrap shadow-lg">
-        <div className="flex items-center gap-2 mr-4">
-          <span className="text-xl">🍦</span>
-          <span className="font-bold text-sm">Simonetti</span>
-          <span className="text-xs text-gray-400 ml-1">ADMIN</span>
-        </div>
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon
-          const isActive = router.pathname === item.href
-          return (
-            <button key={item.href} onClick={() => router.push(item.href)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${isActive ? 'bg-white text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>
-              <Icon size={13} />{item.label}
-            </button>
-          )
-        })}
-        <div className="ml-auto flex items-center gap-3">
-          <button onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs transition ${soundEnabled ? 'text-yellow-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-700'}`}>
-            {soundEnabled ? <Bell size={13} /> : <BellOff size={13} />}
-            {soundEnabled ? 'Ton an' : 'Ton aus'}
-          </button>
-          <button onClick={handleLogout}
-            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition">
-            <LogOut size={13} /> Abmelden
-          </button>
-        </div>
-      </nav>
+      <div className="p-6">
 
-      {/* CONTENT */}
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold italic">Bestellungen Kanban</h1>
-            <p className="text-gray-500 text-xs">Neue Bestellungen erscheinen als Popup · Aktualisiert alle 15 Sek</p>
+            <h1 className="text-2xl font-bold">Bestellungen Kanban</h1>
+            <p className="text-gray-400 text-xs mt-0.5">Aktualisiert alle 15 Sek · Neue Bestellungen erscheinen als Popup</p>
           </div>
-          <div className="text-right">
-            <div className="text-xl font-bold text-green-600">{todayTotal.toFixed(2)}€</div>
-            <div className="text-xs text-gray-500">{deliveredCount} geliefert heute</div>
+          <div className="flex items-center gap-4">
+            {openCount > 0 && (
+              <div className="bg-red-100 text-red-700 px-3 py-1.5 rounded-full font-bold text-sm animate-pulse">
+                🔔 {openCount} offen
+              </div>
+            )}
+            <div className="text-right">
+              <div className="text-xl font-bold text-green-600">{todayTotal.toFixed(2)}€</div>
+              <div className="text-xs text-gray-400">{deliveredCount} geliefert</div>
+            </div>
+            <button onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition border-2 ${soundEnabled ? 'border-yellow-300 text-yellow-700 bg-yellow-50' : 'border-gray-200 text-gray-400'}`}>
+              {soundEnabled ? <Bell size={15} /> : <BellOff size={15} />}
+              {soundEnabled ? 'Ton an' : 'Ton aus'}
+            </button>
           </div>
         </div>
 
-        <div className="flex gap-2 mb-4">
+        {/* Filter */}
+        <div className="flex gap-2 mb-5">
           <button onClick={() => setShowAllDays(false)}
-            className={`px-3 py-1.5 rounded text-xs font-semibold transition ${!showAllDays ? 'bg-black text-white' : 'bg-white border border-gray-300 hover:border-black'}`}>
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition border-2 ${!showAllDays ? 'bg-black text-white border-black' : 'bg-white border-gray-200 hover:border-black'}`}>
             📅 Nur Heute
           </button>
           <button onClick={() => setShowAllDays(true)}
-            className={`px-3 py-1.5 rounded text-xs font-semibold transition ${showAllDays ? 'bg-black text-white' : 'bg-white border border-gray-300 hover:border-black'}`}>
-            📋 Alle
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition border-2 ${showAllDays ? 'bg-black text-white border-black' : 'bg-white border-gray-200 hover:border-black'}`}>
+            📋 Alle Bestellungen
           </button>
         </div>
 
-        <div className="grid grid-cols-4 gap-3">
-          {COLUMNS.map((column, columnIndex) => (
-            <div key={column.id} className={`rounded-lg ${column.color} p-3`}>
-              <div className="mb-3">
-                <h2 className="font-bold flex items-center gap-1.5">
-                  <span>{column.icon}</span>
-                  <span>{column.title}</span>
-                  <span className="text-sm font-normal text-gray-600">({orders[column.id]?.length || 0})</span>
-                  {column.id === 'OFFEN' && orders['OFFEN']?.length > 0 && (
-                    <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 animate-pulse">
-                      {orders['OFFEN'].length}
+        {/* Kanban Grid */}
+        <div className="grid grid-cols-4 gap-4">
+          {COLUMNS.map((col, colIdx) => (
+            <div key={col.id} className={`rounded-xl ${col.color} border-2 ${col.border} p-3`}>
+
+              {/* Spalten-Header */}
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold text-sm flex items-center gap-1.5">
+                  <span>{col.icon}</span>
+                  <span>{col.title}</span>
+                </h2>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-500 font-semibold bg-white rounded-full px-2 py-0.5">
+                    {orders[col.id]?.length || 0}
+                  </span>
+                  {col.id === 'OFFEN' && (orders[col.id]?.length || 0) > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                      {orders[col.id].length}
                     </span>
                   )}
-                </h2>
+                </div>
               </div>
-              <div className="min-h-[500px]">
-                {orders[column.id]?.map((order: any) => (
+
+              {/* Karten */}
+              <div className="min-h-[400px] space-y-0">
+                {orders[col.id]?.map(order => (
                   <OrderCard
                     key={order.id}
                     order={order}
-                    columnIndex={columnIndex}
-                    onMoveLeft={() => moveOrder(order.id, columnIndex, -1)}
-                    onMoveRight={() => moveOrder(order.id, columnIndex, 1)}
+                    colIdx={colIdx}
+                    onMoveLeft={() => moveOrder(order.id, colIdx, -1)}
+                    onMoveRight={() => moveOrder(order.id, colIdx, 1)}
                     onMarkDelivered={() => markDelivered(order.id)}
                     onAssignDriver={assignDriver}
                     onAccept={() => acceptOrder(order.id)}
                     drivers={drivers}
-                    onClick={() => router.push(`/admin/orders/${order.id}`)}
                   />
                 ))}
-                {orders[column.id]?.length === 0 && (
-                  <div className="text-center text-gray-400 text-xs pt-8">Keine Bestellungen</div>
+                {(orders[col.id]?.length || 0) === 0 && (
+                  <div className="text-center text-gray-400 text-xs pt-10">
+                    Keine Bestellungen
+                  </div>
                 )}
               </div>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }
