@@ -4,7 +4,9 @@ import HeroSection from '@/components/HeroSection'
 import ProductCard, { ProductGrid, CategoryHeader } from '@/components/ProductCard'
 import MiniCart from '@/components/MiniCart'
 import Footer from '@/components/Footer'
+import CookieBanner from '@/components/CookieBanner'
 import { supabase } from '@/lib/supabase'
+import ShopStatusBanner from '@/components/ShopStatusBanner'
 
 export default function Home() {
   const [products, setProducts] = useState([])
@@ -59,23 +61,20 @@ export default function Home() {
 
     if (data) {
       setProducts(data)
-      // Extract unique categories from products AND check if visible in categories table
       await loadVisibleCategories(data)
     }
     setLoading(false)
   }
 
   const loadVisibleCategories = async (products) => {
-    // Hole alle sichtbaren PARENT Kategorien (ohne parent_id)
     const { data: categoriesData } = await supabase
       .from('categories')
       .select('name')
       .eq('visible', true)
-      .is('parent_id', null)  // Nur Top-Level Kategorien
+      .is('parent_id', null)
       .order('sort_order', { ascending: true })
     
     if (categoriesData) {
-      // Filtere nur Kategorien die auch Produkte haben
       const categoriesWithProducts = categoriesData
         .map(c => c.name)
         .filter(catName => products.some(p => p.category === catName))
@@ -101,12 +100,12 @@ export default function Home() {
       selectedFlavors: selectedFlavors,
       selectedExtras: selectedExtras,
       totalPrice: (product.price * portions) + selectedExtras.reduce((sum, e) => sum + e.price, 0),
-      cartId: `${product.id}-${Date.now()}` // Unique ID für mehrfache gleiche Produkte
+      cartId: `${product.id}-${Date.now()}`
     }
 
     const newCart = [...cart, cartItem]
     saveCart(newCart)
-    setIsCartOpen(true) // Auto-open cart
+    setIsCartOpen(true)
   }
 
   const updateCartQuantity = (cartId, newQuantity) => {
@@ -132,7 +131,6 @@ export default function Home() {
   }
 
   const filteredProducts = products.filter(p => p.category === selectedCategory)
-
   const cartTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0)
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -143,6 +141,7 @@ export default function Home() {
         cartCount={cartCount}
         onCartClick={() => setIsCartOpen(true)}
       />
+      <ShopStatusBanner />
 
       {/* Hero Section */}
       <HeroSection />
@@ -218,6 +217,9 @@ export default function Home() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Cookie Banner – immer zuletzt damit es über allem liegt */}
+      <CookieBanner />
     </div>
   )
 }
