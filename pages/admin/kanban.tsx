@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ChevronLeft, ChevronRight, User, MapPin, Clock, Printer, LayoutDashboard, ShoppingBag, Package, Tag, BarChart2, Ticket, Heart, Settings, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User, MapPin, Clock, Printer, LayoutDashboard, ShoppingBag, Package, Tag, BarChart2, Ticket, Heart, Settings, LogOut, Bell, BellOff } from 'lucide-react'
 import { useRouter } from 'next/router'
 
 const COLUMNS = [
@@ -21,6 +21,79 @@ const NAV_ITEMS = [
   { label: 'Favoriten', href: '/admin/favorites', icon: Heart },
   { label: 'Setup', href: '/admin/setup', icon: Settings },
 ]
+
+// API Helper - nutzt Service Role Key serverseitig
+async function updateOrder(orderId: string, data: any) {
+  const response = await fetch(`/api/orders/${orderId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  if (!response.ok) {
+    const err = await response.json()
+    console.error('Order update error:', err)
+    return false
+  }
+  return true
+}
+
+// Ton erzeugen mit Web Audio API
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    
+    // Drei aufsteigende Töne
+    const notes = [523, 659, 784] // C, E, G
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = freq
+      osc.type = 'sine'
+      const startTime = ctx.currentTime + i * 0.15
+      gain.gain.setValueAtTime(0.3, startTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3)
+      osc.start(startTime)
+      osc.stop(startTime + 0.3)
+    })
+  } catch (e) {
+    console.log('Audio not available')
+  }
+}
+
+// Timer Komponente - zeigt wie lange Bestellung schon in dieser Spalte ist
+function OrderTimer({ createdAt, status }: { createdAt: string, status: string }) {
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const calc = () => {
+      const diff = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000)
+      setElapsed(diff)
+    }
+    calc()
+    const interval = setInterval(calc, 10000) // alle 10 Sek aktualisieren
+    return () => clearInterval(interval)
+  }, [createdAt])
+
+  const minutes = Math.floor(elapsed / 60)
+  const hours = Math.floor(minutes / 60)
+  const displayMinutes = minutes % 60
+
+  // Farbe je nach Wartezeit
+  let color = 'text-green-600'
+  if (minutes >= 30) color = 'text-red-600 font-bold'
+  else if (minutes >= 15) color = 'text-orange-500 font-semibold'
+  else if (minutes >= 10) color = 'text-yellow-600'
+
+  const timeStr = hours > 0
+    ? `${hours}h ${displayMinutes}m`
+    : `${minutes}m`
+
+  return (
+    <span className={`text-xs ${color}`}>⏱ {timeStr}</span>
+  )
+}
 
 function printOrder(order: any) {
   const items = order.items?.map((item: any) =>
@@ -89,11 +162,15 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
           <MapPin size={12} className="text-gray-400 flex-shrink-0" />
           <span className="truncate text-gray-600">{order.delivery_address?.split(',')[0]}</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Clock size={12} className="text-gray-400 flex-shrink-0" />
-          <span className="text-gray-600">
-            {new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-          </span>
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1">
+            <Clock size={12} className="text-gray-400 flex-shrink-0" />
+            <span className="text-gray-600">
+              {new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+          {/* Timer - nur bei nicht-gelieferten */}
+          {!isDelivered && <OrderTimer createdAt={order.created_at} status={status} />}
         </div>
       </div>
 
@@ -145,21 +222,33 @@ export default function KanbanPage() {
   const [loading, setLoading] = useState(true)
   const [drivers, setDrivers] = useState<any[]>([])
   const [showAllDays, setShowAllDays] = useState(false)
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [newOrderAlert, setNewOrderAlert] = useState(false)
+  const knownOrderIds = useRef<Set<string>>(new Set())
+  const isFirstLoad = useRef(true)
 
-  useEffect(() => {
-    loadOrders()
-    loadDrivers()
-    const interval = setInterval(loadOrders, 30000)
-    return () => clearInterval(interval)
-  }, [showAllDays])
-
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
     let query = supabase.from('orders').select('*').order('created_at', { ascending: false })
     if (!showAllDays) query = query.gte('created_at', todayStart.toISOString())
     const { data } = await query
+
     if (data) {
+      // Neue Bestellungen erkennen
+      if (!isFirstLoad.current) {
+        const newOrders = data.filter((o: any) => !knownOrderIds.current.has(o.id) && o.status === 'OFFEN')
+        if (newOrders.length > 0) {
+          if (soundEnabled) playNotificationSound()
+          setNewOrderAlert(true)
+          setTimeout(() => setNewOrderAlert(false), 5000)
+        }
+      }
+
+      // Alle bekannten IDs speichern
+      data.forEach((o: any) => knownOrderIds.current.add(o.id))
+      isFirstLoad.current = false
+
       const grouped: any = { OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] }
       data.forEach((order: any) => {
         const status = order.status || 'OFFEN'
@@ -168,7 +257,14 @@ export default function KanbanPage() {
       setOrders(grouped)
     }
     setLoading(false)
-  }
+  }, [showAllDays, soundEnabled])
+
+  useEffect(() => {
+    loadOrders()
+    loadDrivers()
+    const interval = setInterval(loadOrders, 15000) // alle 15 Sek prüfen
+    return () => clearInterval(interval)
+  }, [loadOrders])
 
   const loadDrivers = async () => {
     const { data } = await supabase.from('drivers').select('*').eq('is_active', true).order('name')
@@ -180,28 +276,31 @@ export default function KanbanPage() {
     if (newColumnIndex < 0 || newColumnIndex >= COLUMNS.length) return
     const currentStatus = COLUMNS[currentColumnIndex].id
     const newStatus = COLUMNS[newColumnIndex].id
-    const updateData: any = { status: newStatus, updated_at: new Date().toISOString() }
+    const updateData: any = { status: newStatus }
     if (newStatus === 'AN_FAHRER') {
       const order = orders[currentStatus].find((o: any) => o.id === orderId)
       if (order && !order.assigned_at) updateData.assigned_at = new Date().toISOString()
     }
-    const { error } = await supabase.from('orders').update(updateData).eq('id', orderId)
-    if (!error) loadOrders()
+    const ok = await updateOrder(orderId, updateData)
+    if (ok) loadOrders()
   }
 
   const markDelivered = async (orderId: string) => {
     if (!confirm('Als geliefert markieren?')) return
-    const { error } = await supabase.from('orders').update({
-      status: 'GELIEFERT', delivered_at: new Date().toISOString(), updated_at: new Date().toISOString()
-    }).eq('id', orderId)
-    if (!error) loadOrders()
+    const ok = await updateOrder(orderId, {
+      status: 'GELIEFERT',
+      delivered_at: new Date().toISOString()
+    })
+    if (ok) loadOrders()
   }
 
   const assignDriver = async (orderId: string, driverId: string) => {
-    const { error } = await supabase.from('orders').update({
-      driver_id: driverId, status: 'AN_FAHRER', assigned_at: new Date().toISOString()
-    }).eq('id', orderId)
-    if (!error) loadOrders()
+    const ok = await updateOrder(orderId, {
+      driver_id: driverId,
+      status: 'AN_FAHRER',
+      assigned_at: new Date().toISOString()
+    })
+    if (ok) loadOrders()
   }
 
   const handleLogout = async () => {
@@ -220,6 +319,13 @@ export default function KanbanPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+
+      {/* NEUE BESTELLUNG ALERT */}
+      {newOrderAlert && (
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-full shadow-xl font-bold text-sm animate-bounce">
+          🔔 Neue Bestellung eingegangen!
+        </div>
+      )}
 
       {/* HORIZONTALE TOP NAVBAR */}
       <nav className="bg-gray-900 text-white px-4 py-2 flex items-center gap-1 flex-wrap shadow-lg">
@@ -244,6 +350,13 @@ export default function KanbanPage() {
         })}
 
         <div className="ml-auto flex items-center gap-3">
+          {/* Sound Toggle */}
+          <button onClick={() => setSoundEnabled(!soundEnabled)}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs transition ${soundEnabled ? 'text-yellow-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-700'}`}
+            title={soundEnabled ? 'Ton ausschalten' : 'Ton einschalten'}>
+            {soundEnabled ? <Bell size={13} /> : <BellOff size={13} />}
+            {soundEnabled ? 'Ton an' : 'Ton aus'}
+          </button>
           <span className="text-xs text-gray-400 hidden md:block">info@eiscafe-simonetti.de</span>
           <button onClick={handleLogout}
             className="flex items-center gap-1 px-3 py-1.5 rounded text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition">
@@ -257,7 +370,7 @@ export default function KanbanPage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-2xl font-bold italic">Bestellungen Kanban</h1>
-            <p className="text-gray-500 text-xs">Pfeile ← → zum Verschieben</p>
+            <p className="text-gray-500 text-xs">Pfeile ← → zum Verschieben · Aktualisiert alle 15 Sek</p>
           </div>
           <div className="text-right">
             <div className="text-xl font-bold text-green-600">{todayTotal.toFixed(2)}€</div>
