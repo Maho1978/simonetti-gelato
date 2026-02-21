@@ -156,8 +156,8 @@ function ExtrasContent() {
               type="number"
               step="0.01"
               placeholder="Preis *"
-              value={newExtra.price}
-              onChange={(e) => setNewExtra({ ...newExtra, price: parseFloat(e.target.value) })}
+              value={newExtra.price || ''}
+              onChange={(e) => setNewExtra({ ...newExtra, price: parseFloat(e.target.value.replace(',', '.')) || 0 })}
               className="px-4 py-2 border border-gray-300 rounded-lg"
             />
             
@@ -226,8 +226,8 @@ function ExtrasContent() {
                             <input
                               type="number"
                               step="0.01"
-                              value={editForm.price}
-                              onChange={(e) => setEditForm({ ...editForm, price: parseFloat(e.target.value) })}
+                              value={editForm.price || ''}
+                              onChange={(e) => setEditForm({ ...editForm, price: parseFloat(e.target.value.replace(',', '.')) || 0 })}
                               className="px-3 py-2 border border-gray-300 rounded"
                             />
                             <select
