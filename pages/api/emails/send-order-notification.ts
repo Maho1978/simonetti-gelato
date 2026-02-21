@@ -55,6 +55,7 @@ export default async function handler(
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: recipientEmail,
+      reply_to: 'info@eiscafe-simonetti.de', // Antworten kommen bei Hetzner an
       subject: emailContent.subject,
       html: emailContent.html,
     })
