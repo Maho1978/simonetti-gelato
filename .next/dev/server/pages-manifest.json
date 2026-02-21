@@ -2,5 +2,9 @@
   "/": "pages/index.js",
   "/_app": "pages/_app.js",
   "/_document": "pages/_document.js",
-  "/_error": "pages/_error.js"
+  "/_error": "pages/_error.js",
+  "/admin": "pages/admin.js",
+  "/admin/kanban": "pages/admin/kanban.js",
+  "/auth/login": "pages/auth/login.js",
+  "/ueber-uns": "pages/ueber-uns.js"
 }

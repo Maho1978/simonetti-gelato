@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import { ChevronLeft, Plus, Edit2, Trash2, Copy, Check, X } from 'lucide-react'
+import AdminLayout from '@/components/AdminLayout'
+import { Plus, Edit2, Trash2, Copy, Check, X } from 'lucide-react'
 
 interface Voucher {
   id: string
@@ -19,7 +18,7 @@ interface Voucher {
   created_at: string
 }
 
-export default function Vouchers({ session }: { session: Session | null }) {
+function VouchersContent() {
   const router = useRouter()
   const [vouchers, setVouchers] = useState<Voucher[]>([])
   const [showModal, setShowModal] = useState(false)
@@ -36,12 +35,16 @@ export default function Vouchers({ session }: { session: Session | null }) {
   const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
+    checkAuth()
+    fetchVouchers()
+  }, [])
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       router.push('/auth/login?redirect=/admin/vouchers')
-      return
     }
-    fetchVouchers()
-  }, [session])
+  }
 
   const fetchVouchers = async () => {
     const { data } = await supabase
@@ -133,299 +136,205 @@ export default function Vouchers({ session }: { session: Session | null }) {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#fdfcfb' }}>
-      <Navbar session={session} cartCount={0} onCartClick={() => {}} />
-
-      <div className="max-w-7xl mx-auto px-6 py-10">
-        <button 
-          onClick={() => router.push('/admin')}
-          className="flex items-center gap-2 text-[#8da399] font-bold text-sm mb-6 hover:text-[#4a5d54] transition"
-        >
-          <ChevronLeft size={18} /> ZURÜCK ZUM ADMIN
-        </button>
-
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-5xl font-display font-bold italic" style={{ color: '#4a5d54' }}>
-              Gutscheine
-            </h1>
-            <p className="text-lg mt-1" style={{ color: '#8da399' }}>
-              {vouchers.length} Gutscheine erstellt
-            </p>
-          </div>
-          <button
-            onClick={() => { setShowModal(true); resetForm(); }}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition hover:opacity-90"
-            style={{ backgroundColor: '#4a5d54' }}
-          >
-            <Plus size={20} />
-            Neuer Gutschein
-          </button>
+    <div className="p-8">
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h1 className="text-4xl font-display font-bold italic text-[#4a5d54]">Gutscheine</h1>
+          <p className="text-gray-500">{vouchers.length} Gutscheine insgesamt</p>
         </div>
+        <button
+          onClick={() => { setShowModal(true); resetForm(); }}
+          className="flex items-center gap-2 px-6 py-3 bg-[#4a5d54] text-white rounded-xl font-bold hover:opacity-90 transition shadow-sm"
+        >
+          <Plus size={20} /> Neuer Gutschein
+        </button>
+      </div>
 
-        {/* Gutschein-Liste */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {vouchers.map(voucher => {
-            const isExpired = voucher.valid_until && new Date(voucher.valid_until) < new Date()
-            const isExhausted = voucher.current_uses >= voucher.max_uses
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {vouchers.map(voucher => {
+          const isExpired = voucher.valid_until && new Date(voucher.valid_until) < new Date()
+          const isExhausted = voucher.current_uses >= voucher.max_uses
+          const isActive = voucher.is_active && !isExpired && !isExhausted
 
-            return (
-              <div
-                key={voucher.id}
-                className={`bg-white rounded-2xl p-6 shadow-sm border-2 transition-all ${
-                  voucher.is_active && !isExpired && !isExhausted
-                    ? 'border-green-200 bg-green-50'
-                    : 'border-gray-200 opacity-60'
-                }`}
-              >
-                {/* Header */}
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => copyCode(voucher.code)}
-                      className="px-4 py-2 bg-gradient-to-r from-[#4a5d54] to-[#8da399] text-white rounded-lg font-bold text-lg tracking-wider hover:opacity-90 transition flex items-center gap-2"
-                    >
-                      {voucher.code}
-                      {copied === voucher.code ? <Check size={16} /> : <Copy size={16} />}
-                    </button>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleEdit(voucher)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition"
-                    >
-                      <Edit2 size={16} style={{ color: '#4a5d54' }} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(voucher.id)}
-                      className="p-2 hover:bg-red-50 rounded-lg transition"
-                    >
-                      <Trash2 size={16} className="text-red-500" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Rabatt */}
-                <div className="mb-4">
-                  <div className="text-4xl font-bold mb-1" style={{ color: '#4a5d54' }}>
-                    {voucher.discount_type === 'percentage' 
-                      ? `${voucher.discount_value}%`
-                      : `${voucher.discount_value}€`
-                    }
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {voucher.discount_type === 'percentage' ? 'Prozentual' : 'Festbetrag'}
-                  </div>
-                </div>
-
-                {/* Infos */}
-                <div className="space-y-2 text-sm mb-4">
-                  {voucher.min_order_value > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Mindestbestellwert:</span>
-                      <span className="font-bold">{voucher.min_order_value}€</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Einlösungen:</span>
-                    <span className="font-bold">
-                      {voucher.current_uses} / {voucher.max_uses}
-                    </span>
-                  </div>
-                  {voucher.valid_until && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Gültig bis:</span>
-                      <span className="font-bold">
-                        {new Date(voucher.valid_until).toLocaleDateString('de-DE')}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Status */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <div className="flex items-center gap-2">
-                    {isExpired && <span className="text-xs font-bold text-red-500">⏰ Abgelaufen</span>}
-                    {isExhausted && <span className="text-xs font-bold text-orange-500">⚠️ Aufgebraucht</span>}
-                    {!isExpired && !isExhausted && voucher.is_active && (
-                      <span className="text-xs font-bold text-green-600">✅ Aktiv</span>
-                    )}
-                    {!voucher.is_active && <span className="text-xs font-bold text-gray-400">⏸️ Deaktiviert</span>}
-                  </div>
-                  <button
-                    onClick={() => toggleActive(voucher.id, voucher.is_active)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
-                      voucher.is_active
-                        ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                        : 'bg-green-100 text-green-600 hover:bg-green-200'
-                    }`}
-                  >
-                    {voucher.is_active ? 'Deaktivieren' : 'Aktivieren'}
+          return (
+            <div
+              key={voucher.id}
+              className={`bg-white rounded-2xl p-6 shadow-sm border-2 transition-all ${
+                isActive ? 'border-green-100' : 'border-gray-200 opacity-75'
+              }`}
+            >
+              <div className="flex justify-between items-start mb-4">
+                <button
+                  onClick={() => copyCode(voucher.code)}
+                  className="px-4 py-2 bg-[#f9f8f4] border border-[#4a5d54]/20 text-[#4a5d54] rounded-lg font-bold text-lg tracking-wider hover:bg-white transition flex items-center gap-2"
+                >
+                  {voucher.code}
+                  {copied === voucher.code ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+                </button>
+                <div className="flex gap-1">
+                  <button onClick={() => handleEdit(voucher)} className="p-2 hover:bg-gray-100 rounded-lg transition text-[#4a5d54]">
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(voucher.id)} className="p-2 hover:bg-red-50 rounded-lg transition text-red-500">
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
-            )
-          })}
-        </div>
 
-        {/* Modal */}
-        {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <div className="bg-white rounded-3xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-6">
-                <h2 className="text-2xl font-display font-bold italic" style={{ color: '#4a5d54' }}>
-                  {editingVoucher ? 'Gutschein bearbeiten' : 'Neuer Gutschein'}
-                </h2>
-                <button onClick={() => { setShowModal(false); setEditingVoucher(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X size={20} />
+              <div className="mb-4">
+                <div className="text-4xl font-bold text-[#4a5d54]">
+                  {voucher.discount_type === 'percentage' ? `${voucher.discount_value}%` : `${voucher.discount_value}€`}
+                </div>
+                <div className="text-xs uppercase tracking-widest text-[#8da399] font-bold">
+                  {voucher.discount_type === 'percentage' ? 'Rabatt' : 'Festbetrag'}
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm border-t border-gray-50 pt-4 mb-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Min. Bestellwert:</span>
+                  <span className="font-bold">{voucher.min_order_value}€</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Einlösungen:</span>
+                  <span className="font-bold">{voucher.current_uses} / {voucher.max_uses}</span>
+                </div>
+                {voucher.valid_until && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Ablaufdatum:</span>
+                    <span className="font-bold">{new Date(voucher.valid_until).toLocaleDateString('de-DE')}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-black uppercase tracking-tighter">
+                  {isExpired && <span className="text-red-500">⏰ Abgelaufen</span>}
+                  {isExhausted && <span className="text-orange-500">⚠️ Limit erreicht</span>}
+                  {isActive && <span className="text-green-600">✅ Aktiv</span>}
+                  {!voucher.is_active && <span className="text-gray-400">⏸️ Pausiert</span>}
+                </div>
+                <button
+                  onClick={() => toggleActive(voucher.id, voucher.is_active)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                    voucher.is_active ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
+                  }`}
+                >
+                  {voucher.is_active ? 'Deaktivieren' : 'Aktivieren'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-display font-bold italic text-[#4a5d54]">
+                {editingVoucher ? 'Gutschein anpassen' : 'Neuer Gutschein'}
+              </h2>
+              <button onClick={() => { setShowModal(false); setEditingVoucher(null); }} className="p-2 hover:bg-gray-100 rounded-full">
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Code</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={formData.code}
+                    onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    className="flex-1 border-2 border-gray-100 rounded-xl px-4 py-3 font-bold text-lg focus:border-[#4a5d54] outline-none transition"
+                    placeholder="SIMONETTI2026"
+                  />
+                  <button type="button" onClick={generateCode} className="px-4 py-2 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition">🎲</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, discount_type: 'percentage' })}
+                  className={`p-4 rounded-xl border-2 transition font-bold ${formData.discount_type === 'percentage' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}
+                >
+                  Prozent (%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, discount_type: 'fixed' })}
+                  className={`p-4 rounded-xl border-2 transition font-bold ${formData.discount_type === 'fixed' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}
+                >
+                  Festbetrag (€)
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Code */}
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#8da399] uppercase tracking-widest mb-2">
-                    Gutscheincode
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      required
-                      value={formData.code}
-                      onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                      className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-3 font-bold text-lg tracking-wider focus:border-[#4a5d54] focus:outline-none"
-                      placeholder="SUMMER20"
-                    />
-                    <button
-                      type="button"
-                      onClick={generateCode}
-                      className="px-6 py-3 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition"
-                    >
-                      🎲 Generieren
-                    </button>
-                  </div>
-                </div>
-
-                {/* Rabatt-Typ */}
-                <div>
-                  <label className="block text-xs font-bold text-[#8da399] uppercase tracking-widest mb-2">
-                    Rabatt-Typ
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, discount_type: 'percentage' })}
-                      className={`p-4 rounded-xl border-2 transition ${
-                        formData.discount_type === 'percentage'
-                          ? 'border-[#4a5d54] bg-[#f9f8f4]'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="text-2xl mb-1">📊</div>
-                      <div className="font-bold">Prozentual (%)</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, discount_type: 'fixed' })}
-                      className={`p-4 rounded-xl border-2 transition ${
-                        formData.discount_type === 'fixed'
-                          ? 'border-[#4a5d54] bg-[#f9f8f4]'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="text-2xl mb-1">💰</div>
-                      <div className="font-bold">Festbetrag (€)</div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Rabatt-Wert */}
-                <div>
-                  <label className="block text-xs font-bold text-[#8da399] uppercase tracking-widest mb-2">
-                    Rabatt-Wert {formData.discount_type === 'percentage' ? '(%)' : '(€)'}
-                  </label>
+                  <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Wert</label>
                   <input
                     type="number"
                     required
-                    min="0"
-                    step="0.01"
                     value={formData.discount_value}
                     onChange={e => setFormData({ ...formData, discount_value: parseFloat(e.target.value) })}
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-bold text-2xl focus:border-[#4a5d54] focus:outline-none"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]"
                   />
                 </div>
-
-                {/* Mindestbestellwert */}
                 <div>
-                  <label className="block text-xs font-bold text-[#8da399] uppercase tracking-widest mb-2">
-                    Mindestbestellwert (€) - Optional
-                  </label>
+                  <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Mindestumsatz</label>
                   <input
                     type="number"
-                    min="0"
-                    step="0.01"
                     value={formData.min_order_value}
                     onChange={e => setFormData({ ...formData, min_order_value: parseFloat(e.target.value) })}
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-semibold focus:border-[#4a5d54] focus:outline-none"
-                    placeholder="0.00"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]"
                   />
                 </div>
+              </div>
 
-                {/* Max Nutzungen */}
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#8da399] uppercase tracking-widest mb-2">
-                    Maximale Einlösungen
-                  </label>
+                  <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Limit</label>
                   <input
                     type="number"
                     required
-                    min="1"
                     value={formData.max_uses}
                     onChange={e => setFormData({ ...formData, max_uses: parseInt(e.target.value) })}
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-semibold focus:border-[#4a5d54] focus:outline-none"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]"
                   />
                 </div>
-
-                {/* Gültig bis */}
                 <div>
-                  <label className="block text-xs font-bold text-[#8da399] uppercase tracking-widest mb-2">
-                    Gültig bis - Optional
-                  </label>
+                  <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Ablaufdatum</label>
                   <input
                     type="date"
                     value={formData.valid_until}
                     onChange={e => setFormData({ ...formData, valid_until: e.target.value })}
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-semibold focus:border-[#4a5d54] focus:outline-none"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]"
                   />
                 </div>
+              </div>
 
-                {/* Aktiv */}
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="is_active"
-                    checked={formData.is_active}
-                    onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-5 h-5"
-                  />
-                  <label htmlFor="is_active" className="font-semibold cursor-pointer">
-                    Sofort aktivieren
-                  </label>
-                </div>
-
-                {/* Submit */}
-                <button
-                  type="submit"
-                  className="w-full py-4 rounded-xl font-bold text-white text-lg transition hover:opacity-90"
-                  style={{ backgroundColor: '#4a5d54' }}
-                >
-                  {editingVoucher ? '💾 Speichern' : '✨ Gutschein erstellen'}
-                </button>
-              </form>
-            </div>
+              <button
+                type="submit"
+                className="w-full py-4 bg-[#4a5d54] text-white rounded-xl font-bold text-lg hover:opacity-90 transition shadow-lg"
+              >
+                {editingVoucher ? 'Änderungen speichern' : 'Gutschein aktivieren'}
+              </button>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+export default function VouchersPage() {
+  return (
+    <AdminLayout>
+      <VouchersContent />
+    </AdminLayout>
   )
 }

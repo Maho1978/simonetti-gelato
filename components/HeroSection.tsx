@@ -77,12 +77,12 @@ export default function HeroSection() {
                 Unsere Geschichte
               </h2>
               <p className="text-gray-300 text-lg leading-relaxed mb-6">
-                Seit über 40 Jahren verwöhnen wir unsere Gäste mit dem besten Gelato der Stadt. 
-                Was als kleine Eisdiele begann, ist heute eine Institution in Langenfeld.
+                Authentisches Gelato nach italienischer Tradition. Unsere Familie führt die Kunst der Eisherstellung 
+                mit Hingabe und Stolz fort – was als kleiner Familienbetrieb begann, ist heute eine feste Größe in Langenfeld.
               </p>
               <p className="text-gray-300 text-lg leading-relaxed mb-8">
                 Jede Sorte wird täglich frisch in unserer eigenen Manufaktur hergestellt – 
-                mit Leidenschaft, Erfahrung und den besten Zutaten.
+                mit Leidenschaft, Präzision und nur den besten Zutaten. Ehrliches Handwerk statt Abkürzungen.
               </p>
               <Link href="/ueber-uns">
                 <button className="px-8 py-3 border-2 border-white text-white font-medium text-sm uppercase tracking-wider hover:bg-white hover:text-black transition">

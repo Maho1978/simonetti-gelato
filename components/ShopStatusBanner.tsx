@@ -1,187 +1,150 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Clock, X } from 'lucide-react'
+import { Clock, Truck, AlertCircle } from 'lucide-react'
 
-interface ShopStatusBannerProps {
-  onClose?: () => void
-}
-
-export default function ShopStatusBanner({ onClose }: ShopStatusBannerProps) {
-  const [isOpen, setIsOpen] = useState(true)
-  const [message, setMessage] = useState('')
-  const [nextOpeningTime, setNextOpeningTime] = useState('')
-  const [countdown, setCountdown] = useState('')
-  const [show, setShow] = useState(false)
+export default function ShopStatusBanner() {
+  const [status, setStatus] = useState({
+    isOpen: true,
+    manualClose: false,
+    closeMessage: '',
+    deliveryDuration: '30-45',
+    todayHours: null
+  })
 
   useEffect(() => {
-    checkShopStatus()
-    const interval = setInterval(checkShopStatus, 60000) // Jede Minute prüfen
+    loadStatus()
+    
+    // Update alle 60 Sekunden
+    const interval = setInterval(loadStatus, 60000)
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    if (!isOpen && nextOpeningTime) {
-      const timer = setInterval(() => {
-        updateCountdown()
-      }, 1000)
-      return () => clearInterval(timer)
-    }
-  }, [isOpen, nextOpeningTime])
-
-  const checkShopStatus = async () => {
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-    const dayOfWeek = now.getDay() // 0 = Sonntag, 1 = Montag, etc.
-
-    // 1. Prüfe spezielle Tage im Kalender
-    const { data: specialDay } = await supabase
-      .from('opening_hours_calendar')
-      .select('*')
-      .eq('date', today)
-      .single()
-
-    if (specialDay) {
-      if (!specialDay.is_open) {
-        setIsOpen(false)
-        setMessage(specialDay.reason || 'Heute geschlossen')
-        setShow(true)
-        calculateNextOpening(now)
-        return
-      }
-      // Spezielle Öffnungszeiten für heute
-      if (specialDay.opening_hours) {
-        const [open, close] = specialDay.opening_hours.split('-').map(t => t.trim())
-        if (currentTime < open || currentTime > close) {
-          setIsOpen(false)
-          setMessage(`Heute geöffnet: ${specialDay.opening_hours}`)
-          setNextOpeningTime(open)
-          setShow(true)
-          return
-        } else {
-          setIsOpen(true)
-          setShow(false)
-          return
-        }
-      }
-    }
-
-    // 2. Prüfe normale Öffnungszeiten aus shop_settings
-    const { data: settings } = await supabase
+  const loadStatus = async () => {
+    const { data } = await supabase
       .from('shop_settings')
       .select('*')
       .eq('id', 'main')
       .single()
 
-    if (settings) {
-      const isOpenNow = settings.is_open && 
-                       currentTime >= settings.open_from && 
-                       currentTime <= settings.open_until
+    if (data) {
+      const today = new Date().toISOString().split('T')[0]
+      
+      // Prüfe ob heute ein Sondertag ist
+      const { data: specialDay } = await supabase
+        .from('special_hours')
+        .select('*')
+        .eq('date', today)
+        .single()
 
-      if (!isOpenNow) {
-        setIsOpen(false)
-        if (!settings.is_open) {
-          setMessage('Derzeit geschlossen')
-        } else if (currentTime < settings.open_from) {
-          setMessage(`Öffnet heute um ${settings.open_from} Uhr`)
-          setNextOpeningTime(`${today}T${settings.open_from}:00`)
-        } else {
-          setMessage('Heute bereits geschlossen')
-        }
-        setShow(true)
-        calculateNextOpening(now)
-      } else {
-        setIsOpen(true)
-        setShow(false)
-      }
+      const isOpen = checkIfOpen(data, specialDay)
+      const todayHours = specialDay 
+        ? (specialDay.is_closed ? null : { open: specialDay.custom_open, close: specialDay.custom_close })
+        : getTodayHours(data.opening_hours)
+
+      setStatus({
+        isOpen,
+        manualClose: data.manual_close,
+        closeMessage: specialDay?.label || data.close_message || '',
+        deliveryDuration: `${data.delivery_duration_min}-${data.delivery_duration_max}`,
+        todayHours
+      })
     }
   }
 
-  const calculateNextOpening = async (now: Date) => {
-    // Suche nächsten Tag an dem geöffnet ist
-    const { data: settings } = await supabase
-      .from('shop_settings')
-      .select('*')
-      .eq('id', 'main')
-      .single()
+  const checkIfOpen = (data, specialDay) => {
+    // Manuell geschlossen?
+    if (data.manual_close) return false
 
-    if (!settings) return
+    // Sondertag geschlossen?
+    if (specialDay?.is_closed) return false
 
-    // Morgen
-    const tomorrow = new Date(now)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowDate = tomorrow.toISOString().split('T')[0]
-
-    // Prüfe ob morgen spezieller Tag
-    const { data: tomorrowSpecial } = await supabase
-      .from('opening_hours_calendar')
-      .select('*')
-      .eq('date', tomorrowDate)
-      .single()
-
-    if (tomorrowSpecial && tomorrowSpecial.is_open) {
-      const openTime = tomorrowSpecial.opening_hours?.split('-')[0]?.trim() || settings.open_from
-      setNextOpeningTime(`${tomorrowDate}T${openTime}:00`)
-    } else if (!tomorrowSpecial) {
-      setNextOpeningTime(`${tomorrowDate}T${settings.open_from}:00`)
+    // Sondertag mit eigenen Öffnungszeiten?
+    if (specialDay && !specialDay.is_closed) {
+      const now = new Date()
+      const currentTime = now.getHours() * 60 + now.getMinutes()
+      const [openH, openM] = specialDay.custom_open.split(':').map(Number)
+      const [closeH, closeM] = specialDay.custom_close.split(':').map(Number)
+      const openTime = openH * 60 + openM
+      const closeTime = closeH * 60 + closeM
+      return currentTime >= openTime && currentTime <= closeTime
     }
-  }
 
-  const updateCountdown = () => {
-    if (!nextOpeningTime) return
-
+    // Prüfe normale Öffnungszeiten
     const now = new Date()
-    const opening = new Date(nextOpeningTime)
-    const diff = opening.getTime() - now.getTime()
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const today = dayNames[now.getDay()]
+    
+    const todayHours = data.opening_hours?.[today]
+    if (!todayHours || todayHours.closed) return false
 
-    if (diff <= 0) {
-      setCountdown('')
-      checkShopStatus() // Re-check status
-      return
-    }
+    // Prüfe ob innerhalb Öffnungszeiten
+    const currentTime = now.getHours() * 60 + now.getMinutes()
+    const [openH, openM] = todayHours.open.split(':').map(Number)
+    const [closeH, closeM] = todayHours.close.split(':').map(Number)
+    const openTime = openH * 60 + openM
+    const closeTime = closeH * 60 + closeM
 
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-
-    if (hours > 24) {
-      const days = Math.floor(hours / 24)
-      setCountdown(`Öffnet in ${days} Tag${days > 1 ? 'en' : ''}`)
-    } else if (hours > 0) {
-      setCountdown(`Öffnet in ${hours}h ${minutes}m`)
-    } else if (minutes > 0) {
-      setCountdown(`Öffnet in ${minutes}m ${seconds}s`)
-    } else {
-      setCountdown(`Öffnet in ${seconds}s`)
-    }
+    return currentTime >= openTime && currentTime <= closeTime
   }
 
-  if (!show || isOpen) return null
+  const getTodayHours = (openingHours) => {
+    const now = new Date()
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const today = dayNames[now.getDay()]
+    
+    return openingHours?.[today] || null
+  }
 
-  return (
-    <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white">
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-3 rounded-full">
-              <Clock size={24} />
-            </div>
-            <div>
-              <div className="font-bold text-lg">{message}</div>
-              {countdown && (
-                <div className="text-sm opacity-90 font-medium">{countdown}</div>
-              )}
-            </div>
+  // Geschlossen
+  if (!status.isOpen) {
+    return (
+      <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 mb-6">
+        <div className="flex items-center gap-3">
+          <AlertCircle className="text-red-600" size={24} />
+          <div className="flex-1">
+            <h3 className="font-bold text-red-900">
+              {status.manualClose ? '🔴 Shop geschlossen' : '🔴 Aktuell geschlossen'}
+            </h3>
+            <p className="text-sm text-red-700">
+              {status.closeMessage || 'Wir haben aktuell geschlossen. Schau bald wieder vorbei!'}
+            </p>
+            {status.todayHours && !status.todayHours.closed && (
+              <p className="text-xs text-red-600 mt-1">
+                Öffnungszeiten heute: {status.todayHours.open} - {status.todayHours.close} Uhr
+              </p>
+            )}
           </div>
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <X size={20} />
-            </button>
-          )}
         </div>
+      </div>
+    )
+  }
+
+  // Geöffnet
+  return (
+    <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-4 mb-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        
+        {/* Status */}
+        <div className="flex items-center gap-3">
+          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+          <div>
+            <h3 className="font-bold text-green-900">🟢 Jetzt geöffnet</h3>
+            {status.todayHours && (
+              <p className="text-xs text-green-700">
+                Heute: {status.todayHours.open} - {status.todayHours.close} Uhr
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Lieferdauer */}
+        <div className="flex items-center gap-2 text-sm">
+          <Truck className="text-green-700" size={18} />
+          <span className="text-green-800">
+            Lieferung in ca. <strong>{status.deliveryDuration} Min</strong>
+          </span>
+        </div>
+
       </div>
     </div>
   )

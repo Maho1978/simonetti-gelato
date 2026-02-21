@@ -1,6 +1,6 @@
 var R=require("../../chunks/ssr/[turbopack]_runtime.js")("server/pages/admin/kanban.js")
-R.c("server/chunks/ssr/[root-of-the-server]__5cd4c1a4._.js")
-R.c("server/chunks/ssr/[root-of-the-server]__7cc3c992._.js")
+R.c("server/chunks/ssr/dbe97_f10d9e5d._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__85f8da2a._.js")
 R.c("server/chunks/ssr/dbe97_e7f95d29._.js")
 R.c("server/chunks/ssr/[root-of-the-server]__fd58ed4c._.js")
 R.c("server/chunks/ssr/[root-of-the-server]__4d769fb5._.js")

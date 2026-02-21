@@ -1,0 +1,5 @@
+{
+  "/checkout-login": [
+    "static/chunks/pages/checkout-login.js"
+  ]
+}
