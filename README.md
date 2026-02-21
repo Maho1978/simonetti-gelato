@@ -379,4 +379,5 @@ Deine Plattform ist jetzt bereit! Nach dem Setup kannst du:
 #   D e p l o y e d !  
  D e p l o y   n o w !  
  D e p l o y   n o w !  
+ D e p l o y   t o   V e r c e l !  
  
