@@ -1,4 +1,4 @@
-# 🍕 FoodExpress - Restaurant Online-Bestellplattform
+# Eiscafe Simonetti - Restaurant Online-Bestellplattform
 
 Vollständige E-Commerce-Plattform für Restaurants wie Lieferando - bereit für Vercel, Supabase & Stripe!
 
