@@ -1,121 +1,223 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import Navbar from '@/components/Navbar'
+import HeroSection from '@/components/HeroSection'
+import ProductCard, { ProductGrid, CategoryHeader } from '@/components/ProductCard'
+import MiniCart from '@/components/MiniCart'
+import Footer from '@/components/Footer'
+import { supabase } from '@/lib/supabase'
 
-export default function ConstructionPage() {
+export default function Home() {
+  const [products, setProducts] = useState([])
+  const [extras, setExtras] = useState([])
+  const [categories, setCategories] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [session, setSession] = useState(null)
+  const [loading, setLoading] = useState(true)
+  
+  // CART STATE
+  const [cart, setCart] = useState([])
+  const [isCartOpen, setIsCartOpen] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+    })
+    loadProducts()
+    loadExtras()
+    loadCart()
+  }, [])
+
+  // Setze erste Kategorie als ausgewählt
+  useEffect(() => {
+    if (categories.length > 0 && !selectedCategory) {
+      setSelectedCategory(categories[0])
+    }
+  }, [categories])
+
+  // Cart aus localStorage laden
+  const loadCart = () => {
+    const savedCart = localStorage.getItem('simonetti-cart')
+    if (savedCart) {
+      setCart(JSON.parse(savedCart))
+    }
+  }
+
+  // Cart speichern
+  const saveCart = (newCart) => {
+    setCart(newCart)
+    localStorage.setItem('simonetti-cart', JSON.stringify(newCart))
+  }
+
+  const loadProducts = async () => {
+    setLoading(true)
+    
+    const { data } = await supabase
+      .from('products')
+      .select('*')
+      .eq('active', true)
+      .order('category', { ascending: true })
+
+    if (data) {
+      setProducts(data)
+      // Extract unique categories from products AND check if visible in categories table
+      await loadVisibleCategories(data)
+    }
+    setLoading(false)
+  }
+
+  const loadVisibleCategories = async (products) => {
+    // Hole alle sichtbaren PARENT Kategorien (ohne parent_id)
+    const { data: categoriesData } = await supabase
+      .from('categories')
+      .select('name')
+      .eq('visible', true)
+      .is('parent_id', null)  // Nur Top-Level Kategorien
+      .order('sort_order', { ascending: true })
+    
+    if (categoriesData) {
+      // Filtere nur Kategorien die auch Produkte haben
+      const categoriesWithProducts = categoriesData
+        .map(c => c.name)
+        .filter(catName => products.some(p => p.category === catName))
+      
+      setCategories(categoriesWithProducts)
+    }
+  }
+
+  const loadExtras = async () => {
+    const { data } = await supabase
+      .from('extras')
+      .select('*')
+      .eq('active', true)
+    
+    if (data) setExtras(data)
+  }
+
+  // ADD TO CART mit Portionen & Extras
+  const handleAddToCart = (product, portions = 1, selectedFlavors = [], selectedExtras = []) => {
+    const cartItem = {
+      ...product,
+      quantity: portions,
+      selectedFlavors: selectedFlavors,
+      selectedExtras: selectedExtras,
+      totalPrice: (product.price * portions) + selectedExtras.reduce((sum, e) => sum + e.price, 0),
+      cartId: `${product.id}-${Date.now()}` // Unique ID für mehrfache gleiche Produkte
+    }
+
+    const newCart = [...cart, cartItem]
+    saveCart(newCart)
+    setIsCartOpen(true) // Auto-open cart
+  }
+
+  const updateCartQuantity = (cartId, newQuantity) => {
+    if (newQuantity === 0) {
+      removeFromCart(cartId)
+      return
+    }
+    const newCart = cart.map(item => 
+      item.cartId === cartId 
+        ? { ...item, quantity: newQuantity, totalPrice: (item.price * newQuantity) + item.selectedExtras.reduce((sum, e) => sum + e.price, 0) }
+        : item
+    )
+    saveCart(newCart)
+  }
+
+  const removeFromCart = (cartId) => {
+    const newCart = cart.filter(item => item.cartId !== cartId)
+    saveCart(newCart)
+  }
+
+  const clearCart = () => {
+    saveCart([])
+  }
+
+  const filteredProducts = products.filter(p => p.category === selectedCategory)
+
+  const cartTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0)
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+
   return (
-    <>
-      <Head>
-        <title>Eiscafe Simonetti - Bald verfügbar</title>
-        <meta name="description" content="Eiscafe Simonetti - Italienisches Gelato in Langenfeld. Bald können Sie online bestellen!" />
-      </Head>
+    <div className="min-h-screen bg-white">
+      <Navbar 
+        session={session} 
+        cartCount={cartCount}
+        onCartClick={() => setIsCartOpen(true)}
+      />
 
-      <div className="min-h-screen bg-gradient-to-br from-[#4a5d54] to-[#2d3a33] flex items-center justify-center p-4 relative overflow-hidden">
-        
-        {/* Decorative background elements */}
-        <div className="absolute w-[500px] h-[500px] bg-white/10 rounded-full -top-64 -left-64 animate-float"></div>
-        <div className="absolute w-[400px] h-[400px] bg-white/5 rounded-full -bottom-48 -right-48 animate-float-reverse"></div>
+      {/* Hero Section */}
+      <HeroSection />
 
-        <div className="relative z-10 text-center max-w-2xl w-full">
-          <div className="bg-white rounded-3xl p-12 md:p-16 shadow-2xl">
-            
-            {/* Logo */}
-            <div className="w-32 h-32 mx-auto mb-8 rounded-full overflow-hidden shadow-xl">
-              <Image 
-                src="/images/simonetti-logo.jpg" 
-                alt="Eiscafe Simonetti Logo" 
-                width={128} 
-                height={128}
-                className="object-cover"
-              />
+      {/* MiniCart */}
+      <MiniCart
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        onUpdateQuantity={updateCartQuantity}
+        onRemoveItem={removeFromCart}
+        onClearCart={clearCart}
+        total={cartTotal}
+      />
+
+      {/* Speisekarte */}
+      <section id="speisekarte" className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          
+          <CategoryHeader 
+            title="Unsere Gelato-Sorten"
+            description="Täglich frisch hergestellt nach traditioneller italienischer Rezeptur"
+          />
+
+          {/* Category Filter */}
+          {categories.length > 0 && (
+            <div className="flex flex-wrap gap-3 justify-center mb-12">
+              {categories.map(cat => {
+                const count = products.filter(p => p.category === cat).length
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-6 py-2.5 text-sm font-medium uppercase tracking-wider transition ${
+                      selectedCategory === cat
+                        ? 'bg-black text-white'
+                        : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-400'
+                    }`}
+                  >
+                    {cat} ({count})
+                  </button>
+                )
+              })}
             </div>
+          )}
 
-            {/* Title */}
-            <h1 className="text-4xl md:text-5xl font-display font-bold italic mb-3 text-gray-900">
-              EISCAFE SIMONETTI
-            </h1>
-            <p className="text-gray-600 italic text-lg mb-8">Gelateria</p>
-
-            <div className="w-20 h-1 bg-[#4a5d54] mx-auto mb-8"></div>
-
-            {/* Message */}
-            <p className="text-xl text-gray-700 mb-4 leading-relaxed">
-              Wir bereiten gerade etwas Besonderes für Sie vor! 🎉
-            </p>
-            <p className="text-lg text-gray-600 mb-10">
-              <strong>Bald können Sie unsere italienischen Eisspezialitäten auch online bestellen.</strong>
-            </p>
-
-            {/* Icons */}
-            <div className="flex justify-center gap-8 md:gap-12 mb-10 flex-wrap">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#4a5d54] to-[#2d3a33] rounded-full flex items-center justify-center text-4xl mb-3 mx-auto animate-pulse">
-                  🍦
-                </div>
-                <p className="text-sm font-semibold text-gray-700">Handgemacht</p>
-              </div>
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#4a5d54] to-[#2d3a33] rounded-full flex items-center justify-center text-4xl mb-3 mx-auto animate-pulse" style={{ animationDelay: '0.2s' }}>
-                  🇮🇹
-                </div>
-                <p className="text-sm font-semibold text-gray-700">Original</p>
-              </div>
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#4a5d54] to-[#2d3a33] rounded-full flex items-center justify-center text-4xl mb-3 mx-auto animate-pulse" style={{ animationDelay: '0.4s' }}>
-                  🚚
-                </div>
-                <p className="text-sm font-semibold text-gray-700">Lieferung</p>
-              </div>
+          {/* Products Grid */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4 animate-pulse">🍦</div>
+              <p className="text-gray-600">Lädt Produkte...</p>
             </div>
-
-            {/* Info Box */}
-            <div className="bg-gray-50 rounded-2xl p-6 mb-8 space-y-3">
-              <div className="flex items-center justify-center gap-3 text-gray-700">
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                <span>Konrad-Adenauer-Platz 2, 40764 Langenfeld</span>
-              </div>
-              <div className="flex items-center justify-center gap-3 text-gray-700">
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                </svg>
-                <span>02173 1622780</span>
-              </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">😔</div>
+              <p className="text-gray-600 text-xl">Keine Produkte in dieser Kategorie</p>
             </div>
+          ) : (
+            <ProductGrid>
+              {filteredProducts.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  extras={extras}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </ProductGrid>
+          )}
 
-            {/* Admin Link */}
-            <Link 
-              href="/admin"
-              className="inline-block px-8 py-3 bg-[#4a5d54] text-white rounded-lg font-semibold hover:bg-[#3a4d44] transition shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-            >
-              🔐 Admin Login
-            </Link>
-
-            {/* Footer */}
-            <p className="text-sm text-gray-500 mt-8">
-              © 2026 Eiscafe Simonetti · Italienisches Eis seit Generationen
-            </p>
-
-          </div>
         </div>
+      </section>
 
-        <style jsx>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px) translateX(0px); }
-            50% { transform: translateY(50px) translateX(30px); }
-          }
-          
-          .animate-float {
-            animation: float 20s infinite ease-in-out;
-          }
-          
-          .animate-float-reverse {
-            animation: float 15s infinite ease-in-out reverse;
-          }
-        `}</style>
-      </div>
-    </>
+      {/* Footer */}
+      <Footer />
+    </div>
   )
 }
