@@ -87,7 +87,7 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
       {/* Items Count */}
       <div className="text-center py-1 bg-gray-50 rounded mt-2">
         <span className="text-gray-600">
-          {order.items.reduce((sum: number, item: any) => sum + item.quantity, 0)} Artikel
+          {order.items.reduce((sum, item) => sum + item.quantity, 0)} Artikel
         </span>
       </div>
 
@@ -97,7 +97,7 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
           <div className="mt-2" onClick={(e) => e.stopPropagation()}>
             {order.driver_id ? (
               <div className="text-xs bg-blue-50 rounded px-2 py-1 text-center">
-                🚗 {drivers.find((d: any) => d.id === order.driver_id)?.name || 'Zugewiesen'}
+                🚗 {drivers.find(d => d.id === order.driver_id)?.name || 'Zugewiesen'}
               </div>
             ) : (
               <select
@@ -106,7 +106,7 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
                 onClick={(e) => e.stopPropagation()}
               >
                 <option value="">Fahrer...</option>
-                {drivers.map((driver: any) => (
+                {drivers.map(driver => (
                   <option key={driver.id} value={driver.id}>
                     {driver.name}
                   </option>
@@ -153,11 +153,11 @@ export default function KanbanPage() {
     const { data } = await supabase
       .from('orders')
       .select('*')
-      .neq('status', 'GELIEFERT')
+      .neq('status', 'GELIEFERT') // Nur aktive Bestellungen
       .order('created_at', { ascending: false })
 
     if (data) {
-      const grouped: any = {
+      const grouped = {
         OFFEN: [],
         IN_BEARBEITUNG: [],
         AN_FAHRER: []
@@ -192,15 +192,15 @@ export default function KanbanPage() {
     const currentStatus = COLUMNS[currentColumnIndex].id
     const newStatus = COLUMNS[newColumnIndex].id
 
-    const updateData = {
+    const updateData: any = {
       status: newStatus,
       updated_at: new Date().toISOString()
     }
 
     if (newStatus === 'AN_FAHRER') {
-      const order = orders[currentStatus].find((o: any) => o.id === orderId)
-      if (!order?.assigned_at) {
-        (updateData as any).assigned_at = new Date().toISOString()
+      const order: any = orders[currentStatus as keyof typeof orders].find((o: any) => o.id === orderId)
+      if (order && !order.assigned_at) {
+        updateData.assigned_at = new Date().toISOString()
       }
     }
 
@@ -229,7 +229,7 @@ export default function KanbanPage() {
       .eq('id', orderId)
 
     if (!error) {
-      loadOrders()
+      loadOrders() // Verschwindet aus Kanban
     } else {
       console.error('Update error:', error)
     }
@@ -284,7 +284,7 @@ export default function KanbanPage() {
 
               {/* Orders */}
               <div className="min-h-[500px]">
-                {orders[column.id].map((order: any) => (
+                {orders[column.id].map((order) => (
                   <OrderCard
                     key={order.id}
                     order={order}
