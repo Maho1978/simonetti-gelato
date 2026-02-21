@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import AdminLayout from '@/components/AdminLayout'
-import { ChevronLeft, ChevronRight, User, MapPin, Clock, Printer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User, MapPin, Clock, Printer, LayoutDashboard, ShoppingBag, Package, Tag, BarChart2, Ticket, Heart, Settings, LogOut } from 'lucide-react'
 import { useRouter } from 'next/router'
 
 const COLUMNS = [
@@ -9,6 +8,18 @@ const COLUMNS = [
   { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-100', icon: '👨‍🍳' },
   { id: 'AN_FAHRER', title: 'An Fahrer', color: 'bg-orange-100', icon: '🚗' },
   { id: 'GELIEFERT', title: 'Geliefert', color: 'bg-green-100', icon: '✅' }
+]
+
+const NAV_ITEMS = [
+  { label: 'Bestellungen', href: '/admin/orders', icon: ShoppingBag },
+  { label: 'Produkte', href: '/admin/products', icon: Package },
+  { label: 'Extras', href: '/admin/extras', icon: Tag },
+  { label: 'Kategorien', href: '/admin/categories', icon: LayoutDashboard },
+  { label: 'Kanban', href: '/admin/kanban', icon: LayoutDashboard },
+  { label: 'Reports', href: '/admin/reports', icon: BarChart2 },
+  { label: 'Gutscheine', href: '/admin/gutscheine', icon: Ticket },
+  { label: 'Favoriten', href: '/admin/favorites', icon: Heart },
+  { label: 'Setup', href: '/admin/setup', icon: Settings },
 ]
 
 function printOrder(order: any) {
@@ -30,73 +41,45 @@ function printOrder(order: any) {
       <h2>🍦 Simonetti Gelateria</h2>
       <div class="row"><span>Bestellung:</span><span><b>#${order.order_number || order.id.substring(0, 6).toUpperCase()}</b></span></div>
       <div class="row"><span>Zeit:</span><span>${new Date(order.created_at).toLocaleString('de-DE')}</span></div>
-      
       <div class="section">
         <b>Kunde:</b><br/>
         ${order.customer_name}<br/>
         ${order.customer_phone || ''}<br/>
         ${order.delivery_address || 'Abholung'}
       </div>
-
-      <div class="section">
-        <b>Bestellung:</b><br/>
-        <pre>${items}</pre>
-      </div>
-
+      <div class="section"><b>Bestellung:</b><br/><pre>${items}</pre></div>
       ${order.notes ? `<div class="section"><b>Notizen:</b><br/>${order.notes}</div>` : ''}
-
-      <div class="total row">
-        <span>GESAMT:</span>
-        <span>${order.total?.toFixed(2)}€</span>
-      </div>
+      <div class="total row"><span>GESAMT:</span><span>${order.total?.toFixed(2)}€</span></div>
       <div class="row"><span>Zahlung:</span><span>${order.payment_method || 'N/A'}</span></div>
     </body></html>
   `
   const win = window.open('', '_blank')
-  if (win) {
-    win.document.write(printContent)
-    win.document.close()
-    win.print()
-  }
+  if (win) { win.document.write(printContent); win.document.close(); win.print() }
 }
 
 function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, drivers, onClick }: any) {
   const status = COLUMNS[columnIndex].id
   const isDelivered = status === 'GELIEFERT'
-  // Geliefert kann nicht verschoben werden, AN_FAHRER kann nicht nach rechts per Pfeil
   const canMoveLeft = columnIndex > 0 && !isDelivered
-  const canMoveRight = columnIndex < 2 && !isDelivered // max bis AN_FAHRER per Pfeil
+  const canMoveRight = columnIndex < 2 && !isDelivered
 
   return (
     <div className={`bg-white rounded-lg p-2 shadow-sm border border-gray-200 hover:shadow-md transition mb-2 text-xs ${isDelivered ? 'opacity-70' : ''}`}>
-
-      {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <button
-          onClick={(e) => { e.stopPropagation(); onMoveLeft() }}
-          disabled={!canMoveLeft}
-          className={`p-1 rounded transition ${canMoveLeft ? 'hover:bg-gray-200 text-gray-700' : 'text-gray-300 cursor-not-allowed'}`}
-        >
+        <button onClick={(e) => { e.stopPropagation(); onMoveLeft() }} disabled={!canMoveLeft}
+          className={`p-1 rounded transition ${canMoveLeft ? 'hover:bg-gray-200 text-gray-700' : 'text-gray-300 cursor-not-allowed'}`}>
           <ChevronLeft size={16} />
         </button>
-
         <div className="flex-1 text-center cursor-pointer hover:bg-gray-50 rounded px-2 py-1" onClick={onClick}>
-          <div className="font-bold text-xs">
-            #{order.order_number || order.id.substring(0, 6).toUpperCase()}
-          </div>
+          <div className="font-bold text-xs">#{order.order_number || order.id.substring(0, 6).toUpperCase()}</div>
           <div className="font-bold text-base">{order.total?.toFixed(2)}€</div>
         </div>
-
-        <button
-          onClick={(e) => { e.stopPropagation(); onMoveRight() }}
-          disabled={!canMoveRight}
-          className={`p-1 rounded transition ${canMoveRight ? 'hover:bg-gray-200 text-gray-700' : 'text-gray-300 cursor-not-allowed'}`}
-        >
+        <button onClick={(e) => { e.stopPropagation(); onMoveRight() }} disabled={!canMoveRight}
+          className={`p-1 rounded transition ${canMoveRight ? 'hover:bg-gray-200 text-gray-700' : 'text-gray-300 cursor-not-allowed'}`}>
           <ChevronRight size={16} />
         </button>
       </div>
 
-      {/* Customer Info */}
       <div className="space-y-1 cursor-pointer hover:bg-gray-50 rounded p-2" onClick={onClick}>
         <div className="flex items-center gap-1 truncate">
           <User size={12} className="text-gray-400 flex-shrink-0" />
@@ -114,22 +97,15 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
         </div>
       </div>
 
-      {/* Items Count */}
       <div className="text-center py-1 bg-gray-50 rounded mt-2">
-        <span className="text-gray-600">
-          {order.items?.reduce((sum: number, item: any) => sum + item.quantity, 0)} Artikel
-        </span>
+        <span className="text-gray-600">{order.items?.reduce((sum: number, item: any) => sum + item.quantity, 0)} Artikel</span>
       </div>
 
-      {/* Druck Button - immer sichtbar */}
-      <button
-        onClick={(e) => { e.stopPropagation(); printOrder(order) }}
-        className="w-full mt-2 py-1.5 bg-gray-700 text-white rounded text-xs font-bold hover:bg-gray-900 transition flex items-center justify-center gap-1"
-      >
+      <button onClick={(e) => { e.stopPropagation(); printOrder(order) }}
+        className="w-full mt-2 py-1.5 bg-gray-700 text-white rounded text-xs font-bold hover:bg-gray-900 transition flex items-center justify-center gap-1">
         <Printer size={12} /> Drucken
       </button>
 
-      {/* Driver Assignment - nur bei AN_FAHRER */}
       {status === 'AN_FAHRER' && (
         <>
           <div className="mt-2" onClick={(e) => e.stopPropagation()}>
@@ -138,11 +114,8 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
                 🚗 {drivers.find((d: any) => d.id === order.driver_id)?.name || 'Zugewiesen'}
               </div>
             ) : (
-              <select
-                onChange={(e) => onAssignDriver(order.id, e.target.value)}
-                className="text-xs w-full border rounded px-2 py-1"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <select onChange={(e) => onAssignDriver(order.id, e.target.value)}
+                className="text-xs w-full border rounded px-2 py-1" onClick={(e) => e.stopPropagation()}>
                 <option value="">Fahrer...</option>
                 {drivers.map((driver: any) => (
                   <option key={driver.id} value={driver.id}>{driver.name}</option>
@@ -150,17 +123,13 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
               </select>
             )}
           </div>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); onMarkDelivered() }}
-            className="w-full mt-2 py-1.5 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 transition"
-          >
+          <button onClick={(e) => { e.stopPropagation(); onMarkDelivered() }}
+            className="w-full mt-2 py-1.5 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 transition">
             ✅ Geliefert
           </button>
         </>
       )}
 
-      {/* Geliefert-Zeit anzeigen */}
       {isDelivered && order.delivered_at && (
         <div className="text-center mt-2 text-green-600 font-semibold">
           ✅ {new Date(order.delivered_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
@@ -172,9 +141,7 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
 
 export default function KanbanPage() {
   const router = useRouter()
-  const [orders, setOrders] = useState<any>({
-    OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: []
-  })
+  const [orders, setOrders] = useState<any>({ OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] })
   const [loading, setLoading] = useState(true)
   const [drivers, setDrivers] = useState<any[]>([])
   const [showAllDays, setShowAllDays] = useState(false)
@@ -187,29 +154,16 @@ export default function KanbanPage() {
   }, [showAllDays])
 
   const loadOrders = async () => {
-    // Heute von 00:00 bis jetzt
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
-
-    let query = supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    // Standardmäßig nur heute anzeigen
-    if (!showAllDays) {
-      query = query.gte('created_at', todayStart.toISOString())
-    }
-
+    let query = supabase.from('orders').select('*').order('created_at', { ascending: false })
+    if (!showAllDays) query = query.gte('created_at', todayStart.toISOString())
     const { data } = await query
-
     if (data) {
       const grouped: any = { OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] }
       data.forEach((order: any) => {
         const status = order.status || 'OFFEN'
-        if (grouped[status] !== undefined) {
-          grouped[status].push(order)
-        }
+        if (grouped[status] !== undefined) grouped[status].push(order)
       })
       setOrders(grouped)
     }
@@ -224,17 +178,13 @@ export default function KanbanPage() {
   const moveOrder = async (orderId: string, currentColumnIndex: number, direction: number) => {
     const newColumnIndex = currentColumnIndex + direction
     if (newColumnIndex < 0 || newColumnIndex >= COLUMNS.length) return
-
     const currentStatus = COLUMNS[currentColumnIndex].id
     const newStatus = COLUMNS[newColumnIndex].id
-
     const updateData: any = { status: newStatus, updated_at: new Date().toISOString() }
-
     if (newStatus === 'AN_FAHRER') {
       const order = orders[currentStatus].find((o: any) => o.id === orderId)
       if (order && !order.assigned_at) updateData.assigned_at = new Date().toISOString()
     }
-
     const { error } = await supabase.from('orders').update(updateData).eq('id', orderId)
     if (!error) loadOrders()
   }
@@ -242,72 +192,101 @@ export default function KanbanPage() {
   const markDelivered = async (orderId: string) => {
     if (!confirm('Als geliefert markieren?')) return
     const { error } = await supabase.from('orders').update({
-      status: 'GELIEFERT',
-      delivered_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      status: 'GELIEFERT', delivered_at: new Date().toISOString(), updated_at: new Date().toISOString()
     }).eq('id', orderId)
     if (!error) loadOrders()
   }
 
   const assignDriver = async (orderId: string, driverId: string) => {
     const { error } = await supabase.from('orders').update({
-      driver_id: driverId,
-      status: 'AN_FAHRER',
-      assigned_at: new Date().toISOString()
+      driver_id: driverId, status: 'AN_FAHRER', assigned_at: new Date().toISOString()
     }).eq('id', orderId)
     if (!error) loadOrders()
   }
 
-  // Tages-Umsatz berechnen
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/admin')
+  }
+
   const todayTotal = Object.values(orders).flat().reduce((sum: number, o: any) => sum + (o.total || 0), 0)
   const deliveredCount = orders['GELIEFERT']?.length || 0
 
-  if (loading) return <AdminLayout><div className="p-8">Lädt...</div></AdminLayout>
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-4xl animate-pulse">🍦</div>
+    </div>
+  )
 
   return (
-    <AdminLayout>
-      <div className="p-8">
+    <div className="min-h-screen bg-gray-50">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+      {/* HORIZONTALE TOP NAVBAR */}
+      <nav className="bg-gray-900 text-white px-4 py-2 flex items-center gap-1 flex-wrap shadow-lg">
+        <div className="flex items-center gap-2 mr-4">
+          <span className="text-xl">🍦</span>
+          <span className="font-bold text-sm">Simonetti</span>
+          <span className="text-xs text-gray-400 ml-1">ADMIN</span>
+        </div>
+
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon
+          const isActive = router.pathname === item.href
+          return (
+            <button key={item.href} onClick={() => router.push(item.href)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition ${
+                isActive ? 'bg-white text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}>
+              <Icon size={13} />
+              {item.label}
+            </button>
+          )
+        })}
+
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-xs text-gray-400 hidden md:block">info@eiscafe-simonetti.de</span>
+          <button onClick={handleLogout}
+            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs text-gray-300 hover:bg-gray-700 hover:text-white transition">
+            <LogOut size={13} /> Abmelden
+          </button>
+        </div>
+      </nav>
+
+      {/* CONTENT */}
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-3xl font-display font-bold italic mb-1">Bestellungen Kanban</h1>
-            <p className="text-gray-600 text-sm">Verwende die Pfeile ← → um Bestellungen zu verschieben</p>
+            <h1 className="text-2xl font-bold italic">Bestellungen Kanban</h1>
+            <p className="text-gray-500 text-xs">Pfeile ← → zum Verschieben</p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-green-600">{todayTotal.toFixed(2)}€</div>
-            <div className="text-sm text-gray-500">{deliveredCount} geliefert heute</div>
+            <div className="text-xl font-bold text-green-600">{todayTotal.toFixed(2)}€</div>
+            <div className="text-xs text-gray-500">{deliveredCount} geliefert heute</div>
           </div>
         </div>
 
-        {/* Filter: Heute / Alle */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setShowAllDays(false)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${!showAllDays ? 'bg-black text-white' : 'bg-white border border-gray-300 hover:border-black'}`}
-          >
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setShowAllDays(false)}
+            className={`px-3 py-1.5 rounded text-xs font-semibold transition ${!showAllDays ? 'bg-black text-white' : 'bg-white border border-gray-300 hover:border-black'}`}>
             📅 Nur Heute
           </button>
-          <button
-            onClick={() => setShowAllDays(true)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${showAllDays ? 'bg-black text-white' : 'bg-white border border-gray-300 hover:border-black'}`}
-          >
-            📋 Alle Bestellungen
+          <button onClick={() => setShowAllDays(true)}
+            className={`px-3 py-1.5 rounded text-xs font-semibold transition ${showAllDays ? 'bg-black text-white' : 'bg-white border border-gray-300 hover:border-black'}`}>
+            📋 Alle
           </button>
         </div>
 
         {/* 4 Spalten */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-3">
           {COLUMNS.map((column, columnIndex) => (
-            <div key={column.id} className={`rounded-lg ${column.color} p-4`}>
-              <div className="mb-4">
-                <h2 className="font-bold text-lg flex items-center gap-2">
+            <div key={column.id} className={`rounded-lg ${column.color} p-3`}>
+              <div className="mb-3">
+                <h2 className="font-bold flex items-center gap-1.5">
                   <span>{column.icon}</span>
                   <span>{column.title}</span>
                   <span className="text-sm font-normal text-gray-600">({orders[column.id]?.length || 0})</span>
                 </h2>
               </div>
-
               <div className="min-h-[500px]">
                 {orders[column.id]?.map((order: any) => (
                   <OrderCard
@@ -323,14 +302,13 @@ export default function KanbanPage() {
                   />
                 ))}
                 {orders[column.id]?.length === 0 && (
-                  <div className="text-center text-gray-400 text-sm pt-8">Keine Bestellungen</div>
+                  <div className="text-center text-gray-400 text-xs pt-8">Keine Bestellungen</div>
                 )}
               </div>
             </div>
           ))}
         </div>
-
       </div>
-    </AdminLayout>
+    </div>
   )
 }
