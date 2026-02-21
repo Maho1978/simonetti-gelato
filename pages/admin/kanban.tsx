@@ -22,7 +22,7 @@ const NAV_ITEMS = [
   { label: 'Setup', href: '/admin/settings', icon: Settings },
 ]
 
-// API Helper - nutzt Service Role Key serverseitig
+// ── API: Order Update via Service Role ──────────────────────
 async function updateOrder(orderId: string, data: any) {
   const response = await fetch(`/api/orders/${orderId}`, {
     method: 'PATCH',
@@ -37,12 +37,25 @@ async function updateOrder(orderId: string, data: any) {
   return true
 }
 
-// Ton erzeugen mit Web Audio API
+// ── API: Email Benachrichtigung ──────────────────────────────
+async function sendEmailNotification(type: string, order: any) {
+  const email = order?.customer_email
+  if (!email) return
+  try {
+    await fetch('/api/emails/send-order-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, order, recipientEmail: email })
+    })
+  } catch (e) {
+    console.error('Email error:', e)
+  }
+}
+
+// ── Ton bei neuer Bestellung ─────────────────────────────────
 function playNotificationSound() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    
-    // Drei aufsteigende Töne
     const notes = [523, 659, 784] // C, E, G
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator()
@@ -62,8 +75,8 @@ function playNotificationSound() {
   }
 }
 
-// Timer Komponente - zeigt wie lange Bestellung schon in dieser Spalte ist
-function OrderTimer({ createdAt, status }: { createdAt: string, status: string }) {
+// ── Timer Komponente ─────────────────────────────────────────
+function OrderTimer({ createdAt }: { createdAt: string }) {
   const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
@@ -72,7 +85,7 @@ function OrderTimer({ createdAt, status }: { createdAt: string, status: string }
       setElapsed(diff)
     }
     calc()
-    const interval = setInterval(calc, 10000) // alle 10 Sek aktualisieren
+    const interval = setInterval(calc, 10000)
     return () => clearInterval(interval)
   }, [createdAt])
 
@@ -80,21 +93,17 @@ function OrderTimer({ createdAt, status }: { createdAt: string, status: string }
   const hours = Math.floor(minutes / 60)
   const displayMinutes = minutes % 60
 
-  // Farbe je nach Wartezeit
   let color = 'text-green-600'
   if (minutes >= 30) color = 'text-red-600 font-bold'
   else if (minutes >= 15) color = 'text-orange-500 font-semibold'
   else if (minutes >= 10) color = 'text-yellow-600'
 
-  const timeStr = hours > 0
-    ? `${hours}h ${displayMinutes}m`
-    : `${minutes}m`
+  const timeStr = hours > 0 ? `${hours}h ${displayMinutes}m` : `${minutes}m`
 
-  return (
-    <span className={`text-xs ${color}`}>⏱ {timeStr}</span>
-  )
+  return <span className={`text-xs ${color}`}>⏱ {timeStr}</span>
 }
 
+// ── Print ────────────────────────────────────────────────────
 function printOrder(order: any) {
   const items = order.items?.map((item: any) =>
     `${item.quantity}x ${item.name}${item.selectedFlavors?.length ? ' (' + item.selectedFlavors.join(', ') + ')' : ''} - ${(item.price * item.quantity).toFixed(2)}€`
@@ -130,6 +139,7 @@ function printOrder(order: any) {
   if (win) { win.document.write(printContent); win.document.close(); win.print() }
 }
 
+// ── Order Card ───────────────────────────────────────────────
 function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, drivers, onClick }: any) {
   const status = COLUMNS[columnIndex].id
   const isDelivered = status === 'GELIEFERT'
@@ -169,8 +179,7 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
               {new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
-          {/* Timer - nur bei nicht-gelieferten */}
-          {!isDelivered && <OrderTimer createdAt={order.created_at} status={status} />}
+          {!isDelivered && <OrderTimer createdAt={order.created_at} />}
         </div>
       </div>
 
@@ -216,6 +225,7 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
   )
 }
 
+// ── Main Page ────────────────────────────────────────────────
 export default function KanbanPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<any>({ OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] })
@@ -244,8 +254,6 @@ export default function KanbanPage() {
           setTimeout(() => setNewOrderAlert(false), 5000)
         }
       }
-
-      // Alle bekannten IDs speichern
       data.forEach((o: any) => knownOrderIds.current.add(o.id))
       isFirstLoad.current = false
 
@@ -262,7 +270,7 @@ export default function KanbanPage() {
   useEffect(() => {
     loadOrders()
     loadDrivers()
-    const interval = setInterval(loadOrders, 15000) // alle 15 Sek prüfen
+    const interval = setInterval(loadOrders, 15000)
     return () => clearInterval(interval)
   }, [loadOrders])
 
@@ -276,13 +284,25 @@ export default function KanbanPage() {
     if (newColumnIndex < 0 || newColumnIndex >= COLUMNS.length) return
     const currentStatus = COLUMNS[currentColumnIndex].id
     const newStatus = COLUMNS[newColumnIndex].id
+
     const updateData: any = { status: newStatus }
     if (newStatus === 'AN_FAHRER') {
       const order = orders[currentStatus].find((o: any) => o.id === orderId)
       if (order && !order.assigned_at) updateData.assigned_at = new Date().toISOString()
     }
+
     const ok = await updateOrder(orderId, updateData)
-    if (ok) loadOrders()
+    if (ok) {
+      const order = orders[currentStatus].find((o: any) => o.id === orderId)
+      // Email senden je nach neuem Status
+      if (newStatus === 'IN_BEARBEITUNG') {
+        await sendEmailNotification('order_confirmed', order)
+      }
+      if (newStatus === 'AN_FAHRER') {
+        await sendEmailNotification('order_out_for_delivery', order)
+      }
+      loadOrders()
+    }
   }
 
   const markDelivered = async (orderId: string) => {
@@ -291,7 +311,11 @@ export default function KanbanPage() {
       status: 'GELIEFERT',
       delivered_at: new Date().toISOString()
     })
-    if (ok) loadOrders()
+    if (ok) {
+      const order = Object.values(orders).flat().find((o: any) => o.id === orderId)
+      await sendEmailNotification('order_delivered', order)
+      loadOrders()
+    }
   }
 
   const assignDriver = async (orderId: string, driverId: string) => {
@@ -300,7 +324,11 @@ export default function KanbanPage() {
       status: 'AN_FAHRER',
       assigned_at: new Date().toISOString()
     })
-    if (ok) loadOrders()
+    if (ok) {
+      const order = Object.values(orders).flat().find((o: any) => o.id === orderId)
+      await sendEmailNotification('order_out_for_delivery', order)
+      loadOrders()
+    }
   }
 
   const handleLogout = async () => {
@@ -350,7 +378,6 @@ export default function KanbanPage() {
         })}
 
         <div className="ml-auto flex items-center gap-3">
-          {/* Sound Toggle */}
           <button onClick={() => setSoundEnabled(!soundEnabled)}
             className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs transition ${soundEnabled ? 'text-yellow-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-700'}`}
             title={soundEnabled ? 'Ton ausschalten' : 'Ton einschalten'}>
