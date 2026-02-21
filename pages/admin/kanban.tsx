@@ -10,7 +10,7 @@ const COLUMNS = [
   { id: 'AN_FAHRER', title: 'An Fahrer', color: 'bg-orange-100', icon: '🚗' }
 ]
 
-function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, drivers, onClick }) {
+function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, drivers, onClick }: any) {
   const canMoveLeft = columnIndex > 0
   const canMoveRight = columnIndex < COLUMNS.length - 1
   const status = COLUMNS[columnIndex].id
@@ -87,7 +87,7 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
       {/* Items Count */}
       <div className="text-center py-1 bg-gray-50 rounded mt-2">
         <span className="text-gray-600">
-          {order.items.reduce((sum, item) => sum + item.quantity, 0)} Artikel
+          {order.items.reduce((sum: number, item: any) => sum + item.quantity, 0)} Artikel
         </span>
       </div>
 
@@ -97,7 +97,7 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
           <div className="mt-2" onClick={(e) => e.stopPropagation()}>
             {order.driver_id ? (
               <div className="text-xs bg-blue-50 rounded px-2 py-1 text-center">
-                🚗 {drivers.find(d => d.id === order.driver_id)?.name || 'Zugewiesen'}
+                🚗 {drivers.find((d: any) => d.id === order.driver_id)?.name || 'Zugewiesen'}
               </div>
             ) : (
               <select
@@ -106,7 +106,7 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
                 onClick={(e) => e.stopPropagation()}
               >
                 <option value="">Fahrer...</option>
-                {drivers.map(driver => (
+                {drivers.map((driver: any) => (
                   <option key={driver.id} value={driver.id}>
                     {driver.name}
                   </option>
@@ -133,13 +133,13 @@ function OrderCard({ order, columnIndex, onMoveLeft, onMoveRight, onMarkDelivere
 
 export default function KanbanPage() {
   const router = useRouter()
-  const [orders, setOrders] = useState({
+  const [orders, setOrders] = useState<any>({
     OFFEN: [],
     IN_BEARBEITUNG: [],
     AN_FAHRER: []
   })
   const [loading, setLoading] = useState(true)
-  const [drivers, setDrivers] = useState([])
+  const [drivers, setDrivers] = useState<any[]>([])
 
   useEffect(() => {
     loadOrders()
@@ -153,11 +153,11 @@ export default function KanbanPage() {
     const { data } = await supabase
       .from('orders')
       .select('*')
-      .neq('status', 'GELIEFERT') // Nur aktive Bestellungen
+      .neq('status', 'GELIEFERT')
       .order('created_at', { ascending: false })
 
     if (data) {
-      const grouped = {
+      const grouped: any = {
         OFFEN: [],
         IN_BEARBEITUNG: [],
         AN_FAHRER: []
@@ -185,7 +185,7 @@ export default function KanbanPage() {
     if (data) setDrivers(data)
   }
 
-  const moveOrder = async (orderId, currentColumnIndex, direction) => {
+  const moveOrder = async (orderId: string, currentColumnIndex: number, direction: number) => {
     const newColumnIndex = currentColumnIndex + direction
     if (newColumnIndex < 0 || newColumnIndex >= COLUMNS.length) return
 
@@ -198,9 +198,9 @@ export default function KanbanPage() {
     }
 
     if (newStatus === 'AN_FAHRER') {
-      const order = orders[currentStatus].find(o => o.id === orderId)
-      if (!order.assigned_at) {
-        updateData.assigned_at = new Date().toISOString()
+      const order = orders[currentStatus].find((o: any) => o.id === orderId)
+      if (!order?.assigned_at) {
+        (updateData as any).assigned_at = new Date().toISOString()
       }
     }
 
@@ -216,7 +216,7 @@ export default function KanbanPage() {
     }
   }
 
-  const markDelivered = async (orderId) => {
+  const markDelivered = async (orderId: string) => {
     if (!confirm('Als geliefert markieren?')) return
 
     const { error } = await supabase
@@ -229,13 +229,13 @@ export default function KanbanPage() {
       .eq('id', orderId)
 
     if (!error) {
-      loadOrders() // Verschwindet aus Kanban
+      loadOrders()
     } else {
       console.error('Update error:', error)
     }
   }
 
-  const assignDriver = async (orderId, driverId) => {
+  const assignDriver = async (orderId: string, driverId: string) => {
     const { error } = await supabase
       .from('orders')
       .update({ 
@@ -284,7 +284,7 @@ export default function KanbanPage() {
 
               {/* Orders */}
               <div className="min-h-[500px]">
-                {orders[column.id].map((order) => (
+                {orders[column.id].map((order: any) => (
                   <OrderCard
                     key={order.id}
                     order={order}
