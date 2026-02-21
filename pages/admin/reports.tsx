@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { Download, TrendingUp, Euro, ShoppingBag, Calendar, ChevronLeft } from 'lucide-react'
+import AdminLayout from '@/components/AdminLayout'
+import { 
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+} from 'recharts'
+import { Download, TrendingUp, Euro, ShoppingBag, Calendar } from 'lucide-react'
 
 interface Order {
   id: string
@@ -12,21 +14,26 @@ interface Order {
   total: number
   status: string
   items: any[]
+  payment_method?: string
 }
 
-export default function Reports({ session }: { session: Session | null }) {
+function ReportsContent() {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [timeRange, setTimeRange] = useState<'day' | 'week' | 'month' | 'year'>('week')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    checkAuth()
+    fetchOrders()
+  }, [timeRange])
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       router.push('/auth/login?redirect=/admin/reports')
-      return
     }
-    fetchOrders()
-  }, [session, timeRange])
+  }
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -143,216 +150,147 @@ export default function Reports({ session }: { session: Session | null }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#fdfcfb' }}>
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-pulse">📊</div>
-          <div className="font-display italic text-xl" style={{ color: '#4a5d54' }}>Lade Reports...</div>
-        </div>
+      <div className="p-8 text-center">
+        <div className="text-4xl mb-4 animate-bounce">📊</div>
+        <p className="text-gray-500 italic">Lade Berichte...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#fdfcfb' }}>
-      <Navbar session={session} cartCount={0} onCartClick={() => {}} />
-
-      <div className="max-w-7xl mx-auto px-6 py-10">
-        <button 
-          onClick={() => router.push('/admin')}
-          className="flex items-center gap-2 text-[#8da399] font-bold text-sm mb-6 hover:text-[#4a5d54] transition"
+    <div className="p-8">
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h1 className="text-4xl font-display font-bold italic text-[#4a5d54]">Umsatz-Reports</h1>
+          <p className="text-gray-500">Analysen für dein Business</p>
+        </div>
+        <button
+          onClick={exportToCSV}
+          className="flex items-center gap-2 px-6 py-3 bg-[#4a5d54] text-white rounded-xl font-bold hover:opacity-90 transition"
         >
-          <ChevronLeft size={18} /> ZURÜCK ZUM ADMIN
+          <Download size={20} /> CSV Export
         </button>
+      </div>
 
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-5xl font-display font-bold italic" style={{ color: '#4a5d54' }}>
-              Umsatz-Reports
-            </h1>
-            <p className="text-lg mt-1" style={{ color: '#8da399' }}>
-              Detaillierte Analysen & Statistiken
-            </p>
-          </div>
+      {/* Range Selector */}
+      <div className="flex gap-2 mb-8">
+        {(['day', 'week', 'month', 'year'] as const).map(range => (
           <button
-            onClick={exportToCSV}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition hover:opacity-90"
-            style={{ backgroundColor: '#4a5d54' }}
+            key={range}
+            onClick={() => setTimeRange(range)}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              timeRange === range ? 'bg-[#4a5d54] text-white' : 'bg-white text-gray-500 border border-gray-200'
+            }`}
           >
-            <Download size={20} />
-            CSV Export
+            {range.toUpperCase()}
           </button>
+        ))}
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <Euro className="text-blue-500" />
+            <span className="text-sm text-gray-500">Umsatz</span>
+          </div>
+          <div className="text-2xl font-bold">{stats.totalRevenue.toFixed(2)} €</div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <ShoppingBag className="text-green-500" />
+            <span className="text-sm text-gray-500">Bestellungen</span>
+          </div>
+          <div className="text-2xl font-bold">{stats.totalOrders}</div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <TrendingUp className="text-orange-500" />
+            <span className="text-sm text-gray-500">Ø Wert</span>
+          </div>
+          <div className="text-2xl font-bold">{stats.avgOrderValue.toFixed(2)} €</div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <Calendar className="text-purple-500" />
+            <span className="text-sm text-gray-500">Geliefert</span>
+          </div>
+          <div className="text-2xl font-bold">{stats.completedOrders}</div>
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h3 className="font-bold mb-4">Umsatz-Verlauf</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={dailyRevenue()}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="date" fontSize={12} />
+              <YAxis fontSize={12} />
+              <Tooltip />
+              <Line type="monotone" dataKey="revenue" stroke="#4a5d54" strokeWidth={3} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* Time Range Selector */}
-        <div className="flex gap-3 mb-8">
-          {(['day', 'week', 'month', 'year'] as const).map(range => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-6 py-2 rounded-xl font-semibold transition ${
-                timeRange === range
-                  ? 'text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-              style={timeRange === range ? { backgroundColor: '#4a5d54' } : {}}
-            >
-              {range === 'day' && '📅 Heute'}
-              {range === 'week' && '📆 Woche'}
-              {range === 'month' && '📊 Monat'}
-              {range === 'year' && '📈 Jahr'}
-            </button>
-          ))}
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h3 className="font-bold mb-4">Bestellungen nach Uhrzeit</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={ordersByHour()}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="hour" fontSize={12} />
+              <YAxis fontSize={12} />
+              <Tooltip />
+              <Bar dataKey="count" fill="#8da399" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
+      </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-3 rounded-xl" style={{ backgroundColor: '#f0f9ff' }}>
-                <Euro size={24} style={{ color: '#3b82f6' }} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h3 className="font-bold mb-4">Top 10 Produkte</h3>
+          <div className="space-y-3">
+            {getBestsellers().map((product, i) => (
+              <div key={product.name} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <span className="font-medium text-sm">{i + 1}. {product.name}</span>
+                <span className="font-bold">{product.revenue.toFixed(2)} €</span>
               </div>
-              <div>
-                <div className="text-sm text-gray-500">Gesamtumsatz</div>
-                <div className="text-3xl font-bold" style={{ color: '#4a5d54' }}>
-                  {stats.totalRevenue.toFixed(2)} €
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-3 rounded-xl" style={{ backgroundColor: '#f0fdf4' }}>
-                <ShoppingBag size={24} style={{ color: '#10b981' }} />
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Bestellungen</div>
-                <div className="text-3xl font-bold" style={{ color: '#4a5d54' }}>
-                  {stats.totalOrders}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-3 rounded-xl" style={{ backgroundColor: '#fef3c7' }}>
-                <TrendingUp size={24} style={{ color: '#f59e0b' }} />
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Ø Bestellwert</div>
-                <div className="text-3xl font-bold" style={{ color: '#4a5d54' }}>
-                  {stats.avgOrderValue.toFixed(2)} €
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-3 rounded-xl" style={{ backgroundColor: '#e0f2fe' }}>
-                <Calendar size={24} style={{ color: '#0ea5e9' }} />
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Abgeschlossen</div>
-                <div className="text-3xl font-bold" style={{ color: '#4a5d54' }}>
-                  {stats.completedOrders}
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Charts Grid */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          {/* Umsatz pro Tag */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-xl font-bold mb-4" style={{ color: '#4a5d54' }}>
-              Umsatz-Verlauf
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={dailyRevenue()}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0ede8" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="revenue" stroke="#4a5d54" strokeWidth={3} dot={{ fill: '#4a5d54' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Bestellungen pro Stunde */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-xl font-bold mb-4" style={{ color: '#4a5d54' }}>
-              Bestellungen nach Uhrzeit
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={ordersByHour()}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0ede8" />
-                <XAxis dataKey="hour" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="count" fill="#8da399" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Bestseller & Status */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* Bestseller */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-xl font-bold mb-4" style={{ color: '#4a5d54' }}>
-              Top 10 Bestseller
-            </h3>
-            <div className="space-y-3">
-              {getBestsellers().map((product, i) => (
-                <div key={product.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm"
-                      style={{ backgroundColor: COLORS[i % COLORS.length] }}>
-                      {i + 1}
-                    </div>
-                    <div>
-                      <div className="font-semibold">{product.name}</div>
-                      <div className="text-xs text-gray-500">{product.count}x verkauft</div>
-                    </div>
-                  </div>
-                  <div className="font-bold" style={{ color: '#4a5d54' }}>
-                    {product.revenue.toFixed(2)} €
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Status Verteilung */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-xl font-bold mb-4" style={{ color: '#4a5d54' }}>
-              Bestellstatus
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={statusDistribution()}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ status, percent }) => `${status} (${(percent * 100).toFixed(0)}%)`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {statusDistribution().map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h3 className="font-bold mb-4">Status-Verteilung</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={statusDistribution()}
+                dataKey="count"
+                nameKey="status"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                label={({ status }) => status}
+              >
+                {statusDistribution().map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ReportsPage() {
+  return (
+    <AdminLayout>
+      <ReportsContent />
+    </AdminLayout>
   )
 }

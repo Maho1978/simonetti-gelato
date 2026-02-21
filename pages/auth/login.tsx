@@ -1,119 +1,122 @@
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/router'
+import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-export default function Login() {
+export default function LoginPage() {
   const router = useRouter()
-  const { redirect } = router.query
-  
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-      if (error) throw error
-
-      // Redirect to intended page or home
-      router.push(redirect ? String(redirect) : '/')
-    } catch (error: any) {
-      setError(error.message || 'Anmeldung fehlgeschlagen')
-    } finally {
+    if (error) {
+      setError(error.message)
       setLoading(false)
+    } else {
+      router.push('/admin')
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#4a5d54] to-[#2d3a33] flex items-center justify-center p-4">
       <div className="max-w-md w-full">
+        
+        {/* Logo/Branding */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center space-x-2 mb-8">
-            <span className="text-6xl">🍕</span>
-            <span className="text-4xl font-display font-extrabold text-white">
-              FoodExpress
-            </span>
-          </Link>
-          <h1 className="text-4xl font-display font-bold text-white mb-2">
-            Willkommen zurück!
+          <div className="inline-block bg-white rounded-full p-4 mb-4">
+            <div className="text-6xl">🍦</div>
+          </div>
+          <h1 className="text-4xl font-display font-bold italic text-white mb-2">
+            SIMONETTI
           </h1>
-          <p className="text-white text-opacity-90">
-            Melde dich an, um fortzufahren
+          <p className="text-white/80">
+            Admin Login
           </p>
         </div>
 
+        {/* Login Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
+          
+          <h2 className="text-2xl font-bold mb-6 text-center">Anmelden</h2>
+
           {error && (
-            <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
-              {error}
+            <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-800 text-sm">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-6">
+            
+            {/* Email */}
             <div>
-              <label className="block text-sm font-semibold mb-2">
-                E-Mail
+              <label className="block text-sm font-semibold mb-2 text-gray-700">
+                Email
               </label>
               <input
                 type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
-                className="input"
-                placeholder="deine@email.de"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#4a5d54] focus:outline-none transition"
+                placeholder="admin@simonetti.de"
               />
             </div>
 
+            {/* Password */}
             <div>
-              <label className="block text-sm font-semibold mb-2">
+              <label className="block text-sm font-semibold mb-2 text-gray-700">
                 Passwort
               </label>
               <input
                 type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
-                className="input"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-[#4a5d54] focus:outline-none transition"
                 placeholder="••••••••"
               />
             </div>
 
+            {/* Login Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary text-lg"
+              className="w-full py-4 bg-[#4a5d54] text-white font-bold text-lg rounded-lg hover:bg-[#3a4d44] transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="spinner !w-5 !h-5 !border-2"></div>
-                  <span>Anmelden...</span>
-                </div>
-              ) : (
-                'Anmelden'
-              )}
+              {loading ? 'Anmelden...' : 'Anmelden'}
             </button>
+
           </form>
 
-          <div className="mt-6 text-center text-gray-600">
-            Noch kein Konto?{' '}
-            <Link
-              href="/auth/register"
-              className="text-primary font-semibold hover:underline"
+          {/* Back to Home */}
+          <div className="mt-6 text-center">
+            <Link 
+              href="/"
+              className="text-sm text-gray-600 hover:text-[#4a5d54] transition"
             >
-              Jetzt registrieren
+              ← Zurück zur Startseite
             </Link>
           </div>
+
         </div>
+
+        {/* Footer */}
+        <div className="text-center mt-8 text-white/60 text-sm">
+          <p>Eiscafe Simonetti © 2026</p>
+          <p className="mt-1">Konrad-Adenauer-Platz 2, 40764 Langenfeld</p>
+        </div>
+
       </div>
     </div>
   )

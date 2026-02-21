@@ -1,17 +1,17 @@
 {
   "pages": {
     "/": [
-      "static/chunks/[root-of-the-server]__28ad21fd._.js",
-      "static/chunks/dbe97_next_dist_compiled_5af220ac._.js",
+      "static/chunks/[root-of-the-server]__b8d47b37._.js",
+      "static/chunks/dbe97_next_dist_compiled_2380add9._.js",
       "static/chunks/dbe97_next_dist_shared_lib_ee9d4612._.js",
       "static/chunks/dbe97_next_dist_client_37f16a24._.js",
       "static/chunks/dbe97_next_dist_8987890d._.js",
-      "static/chunks/dbe97_next_a4d0cedf._.js",
+      "static/chunks/dbe97_next_5a6e0f70._.js",
       "static/chunks/dbe97_react-dom_65ca1d60._.js",
       "static/chunks/dbe97_@supabase_auth-js_dist_module_04bc38cc._.js",
-      "static/chunks/dbe97_4af657dd._.js",
+      "static/chunks/dbe97_d6cfc7e6._.js",
       "static/chunks/OneDrive_Desktop_simonetti-hybrid_pages_index_2da965e7._.js",
-      "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages_index_17f3cdef._.js"
+      "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages_index_cb763d43._.js"
     ],
     "/_app": [
       "static/chunks/dbe97_next_dist_compiled_21111b1a._.js",
@@ -38,6 +38,58 @@
       "static/chunks/[root-of-the-server]__ba496247._.js",
       "static/chunks/OneDrive_Desktop_simonetti-hybrid_pages__error_2da965e7._.js",
       "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages__error_329dfbf4._.js"
+    ],
+    "/admin": [
+      "static/chunks/dbe97_next_dist_compiled_153d1ecd._.js",
+      "static/chunks/dbe97_next_dist_shared_lib_58a8551b._.js",
+      "static/chunks/dbe97_next_dist_client_9fff3c83._.js",
+      "static/chunks/dbe97_next_dist_8987890d._.js",
+      "static/chunks/dbe97_next_8d6e8d95._.js",
+      "static/chunks/dbe97_react-dom_65ca1d60._.js",
+      "static/chunks/dbe97_@supabase_auth-js_dist_module_04bc38cc._.js",
+      "static/chunks/dbe97_ce0b34bf._.js",
+      "static/chunks/[root-of-the-server]__982799e5._.js",
+      "static/chunks/OneDrive_Desktop_simonetti-hybrid_pages_admin_index_tsx_2da965e7._.js",
+      "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages_admin_index_tsx_a58996f2._.js"
+    ],
+    "/admin/kanban": [
+      "static/chunks/dbe97_next_dist_compiled_153d1ecd._.js",
+      "static/chunks/dbe97_next_dist_shared_lib_58a8551b._.js",
+      "static/chunks/dbe97_next_dist_client_9fff3c83._.js",
+      "static/chunks/dbe97_next_dist_8987890d._.js",
+      "static/chunks/dbe97_next_8d6e8d95._.js",
+      "static/chunks/dbe97_react-dom_65ca1d60._.js",
+      "static/chunks/dbe97_@supabase_auth-js_dist_module_04bc38cc._.js",
+      "static/chunks/dbe97_f4d6f02c._.js",
+      "static/chunks/[root-of-the-server]__ce9e9950._.js",
+      "static/chunks/OneDrive_Desktop_simonetti-hybrid_pages_admin_kanban_tsx_2da965e7._.js",
+      "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages_admin_kanban_tsx_03a3f0f9._.js"
+    ],
+    "/auth/login": [
+      "static/chunks/dbe97_next_dist_compiled_21111b1a._.js",
+      "static/chunks/dbe97_next_dist_shared_lib_58a8551b._.js",
+      "static/chunks/dbe97_next_dist_client_9fff3c83._.js",
+      "static/chunks/dbe97_next_dist_8987890d._.js",
+      "static/chunks/dbe97_next_8d6e8d95._.js",
+      "static/chunks/dbe97_react-dom_65ca1d60._.js",
+      "static/chunks/dbe97_@supabase_auth-js_dist_module_04bc38cc._.js",
+      "static/chunks/dbe97_afcf2215._.js",
+      "static/chunks/[root-of-the-server]__160781b1._.js",
+      "static/chunks/OneDrive_Desktop_simonetti-hybrid_pages_auth_login_tsx_2da965e7._.js",
+      "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages_auth_login_tsx_06f038cc._.js"
+    ],
+    "/ueber-uns": [
+      "static/chunks/[root-of-the-server]__de8dbd72._.js",
+      "static/chunks/dbe97_next_dist_compiled_2380add9._.js",
+      "static/chunks/dbe97_next_dist_shared_lib_ee9d4612._.js",
+      "static/chunks/dbe97_next_dist_client_37f16a24._.js",
+      "static/chunks/dbe97_next_dist_8987890d._.js",
+      "static/chunks/dbe97_next_db7d1ae5._.js",
+      "static/chunks/dbe97_react-dom_65ca1d60._.js",
+      "static/chunks/dbe97_@supabase_auth-js_dist_module_04bc38cc._.js",
+      "static/chunks/dbe97_31358884._.js",
+      "static/chunks/OneDrive_Desktop_simonetti-hybrid_pages_ueber-uns_2da965e7._.js",
+      "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages_ueber-uns_38af9a60._.js"
     ]
   },
   "devFiles": [],

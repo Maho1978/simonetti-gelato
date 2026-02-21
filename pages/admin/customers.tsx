@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import { ChevronLeft, User, Mail, ShoppingBag, Star, Heart, Gift, MessageSquare, X } from 'lucide-react'
+import AdminLayout from '@/components/AdminLayout'
+import { User, Mail, ShoppingBag, Star, Heart, Gift, MessageSquare, X, Search } from 'lucide-react'
 
 interface Customer {
   user_id: string
@@ -24,21 +23,19 @@ interface CustomerNote {
   created_at: string
 }
 
-export default function Customers({ session }: { session: Session | null }) {
+function CustomersContent() {
   const router = useRouter()
   const [customers, setCustomers] = useState<Customer[]>([])
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+ const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerNotes, setCustomerNotes] = useState<CustomerNote[]>([])
   const [newNote, setNewNote] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!session) {
-      router.push('/auth/login?redirect=/admin/customers')
-      return
-    }
+    checkAuth()
     fetchCustomers()
-  }, [session])
+  }, [])
 
   useEffect(() => {
     if (selectedCustomer) {
@@ -46,9 +43,16 @@ export default function Customers({ session }: { session: Session | null }) {
     }
   }, [selectedCustomer])
 
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      router.push('/auth/login?redirect=/admin/customers')
+    }
+  }
+
   const fetchCustomers = async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('customer_stats')
       .select('*')
       .order('total_spent', { ascending: false })
@@ -68,12 +72,13 @@ export default function Customers({ session }: { session: Session | null }) {
   }
 
   const addNote = async () => {
-    if (!newNote.trim() || !selectedCustomer) return
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!newNote.trim() || !selectedCustomer || !session) return
 
     await supabase.from('customer_notes').insert({
       user_id: selectedCustomer.user_id,
       note: newNote,
-      created_by: session?.user?.id
+      created_by: session.user.id
     })
 
     setNewNote('')
@@ -86,221 +91,185 @@ export default function Customers({ session }: { session: Session | null }) {
   }
 
   const getProgressPercentage = (current: number, target: number) => {
-    return Math.min((current / target) * 100, 100)
+    return Math.min((current / (target || 10)) * 100, 100)
   }
+
+  const filteredCustomers = customers.filter(c => 
+    c.email.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#fdfcfb' }}>
-        <div className="text-center">
-          <div className="text-6xl mb-4 animate-pulse">👥</div>
-          <div className="font-display italic text-xl" style={{ color: '#4a5d54' }}>Lade Kunden...</div>
-        </div>
+      <div className="p-8 text-center">
+        <div className="text-4xl mb-4 animate-bounce">👥</div>
+        <p className="text-gray-500 italic">Lade Kunden-Daten...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#fdfcfb' }}>
-      <Navbar session={session} cartCount={0} onCartClick={() => {}} />
+    <div className="p-8">
+      {/* Header */}
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h1 className="text-4xl font-display font-bold italic text-[#4a5d54]">CRM & Kunden</h1>
+          <p className="text-gray-500">{customers.length} registrierte Profile</p>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input 
+            type="text"
+            placeholder="Kunden suchen..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 border-2 border-gray-100 rounded-xl focus:border-[#4a5d54] outline-none transition w-64"
+          />
+        </div>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
-        <button 
-          onClick={() => router.push('/admin')}
-          className="flex items-center gap-2 text-[#8da399] font-bold text-sm mb-6 hover:text-[#4a5d54] transition"
-        >
-          <ChevronLeft size={18} /> ZURÜCK ZUM ADMIN
-        </button>
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Liste */}
+        <div className="lg:col-span-2 space-y-4">
+          {filteredCustomers.map(customer => (
+            <div
+              key={customer.user_id}
+              onClick={() => setSelectedCustomer(customer)}
+              className={`bg-white rounded-2xl p-6 shadow-sm border-2 cursor-pointer transition-all ${
+                selectedCustomer?.user_id === customer.user_id
+                  ? 'border-[#4a5d54] bg-[#f9f8f4]'
+                  : 'border-gray-50 hover:border-gray-200'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-[#4a5d54] text-white flex items-center justify-center font-bold">
+                    {customer.email.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="font-bold text-[#4a5d54]">{customer.email}</div>
+                    <div className="text-xs text-[#8da399]">
+                      Seit {new Date(customer.last_order_date).toLocaleDateString('de-DE')} aktiv
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right text-[#4a5d54]">
+                  <div className="text-xl font-black">{customer.total_spent.toFixed(2)} €</div>
+                  <div className="text-[10px] uppercase font-bold text-[#8da399]">Lifetime Value</div>
+                </div>
+              </div>
 
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-5xl font-display font-bold italic" style={{ color: '#4a5d54' }}>
-              Kunden-Übersicht
-            </h1>
-            <p className="text-lg mt-1" style={{ color: '#8da399' }}>
-              {customers.length} Kunden • {customers.reduce((sum, c) => sum + c.total_orders, 0)} Bestellungen
-            </p>
-          </div>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-white/50 p-2 rounded-lg text-center border border-gray-50">
+                  <div className="font-bold text-sm">{customer.total_orders}</div>
+                  <div className="text-[10px] text-gray-400 uppercase">Orders</div>
+                </div>
+                <div className="bg-white/50 p-2 rounded-lg text-center border border-gray-50">
+                  <div className="font-bold text-sm">{customer.avg_order_value.toFixed(2)}€</div>
+                  <div className="text-[10px] text-gray-400 uppercase">Ø Wert</div>
+                </div>
+                <div className="bg-white/50 p-2 rounded-lg text-center border border-gray-50">
+                  <div className="font-bold text-sm">{customer.favorite_count}</div>
+                  <div className="text-[10px] text-gray-400 uppercase">Favs</div>
+                </div>
+              </div>
+
+              {/* Progress */}
+              <div className="flex justify-between items-center text-[10px] font-bold uppercase mb-1">
+                <span className="text-[#8da399]">Points Progress</span>
+                <span className="text-[#4a5d54]">{customer.current_points} / {customer.next_reward_at || 10}</span>
+              </div>
+              <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                <div 
+                  className="bg-[#4a5d54] h-full transition-all duration-1000"
+                  style={{ width: `${getProgressPercentage(customer.current_points, customer.next_reward_at)}%` }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Kunden-Liste */}
-          <div className="lg:col-span-2 space-y-3">
-            {customers.map(customer => {
-              const progressPercent = getProgressPercentage(customer.current_points || 0, customer.next_reward_at || 10)
+        {/* Sidebar Details */}
+        <div className="lg:col-span-1">
+          {selectedCustomer ? (
+            <div className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100 sticky top-8">
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-2xl font-display font-bold italic text-[#4a5d54]">Details</h2>
+                <button onClick={() => setSelectedCustomer(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                  <X size={20} />
+                </button>
+              </div>
 
-              return (
-                <div
-                  key={customer.user_id}
-                  onClick={() => setSelectedCustomer(customer)}
-                  className={`bg-white rounded-2xl p-6 shadow-sm border-2 cursor-pointer transition-all ${
-                    selectedCustomer?.user_id === customer.user_id
-                      ? 'border-[#4a5d54] shadow-md'
-                      : 'border-gray-100 hover:border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                        style={{ backgroundColor: '#4a5d54' }}>
-                        {customer.email.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-bold text-lg" style={{ color: '#4a5d54' }}>
-                          {customer.email}
-                        </div>
-                        {customer.last_order_date && (
-                          <div className="text-xs text-gray-400">
-                            Letzte Bestellung: {new Date(customer.last_order_date).toLocaleDateString('de-DE')}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Statistiken */}
-                  <div className="grid grid-cols-4 gap-4 mb-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold" style={{ color: '#4a5d54' }}>
-                        {customer.total_orders || 0}
-                      </div>
-                      <div className="text-xs text-gray-400">Bestellungen</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold" style={{ color: '#4a5d54' }}>
-                        {(customer.total_spent || 0).toFixed(0)} €
-                      </div>
-                      <div className="text-xs text-gray-400">Umsatz</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold" style={{ color: '#4a5d54' }}>
-                        {(customer.avg_order_value || 0).toFixed(0)} €
-                      </div>
-                      <div className="text-xs text-gray-400">Ø Wert</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold" style={{ color: '#4a5d54' }}>
-                        {customer.favorite_count || 0}
-                      </div>
-                      <div className="text-xs text-gray-400">Favoriten</div>
-                    </div>
-                  </div>
-
-                  {/* Treue-Fortschritt */}
-                  {customer.total_orders > 0 && (
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="font-semibold" style={{ color: '#8da399' }}>
-                          <Gift size={12} className="inline mr-1" />
-                          Treueprogramm
-                        </span>
-                        <span className="font-bold" style={{ color: '#4a5d54' }}>
-                          {customer.current_points || 0} / {customer.next_reward_at || 10}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{
-                            width: `${progressPercent}%`,
-                            backgroundColor: '#4a5d54'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <Mail className="text-[#8da399]" size={18} />
+                  <span className="text-sm font-medium">{selectedCustomer.email}</span>
                 </div>
-              )
-            })}
-          </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <Star className="text-[#8da399]" size={18} />
+                  <span className="text-sm font-medium">{selectedCustomer.review_count} Rezensionen</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <Heart className="text-[#8da399]" size={18} />
+                  <span className="text-sm font-medium">{selectedCustomer.favorite_count} gespeicherte Artikel</span>
+                </div>
+              </div>
 
-          {/* Detail-Panel */}
-          <div className="lg:col-span-1">
-            {selectedCustomer ? (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 sticky top-24">
-                <div className="flex justify-between items-start mb-6">
-                  <h3 className="text-xl font-bold" style={{ color: '#4a5d54' }}>
-                    Kunden-Details
-                  </h3>
-                  <button
-                    onClick={() => setSelectedCustomer(null)}
-                    className="p-1 hover:bg-gray-100 rounded"
+              <div className="border-t border-gray-100 pt-6">
+                <h3 className="font-bold text-[#4a5d54] mb-4 flex items-center gap-2">
+                  <MessageSquare size={18} /> CRM Notizen
+                </h3>
+                
+                <div className="space-y-3 mb-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                  {customerNotes.map(note => (
+                    <div key={note.id} className="bg-[#f9f8f4] p-3 rounded-xl relative group border border-[#4a5d54]/5">
+                      <button 
+                        onClick={() => deleteNote(note.id)}
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition text-red-400"
+                      >
+                        <X size={14} />
+                      </button>
+                      <p className="text-sm text-gray-700 leading-relaxed">{note.note}</p>
+                      <span className="text-[10px] text-gray-400 block mt-2">
+                        {new Date(note.created_at).toLocaleString('de-DE')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addNote()}
+                    placeholder="Interaktion erfassen..."
+                    className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm focus:ring-2 ring-[#4a5d54] outline-none"
+                  />
+                  <button 
+                    onClick={addNote}
+                    className="bg-[#4a5d54] text-white px-4 py-2 rounded-xl font-bold hover:scale-105 transition"
                   >
-                    <X size={18} />
+                    +
                   </button>
                 </div>
-
-                <div className="space-y-4 mb-6">
-                  <div className="flex items-center gap-2">
-                    <Mail size={16} style={{ color: '#8da399' }} />
-                    <span className="text-sm">{selectedCustomer.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ShoppingBag size={16} style={{ color: '#8da399' }} />
-                    <span className="text-sm">{selectedCustomer.total_orders} Bestellungen</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Heart size={16} style={{ color: '#8da399' }} />
-                    <span className="text-sm">{selectedCustomer.favorite_count} Favoriten</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Star size={16} style={{ color: '#8da399' }} />
-                    <span className="text-sm">{selectedCustomer.review_count} Bewertungen</span>
-                  </div>
-                </div>
-
-                {/* Notizen */}
-                <div className="border-t pt-4">
-                  <h4 className="font-bold mb-3 flex items-center gap-2" style={{ color: '#4a5d54' }}>
-                    <MessageSquare size={16} />
-                    Notizen
-                  </h4>
-
-                  <div className="space-y-2 mb-3">
-                    {customerNotes.map(note => (
-                      <div key={note.id} className="bg-gray-50 p-3 rounded-lg relative group">
-                        <button
-                          onClick={() => deleteNote(note.id)}
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition p-1 hover:bg-white rounded"
-                        >
-                          <X size={12} />
-                        </button>
-                        <div className="text-sm text-gray-700 pr-6">{note.note}</div>
-                        <div className="text-xs text-gray-400 mt-1">
-                          {new Date(note.created_at).toLocaleString('de-DE')}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newNote}
-                      onChange={e => setNewNote(e.target.value)}
-                      onKeyPress={e => e.key === 'Enter' && addNote()}
-                      placeholder="Neue Notiz..."
-                      className="flex-1 border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#4a5d54] focus:outline-none"
-                    />
-                    <button
-                      onClick={addNote}
-                      className="px-4 py-2 rounded-lg text-white font-bold text-sm"
-                      style={{ backgroundColor: '#4a5d54' }}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
-                <User size={48} className="mx-auto mb-3" style={{ color: '#8da399' }} />
-                <p className="text-gray-400">Wähle einen Kunden aus</p>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl p-12 text-center border-2 border-dashed border-gray-100">
+              <User size={48} className="mx-auto text-gray-200 mb-4" />
+              <p className="text-gray-400 font-medium">Kunden auswählen für CRM-Details</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CustomersPage() {
+  return (
+    <AdminLayout>
+      <CustomersContent />
+    </AdminLayout>
   )
 }

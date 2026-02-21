@@ -127,7 +127,7 @@ export default function Checkout({ session }: { session: Session | null }) {
     }
   }
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const subtotal = cart.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity), 0)
   const grandTotal = subtotal + settings.delivery_fee + tip
 
   return (
@@ -256,11 +256,25 @@ export default function Checkout({ session }: { session: Session | null }) {
 
               <div className="space-y-4 mb-8">
                 {cart.map(item => (
-                  <div key={item.id} className="flex justify-between items-start">
-                    <div className="text-sm">
-                      <span className="font-bold text-[#4a5d54]">{item.quantity}x</span> {item.name}
+                  <div key={item.cartId || item.id} className="border-b border-gray-100 pb-3">
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="text-sm">
+                        <span className="font-bold text-[#4a5d54]">{item.quantity}x</span> {item.name}
+                      </div>
+                      <div className="font-bold text-sm">{(item.totalPrice || item.price * item.quantity).toFixed(2)} €</div>
                     </div>
-                    <div className="font-bold text-sm">{(item.price * item.quantity).toFixed(2)} €</div>
+                    {/* Sorten anzeigen */}
+                    {item.selectedFlavors && item.selectedFlavors.length > 0 && (
+                      <div className="text-xs text-gray-600 ml-4 mt-1">
+                        🍦 {item.selectedFlavors.join(', ')}
+                      </div>
+                    )}
+                    {/* Extras anzeigen */}
+                    {item.selectedExtras && item.selectedExtras.length > 0 && (
+                      <div className="text-xs text-gray-600 ml-4 mt-1">
+                        ➕ {item.selectedExtras.map(e => e.name).join(', ')}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -325,6 +339,7 @@ function StripeCheckoutForm({ session, isGuest, cart, total, subtotal, deliveryF
   const [formData, setFormData] = useState({
     name: '',
     email: session?.user?.email || '',
+    phone: '',
     street: '',
     houseNumber: '',
     zip: '40764',
@@ -369,63 +384,61 @@ function StripeCheckoutForm({ session, isGuest, cart, total, subtotal, deliveryF
 
       if (stripeError) throw new Error(stripeError.message)
 
-      const orderData = {
-        user_id: session?.user?.id || null,
-        guest_email: isGuest ? formData.email : null,
-        items: cart,
-        total,
-        tip,
-        delivery_address: {
-          name: formData.name,
-          street: `${formData.street} ${formData.houseNumber}`,
-          zip: formData.zip,
-          city: formData.city,
-        },
-        delivery_time: formData.deliveryTime,
-        notes: formData.notes,
-        payment_intent_id: paymentIntent?.id,
-        payment_method: 'stripe'
+      // Erstelle Order in Supabase
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          customer_name: formData.name,
+          customer_email: isGuest ? formData.email : session?.user?.email,
+          customer_phone: formData.phone || '',
+          delivery_address: `${formData.street} ${formData.houseNumber}, ${formData.zip} ${formData.city}`,
+          notes: formData.notes,
+          items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            flavors: item.selectedFlavors || [],
+            extras: item.selectedExtras || []
+          })),
+          subtotal: subtotal,
+          delivery_fee: deliveryFee,
+          total: total,
+          tip: tip || 0,
+          status: 'OFFEN',
+          payment_method: 'STRIPE',
+          payment_intent_id: paymentIntent?.id,
+          user_id: session?.user?.id || null
+        })
+        .select()
+        .single()
+
+      if (orderError) {
+        console.error('Order creation error:', orderError)
+        throw new Error('Bestellung konnte nicht erstellt werden')
       }
 
-      // 1. Order in DB speichern
-      const orderResponse = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      })
-      
-      const { order: createdOrder } = await orderResponse.json()
-
-      // 2. Email an Kunde senden
-      await fetch('/api/emails/send-order-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'order_confirmed',
-          order: { ...orderData, id: createdOrder.id, order_number: createdOrder.order_number },
-          recipientEmail: isGuest ? formData.email : session?.user?.email
+      // Emails senden (optional - kann fehlschlagen ohne den Flow zu brechen)
+      try {
+        await fetch('/api/emails/send-order-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'order_confirmed',
+            order: { ...order, order_number: order.id },
+            recipientEmail: isGuest ? formData.email : session?.user?.email
+          })
         })
-      })
-
-      // 3. Email an Admin senden
-      await fetch('/api/emails/send-order-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'new_order_admin',
-          order: { ...orderData, id: createdOrder.id, order_number: createdOrder.order_number },
-          recipientEmail: process.env.NEXT_PUBLIC_ADMIN_EMAIL
-        })
-      })
+      } catch (emailError) {
+        console.log('Email notification failed (non-critical)', emailError)
+      }
 
       localStorage.removeItem('simonetti-cart')
       localStorage.removeItem('cart')
       localStorage.removeItem('orderTip')
-      
-      localStorage.setItem('lastOrder', JSON.stringify({     orderId: createdOrder.id,     items: cart.map(item => ({       id: item.id,       name: item.name,       quantity: item.quantity     }))   }))
-
-      router.push('/order-success')
+      router.push(`/order-success?order_id=${order.id}`)
     } catch (error: any) {
+      console.error('Checkout error:', error)
       setError(error.message || 'Zahlung fehlgeschlagen')
     } finally {
       setLoading(false)
@@ -444,13 +457,18 @@ function StripeCheckoutForm({ session, isGuest, cart, total, subtotal, deliveryF
             <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">Vollständiger Name</label>
             <input type="text" required className="input-simonetti" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Max Mustermann" />
           </div>
-          {isGuest && (
-            <div>
-              <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">E-Mail für Bestätigung</label>
-              <input type="email" required className="input-simonetti" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="max@beispiel.de" />
-            </div>
-          )}
+          <div>
+            <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">Telefonnummer</label>
+            <input type="tel" required className="input-simonetti" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="0173 1234567" />
+          </div>
         </div>
+
+        {isGuest && (
+          <div className="mb-4">
+            <label className="block text-[10px] font-bold text-[#8da399] uppercase tracking-widest mb-1.5 ml-1">E-Mail für Bestätigung</label>
+            <input type="email" required className="input-simonetti" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="max@beispiel.de" />
+          </div>
+        )}
 
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="col-span-2 relative">

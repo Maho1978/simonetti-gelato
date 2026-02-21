@@ -1,116 +1,195 @@
-import { ShoppingCart } from 'lucide-react'
+import { X, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/router'
 
 interface CartItem {
+  cartId: string
   id: string
   name: string
   price: number
   quantity: number
+  selectedFlavors?: string[]
+  selectedExtras?: { id: string; name: string; price: number }[]
+  totalPrice: number
+  notes?: string
 }
 
 interface MiniCartProps {
+  isOpen: boolean
+  onClose: () => void
   cart: CartItem[]
+  onUpdateQuantity: (cartId: string, newQuantity: number) => void
+  onRemoveItem: (cartId: string) => void
+  onUpdateNotes: (cartId: string, notes: string) => void
+  onClearCart: () => void
   total: number
-  onOpenCart: () => void
 }
 
-const DELIVERY_FEE = 3.00
+export default function MiniCart({
+  isOpen,
+  onClose,
+  cart,
+  onUpdateQuantity,
+  onRemoveItem,
+  onUpdateNotes,
+  onClearCart,
+  total
+}: MiniCartProps) {
+  const router = useRouter()
 
-export default function MiniCart({ cart, total, onOpenCart }: MiniCartProps) {
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
-  const grandTotal = total + DELIVERY_FEE
+  const handleCheckout = () => {
+    router.push('/checkout-login')
+    onClose()
+  }
 
-  if (cartCount === 0) return null
+  if (!isOpen) return null
 
   return (
     <>
-      {/* Desktop - Fixed Right Sidebar */}
-      <div className="hidden lg:block fixed right-6 top-24 z-30">
-        <div 
-          onClick={onOpenCart}
-          className="bg-white rounded-2xl shadow-xl p-5 cursor-pointer transition-all hover:shadow-2xl hover:scale-105"
-          style={{ width: '280px', border: '3px solid #4a5d54' }}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <ShoppingCart size={20} style={{ color: '#4a5d54' }} />
-              <span className="font-bold" style={{ color: '#4a5d54' }}>
-                Warenkorb
-              </span>
-            </div>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm"
-              style={{ backgroundColor: '#4a5d54' }}>
-              {cartCount}
-            </div>
-          </div>
+      {/* Overlay */}
+      <div 
+        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        onClick={onClose}
+      />
 
-          {/* Items List */}
-          <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
-            {cart.map((item) => (
-              <div key={item.id} className="flex justify-between items-center text-sm p-2 rounded-lg"
-                style={{ backgroundColor: '#f9f8f4' }}>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold truncate" style={{ color: '#4a5d54' }}>
-                    {item.quantity}x {item.name}
-                  </div>
-                </div>
-                <div className="font-bold ml-2" style={{ color: '#8da399' }}>
-                  {(item.price * item.quantity).toFixed(2)}€
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Summary */}
-          <div className="border-t-2 pt-3 space-y-2" style={{ borderColor: '#f0ede8' }}>
-            <div className="flex justify-between text-sm">
-              <span style={{ color: '#8da399' }}>Zwischensumme</span>
-              <span className="font-bold" style={{ color: '#4a5d54' }}>
-                {total.toFixed(2)} €
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span style={{ color: '#8da399' }}>Liefergebühr</span>
-              <span className="font-bold" style={{ color: '#4a5d54' }}>
-                {DELIVERY_FEE.toFixed(2)} €
-              </span>
-            </div>
-            <div className="flex justify-between items-center pt-2 border-t" style={{ borderColor: '#f0ede8' }}>
-              <span className="font-bold text-lg" style={{ color: '#4a5d54' }}>
-                Gesamt
-              </span>
-              <span className="font-bold text-2xl" style={{ color: '#4a5d54' }}>
-                {grandTotal.toFixed(2)} €
-              </span>
-            </div>
-          </div>
-
-          {/* CTA */}
+      {/* Sidebar - SCHWEBEND */}
+      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out"
+           style={{ transform: isOpen ? 'translateX(0)' : 'translateX(100%)' }}>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <ShoppingBag size={24} />
+            Warenkorb ({cart.length})
+          </h2>
           <button
-            className="w-full mt-4 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90"
-            style={{ backgroundColor: '#4a5d54' }}
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-full transition"
           >
-            Zur Kasse →
+            <X size={24} />
           </button>
         </div>
-      </div>
 
-      {/* Mobile - Floating Button */}
-      <button
-        onClick={onOpenCart}
-        className="lg:hidden fixed bottom-6 right-6 p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 z-40"
-        style={{ backgroundColor: '#4a5d54', color: '#fdfcfb' }}
-      >
-        <ShoppingCart size={24} />
-        <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
-          style={{ backgroundColor: '#8da399' }}>
-          {cartCount}
-        </span>
-        <div className="absolute -bottom-12 right-0 bg-white px-3 py-1 rounded-full shadow-lg font-bold text-sm whitespace-nowrap"
-          style={{ color: '#4a5d54' }}>
-          {grandTotal.toFixed(2)} €
+        {/* Cart Items */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {cart.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🛒</div>
+              <p className="text-gray-500 text-lg">Dein Warenkorb ist leer</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cart.map((item) => (
+                <div key={item.cartId} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  
+                  {/* Item Header */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg">{item.name}</h3>
+                      <p className="text-sm text-gray-600">{item.price.toFixed(2)} € / Stück</p>
+                    </div>
+                    <button
+                      onClick={() => onRemoveItem(item.cartId)}
+                      className="p-2 hover:bg-red-100 rounded-full transition text-red-600"
+                      title="Entfernen"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+
+                  {/* Sorten */}
+                  {item.selectedFlavors && item.selectedFlavors.length > 0 && (
+                    <div className="mb-2 text-sm">
+                      <span className="font-semibold">Sorten:</span>
+                      <div className="text-gray-700 ml-2">
+                        🍦 {item.selectedFlavors.join(', ')}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Extras */}
+                  {item.selectedExtras && item.selectedExtras.length > 0 && (
+                    <div className="mb-2 text-sm">
+                      <span className="font-semibold">Extras:</span>
+                      <div className="text-gray-700 ml-2">
+                        {item.selectedExtras.map(extra => (
+                          <div key={extra.id}>
+                            ➕ {extra.name} (+{extra.price.toFixed(2)} €)
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Anmerkungen Input */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      💬 Anmerkungen (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={item.notes || ''}
+                      onChange={(e) => onUpdateNotes(item.cartId, e.target.value)}
+                      placeholder="z.B. weniger süß, extra kalt..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
+                    />
+                  </div>
+
+                  {/* Quantity Controls */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => onUpdateQuantity(item.cartId, item.quantity - 1)}
+                        className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center font-bold transition"
+                      >
+                        −
+                      </button>
+                      <span className="font-bold text-lg w-8 text-center">{item.quantity}</span>
+                      <button
+                        onClick={() => onUpdateQuantity(item.cartId, item.quantity + 1)}
+                        className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center font-bold transition"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="font-bold text-xl">
+                      {(item.totalPrice || (item.price * item.quantity)).toFixed(2)} €
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </button>
+
+        {/* Footer */}
+        {cart.length > 0 && (
+          <div className="border-t border-gray-200 p-6 space-y-4 bg-gray-50">
+            
+            {/* Clear Cart */}
+            <button
+              onClick={onClearCart}
+              className="w-full text-sm text-red-600 hover:text-red-700 font-semibold transition"
+            >
+              Warenkorb leeren
+            </button>
+
+            {/* Total */}
+            <div className="flex items-center justify-between text-2xl font-bold border-t border-gray-200 pt-4">
+              <span>Zwischensumme:</span>
+              <span>{total.toFixed(2)} €</span>
+            </div>
+
+            {/* Checkout Button */}
+            <button
+              onClick={handleCheckout}
+              className="w-full py-4 bg-black text-white font-bold text-lg rounded-lg hover:bg-gray-900 transition flex items-center justify-center gap-2"
+            >
+              Zur Kasse
+              <ArrowRight size={20} />
+            </button>
+          </div>
+        )}
+      </div>
     </>
   )
 }

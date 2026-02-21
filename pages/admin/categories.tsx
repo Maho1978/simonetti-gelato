@@ -1,322 +1,319 @@
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
-import { Session } from '@supabase/supabase-js'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import { ArrowLeft, Plus, Edit2, Trash2, GripVertical } from 'lucide-react'
+import AdminLayout from '@/components/AdminLayout'
+import { Plus, Edit2, Trash2, Save, X, Tag, Eye, EyeOff } from 'lucide-react'
 
-interface Category {
-  id: string
-  name: string
-  icon: string
-  description: string
-  sort_order: number
-}
-
-export default function CategoriesAdmin({ session }: { session: Session | null }) {
-  const router = useRouter()
-  const [categories, setCategories] = useState<Category[]>([])
+function CategoriesContent() {
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState<Category | null>(null)
-  const [message, setMessage] = useState('')
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    icon: '🍦',
-    description: ''
-  })
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [newCategory, setNewCategory] = useState({ name: '', description: '', emoji: '🍦', sort_order: 0 })
+  const [editForm, setEditForm] = useState({ name: '', description: '', emoji: '', sort_order: 0 })
 
   useEffect(() => {
-    if (!session) {
-      router.push('/auth/login?redirect=/admin/categories')
-      return
-    }
-    fetchCategories()
-  }, [session])
+    loadCategories()
+  }, [])
 
-  const fetchCategories = async () => {
+  const loadCategories = async () => {
+    setLoading(true)
     const { data } = await supabase
       .from('categories')
       .select('*')
-      .order('sort_order')
+      .order('sort_order', { ascending: true })
     
     if (data) setCategories(data)
     setLoading(false)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (editing) {
-      // Update
-      const { error } = await supabase
-        .from('categories')
-        .update({
-          name: formData.name,
-          icon: formData.icon,
-          description: formData.description
-        })
-        .eq('id', editing.id)
-      
-      if (error) {
-        showMessage('❌ Fehler: ' + error.message)
-        return
-      }
-      
-      showMessage('✅ Kategorie aktualisiert!')
-    } else {
-      // Create
-      const { error } = await supabase
-        .from('categories')
-        .insert({
-          name: formData.name,
-          icon: formData.icon,
-          description: formData.description,
-          sort_order: categories.length
-        })
-      
-      if (error) {
-        showMessage('❌ Fehler: ' + error.message)
-        return
-      }
-      
-      showMessage('✅ Kategorie erstellt!')
+  const handleCreate = async () => {
+    if (!newCategory.name.trim()) {
+      alert('Bitte Namen eingeben!')
+      return
     }
-    
-    setFormData({ name: '', icon: '🍦', description: '' })
-    setEditing(null)
-    fetchCategories()
+
+    const { error } = await supabase
+      .from('categories')
+      .insert({
+        name: newCategory.name,
+        description: newCategory.description,
+        emoji: newCategory.emoji,
+        sort_order: newCategory.sort_order || categories.length
+      })
+
+    if (error) {
+      alert('Fehler beim Erstellen: ' + error.message)
+    } else {
+      setNewCategory({ name: '', description: '', emoji: '🍦', sort_order: 0 })
+      loadCategories()
+    }
   }
 
-  const handleEdit = (category: Category) => {
-    setEditing(category)
-    setFormData({
+  const handleEdit = (category: any) => {
+    setEditingId(category.id)
+    setEditForm({
       name: category.name,
-      icon: category.icon,
-      description: category.description
+      description: category.description || '',
+      emoji: category.emoji || '🍦',
+      sort_order: category.sort_order || 0
     })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Kategorie wirklich löschen? Alle Produkte dieser Kategorie bleiben erhalten.')) return
-    
+  const handleUpdate = async (id: string) => {
+    const { error } = await supabase
+      .from('categories')
+      .update({
+        name: editForm.name,
+        description: editForm.description,
+        emoji: editForm.emoji,
+        sort_order: editForm.sort_order
+      })
+      .eq('id', id)
+
+    if (error) {
+      alert('Fehler beim Aktualisieren: ' + error.message)
+    } else {
+      setEditingId(null)
+      loadCategories()
+    }
+  }
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Kategorie "${name}" wirklich löschen?`)) return
+
     const { error } = await supabase
       .from('categories')
       .delete()
       .eq('id', id)
-    
+
     if (error) {
-      showMessage('❌ Fehler: ' + error.message)
-      return
+      alert('Fehler beim Löschen: ' + error.message)
+    } else {
+      loadCategories()
     }
-    
-    showMessage('✅ Kategorie gelöscht!')
-    fetchCategories()
   }
 
-  const moveCategory = async (id: string, direction: 'up' | 'down') => {
-    const index = categories.findIndex(c => c.id === id)
-    if (index === -1) return
-    if (direction === 'up' && index === 0) return
-    if (direction === 'down' && index === categories.length - 1) return
-    
-    const newIndex = direction === 'up' ? index - 1 : index + 1
-    const newCategories = [...categories]
-    const [moved] = newCategories.splice(index, 1)
-    newCategories.splice(newIndex, 0, moved)
-    
-    // Update sort_order in DB
-    const updates = newCategories.map((cat, idx) => 
-      supabase.from('categories').update({ sort_order: idx }).eq('id', cat.id)
-    )
-    
-    await Promise.all(updates)
-    fetchCategories()
-    showMessage('✅ Reihenfolge geändert!')
-  }
+  const toggleVisible = async (id: string, currentVisible: boolean) => {
+    const { error } = await supabase
+      .from('categories')
+      .update({ visible: !currentVisible })
+      .eq('id', id)
 
-  const showMessage = (msg: string) => {
-    setMessage(msg)
-    setTimeout(() => setMessage(''), 3000)
+    if (!error) loadCategories()
   }
-
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-6xl animate-pulse">🍦</div>
-    </div>
-  )
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#fdfcfb' }}>
-      <Navbar session={session} cartCount={0} onCartClick={() => {}} />
-      
-      <div className="max-w-4xl mx-auto px-6 py-10">
-        <button onClick={() => router.push('/admin')} 
-          className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900 transition-all">
-          <ArrowLeft size={20} />
-          Zurück zum Admin
-        </button>
+    <div className="p-8">
+      <div className="max-w-5xl">
+        
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-display font-bold mb-2" style={{ fontStyle: 'italic' }}>
+            Kategorien
+          </h1>
+          <p className="text-gray-600">Strukturiere dein Sortiment</p>
+        </div>
 
-        <h1 className="text-4xl font-display font-bold italic mb-2" style={{ color: '#4a5d54' }}>
-          Kategorien verwalten
-        </h1>
-        <p className="text-gray-500 mb-8">Organisiere deine Produkt-Kategorien</p>
-
-        {message && (
-          <div className="mb-6 p-4 rounded-xl text-center font-bold" 
-            style={{ 
-              backgroundColor: message.includes('✅') ? '#e8f8f0' : '#fde8e8',
-              color: message.includes('✅') ? '#27ae60' : '#e74c3c'
-            }}>
-            {message}
-          </div>
-        )}
-
-        {/* Formular */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm mb-8">
-          <h2 className="text-2xl font-bold mb-5" style={{ color: '#4a5d54' }}>
-            {editing ? '✏️ Kategorie bearbeiten' : '➕ Neue Kategorie'}
+        {/* Neue Kategorie - BREIT */}
+        <div className="bg-white rounded-lg border border-gray-200 p-8 mb-6">
+          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+            <Plus size={24} />
+            Neu erstellen
           </h2>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-bold mb-2" style={{ color: '#8da399' }}>
-                  NAME
-                </label>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-12 gap-4">
+              {/* Emoji - Klein */}
+              <div className="col-span-2">
+                <label className="block text-sm font-semibold mb-2 text-gray-700">ICON</label>
                 <input
                   type="text"
-                  value={formData.name}
-                  onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="w-full p-3 rounded-xl border-2 border-gray-200"
-                  placeholder="z.B. Frozen Yogurt"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-bold mb-2" style={{ color: '#8da399' }}>
-                  ICON (Emoji)
-                </label>
-                <input
-                  type="text"
-                  value={formData.icon}
-                  onChange={e => setFormData({ ...formData, icon: e.target.value })}
-                  required
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 text-center text-3xl"
                   placeholder="🍦"
+                  value={newCategory.emoji}
+                  onChange={(e) => setNewCategory({ ...newCategory, emoji: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-3xl text-center focus:border-black focus:outline-none"
+                  maxLength={2}
                 />
               </div>
-              
-              <div>
-                <label className="block text-xs font-bold mb-2" style={{ color: '#8da399' }}>
-                  BESCHREIBUNG
-                </label>
+
+              {/* Name - Breit */}
+              <div className="col-span-7">
+                <label className="block text-sm font-semibold mb-2 text-gray-700">NAME</label>
                 <input
                   type="text"
-                  value={formData.description}
-                  onChange={e => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full p-3 rounded-xl border-2 border-gray-200"
-                  placeholder="Kurze Beschreibung"
+                  placeholder="z.B. Eisbecher, Getränke, Kuchen..."
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-black focus:outline-none"
+                />
+              </div>
+
+              {/* Sortierung - Klein */}
+              <div className="col-span-3">
+                <label className="block text-sm font-semibold mb-2 text-gray-700">SORTIERUNG</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={newCategory.sort_order}
+                  onChange={(e) => setNewCategory({ ...newCategory, sort_order: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:border-black focus:outline-none"
                 />
               </div>
             </div>
-            
-            <div className="flex gap-3">
-              <button 
-                type="submit"
-                className="px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90"
-                style={{ backgroundColor: '#4a5d54' }}>
-                {editing ? '✅ Aktualisieren' : '➕ Hinzufügen'}
-              </button>
-              
-              {editing && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditing(null)
-                    setFormData({ name: '', icon: '🍦', description: '' })
-                  }}
-                  className="px-6 py-3 rounded-xl font-bold bg-gray-100 hover:bg-gray-200 transition-all">
-                  Abbrechen
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
 
-        {/* Liste */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="text-2xl font-bold mb-5" style={{ color: '#4a5d54' }}>
-            Alle Kategorien ({categories.length})
-          </h2>
-          
-          <div className="space-y-2">
-            {categories.map((category, index) => (
-              <div key={category.id} 
-                className="flex items-center gap-4 p-4 rounded-xl transition-all hover:bg-gray-50"
-                style={{ backgroundColor: '#f9f8f4' }}>
-                
-                {/* Drag Handle */}
-                <div className="flex flex-col gap-1">
-                  <button
-                    onClick={() => moveCategory(category.id, 'up')}
-                    disabled={index === 0}
-                    className={`p-1 rounded transition-all ${
-                      index === 0 ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white'
-                    }`}>
-                    ▲
-                  </button>
-                  <button
-                    onClick={() => moveCategory(category.id, 'down')}
-                    disabled={index === categories.length - 1}
-                    className={`p-1 rounded transition-all ${
-                      index === categories.length - 1 ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white'
-                    }`}>
-                    ▼
-                  </button>
-                </div>
-                
-                {/* Icon */}
-                <div className="text-4xl">{category.icon}</div>
-                
-                {/* Info */}
-                <div className="flex-1">
-                  <div className="font-bold" style={{ color: '#4a5d54' }}>
-                    {category.name}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {category.description || 'Keine Beschreibung'}
-                  </div>
-                </div>
-                
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(category)}
-                    className="p-2 rounded-lg text-white transition-all hover:opacity-80"
-                    style={{ backgroundColor: '#8da399' }}>
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(category.id)}
-                    className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-            
-            {categories.length === 0 && (
-              <div className="text-center py-20 text-gray-400">
-                <div className="text-6xl mb-4">📂</div>
-                <div className="text-lg">Noch keine Kategorien</div>
-              </div>
-            )}
+            {/* Beschreibung - Volle Breite */}
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-gray-700">BESCHREIBUNG</label>
+              <input
+                type="text"
+                placeholder="Kurze Info für Kunden..."
+                value={newCategory.description}
+                onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none"
+              />
+            </div>
+
+            <button
+              onClick={handleCreate}
+              className="w-full py-4 bg-black text-white rounded-lg hover:bg-gray-900 transition font-bold text-lg uppercase tracking-wider"
+            >
+              Kategorie anlegen
+            </button>
           </div>
         </div>
+
+        {/* Kategorien Liste */}
+        <div className="space-y-3">
+          {loading ? (
+            <div className="text-center py-12">Lädt...</div>
+          ) : categories.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <Tag size={48} className="mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-500">Noch keine Kategorien</p>
+            </div>
+          ) : (
+            categories.map((cat: any) => (
+              <div key={cat.id} className="bg-white rounded-lg border border-gray-200 p-6">
+                {editingId === cat.id ? (
+                  // EDIT MODE
+                  <div>
+                    <div className="grid grid-cols-12 gap-4 mb-4">
+                      <div className="col-span-2">
+                        <input
+                          type="text"
+                          value={editForm.emoji}
+                          onChange={(e) => setEditForm({ ...editForm, emoji: e.target.value })}
+                          className="w-full px-3 py-2 border-2 border-gray-300 rounded text-3xl text-center"
+                          maxLength={2}
+                        />
+                      </div>
+                      <div className="col-span-7">
+                        <input
+                          type="text"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          className="w-full px-3 py-2 border-2 border-gray-300 rounded text-lg"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="number"
+                          value={editForm.sort_order}
+                          onChange={(e) => setEditForm({ ...editForm, sort_order: parseInt(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border-2 border-gray-300 rounded text-lg"
+                        />
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded mb-4"
+                      placeholder="Beschreibung"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleUpdate(cat.id)}
+                        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition flex items-center gap-2"
+                      >
+                        <Save size={16} />
+                        Speichern
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition flex items-center gap-2"
+                      >
+                        <X size={16} />
+                        Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // VIEW MODE
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="text-4xl">{cat.emoji || '🍦'}</div>
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-display font-bold text-xl" style={{ fontStyle: 'italic' }}>
+                            {cat.name}
+                          </h3>
+                          {cat.visible === false && (
+                            <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">
+                              VERSTECKT
+                            </span>
+                          )}
+                        </div>
+                        {cat.description && (
+                          <p className="text-sm text-gray-600 mt-1">{cat.description}</p>
+                        )}
+                        <div className="text-xs text-gray-400 mt-1">
+                          POS: {cat.sort_order}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleVisible(cat.id, cat.visible ?? true)}
+                        className={`p-2 rounded transition ${
+                          cat.visible === false
+                            ? 'text-red-600 hover:bg-red-50'
+                            : 'text-green-600 hover:bg-green-50'
+                        }`}
+                        title={cat.visible === false ? 'Einblenden' : 'Ausblenden'}
+                      >
+                        {cat.visible === false ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                      <button
+                        onClick={() => handleEdit(cat)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                        title="Bearbeiten"
+                      >
+                        <Edit2 size={20} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(cat.id, cat.name)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Löschen"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
       </div>
     </div>
+  )
+}
+
+export default function CategoriesPage() {
+  return (
+    <AdminLayout>
+      <CategoriesContent />
+    </AdminLayout>
   )
 }

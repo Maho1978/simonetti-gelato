@@ -1,6 +1,6 @@
 __turbopack_load_page_chunks__("/admin/reports", [
-  "static/chunks/[root-of-the-server]__50a97c4b._.js",
-  "static/chunks/dbe97_next_dist_compiled_21111b1a._.js",
+  "static/chunks/[root-of-the-server]__b1fd05ea._.js",
+  "static/chunks/dbe97_next_dist_compiled_153d1ecd._.js",
   "static/chunks/dbe97_next_dist_shared_lib_58a8551b._.js",
   "static/chunks/dbe97_next_dist_client_9fff3c83._.js",
   "static/chunks/dbe97_next_dist_8987890d._.js",
@@ -14,7 +14,7 @@ __turbopack_load_page_chunks__("/admin/reports", [
   "static/chunks/dbe97_recharts_es6_025a5ced._.js",
   "static/chunks/dbe97_@supabase_50d28eec._.js",
   "static/chunks/dbe97_@reduxjs_toolkit_7ff39af2._.js",
-  "static/chunks/dbe97_fa880429._.js",
+  "static/chunks/dbe97_51000d9e._.js",
   "static/chunks/OneDrive_Desktop_simonetti-hybrid_pages_admin_reports_tsx_2da965e7._.js",
-  "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages_admin_reports_tsx_26970bdb._.js"
+  "static/chunks/turbopack-OneDrive_Desktop_simonetti-hybrid_pages_admin_reports_tsx_af887d7e._.js"
 ])

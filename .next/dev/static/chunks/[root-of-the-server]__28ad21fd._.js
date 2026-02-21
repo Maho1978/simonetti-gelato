@@ -568,8 +568,15 @@ function Navbar({ session, cartCount, onCartClick }) {
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "hidden md:flex items-center space-x-8",
                         children: [
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$next$2f$link$2e$js__$5b$client$5d$__$28$ecmascript$29$__["default"], {
-                                href: "/speisekarte",
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                onClick: ()=>{
+                                    window.location.href = '/#speisekarte';
+                                    setTimeout(()=>{
+                                        document.getElementById('speisekarte')?.scrollIntoView({
+                                            behavior: 'smooth'
+                                        });
+                                    }, 100);
+                                },
                                 className: "text-sm font-medium text-gray-700 hover:text-black transition",
                                 children: "Speisekarte"
                             }, void 0, false, {
@@ -583,7 +590,7 @@ function Navbar({ session, cartCount, onCartClick }) {
                                 children: "Über uns"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                lineNumber: 47,
+                                lineNumber: 55,
                                 columnNumber: 13
                             }, this),
                             session && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$next$2f$link$2e$js__$5b$client$5d$__$28$ecmascript$29$__["default"], {
@@ -594,20 +601,20 @@ function Navbar({ session, cartCount, onCartClick }) {
                                         size: 16
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                        lineNumber: 52,
+                                        lineNumber: 60,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: "Favoriten"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                        lineNumber: 53,
+                                        lineNumber: 61,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                lineNumber: 51,
+                                lineNumber: 59,
                                 columnNumber: 15
                             }, this)
                         ]
@@ -627,7 +634,7 @@ function Navbar({ session, cartCount, onCartClick }) {
                                         size: 18
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                        lineNumber: 66,
+                                        lineNumber: 74,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -635,7 +642,7 @@ function Navbar({ session, cartCount, onCartClick }) {
                                         children: "Warenkorb"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                        lineNumber: 67,
+                                        lineNumber: 75,
                                         columnNumber: 15
                                     }, this),
                                     cartCount > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -643,13 +650,13 @@ function Navbar({ session, cartCount, onCartClick }) {
                                         children: cartCount
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                        lineNumber: 69,
+                                        lineNumber: 77,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                lineNumber: 62,
+                                lineNumber: 70,
                                 columnNumber: 13
                             }, this),
                             session ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -662,12 +669,12 @@ function Navbar({ session, cartCount, onCartClick }) {
                                             size: 20
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                            lineNumber: 80,
+                                            lineNumber: 88,
                                             columnNumber: 21
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                        lineNumber: 79,
+                                        lineNumber: 87,
                                         columnNumber: 19
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$next$2f$link$2e$js__$5b$client$5d$__$28$ecmascript$29$__["default"], {
@@ -677,12 +684,12 @@ function Navbar({ session, cartCount, onCartClick }) {
                                             size: 20
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                            lineNumber: 84,
+                                            lineNumber: 92,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                        lineNumber: 83,
+                                        lineNumber: 91,
                                         columnNumber: 17
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -692,18 +699,18 @@ function Navbar({ session, cartCount, onCartClick }) {
                                             size: 20
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                            lineNumber: 87,
+                                            lineNumber: 95,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                        lineNumber: 86,
+                                        lineNumber: 94,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                lineNumber: 77,
+                                lineNumber: 85,
                                 columnNumber: 15
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$next$2f$link$2e$js__$5b$client$5d$__$28$ecmascript$29$__["default"], {
                                 href: "/auth/login",
@@ -711,13 +718,13 @@ function Navbar({ session, cartCount, onCartClick }) {
                                 children: "Anmelden"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                                lineNumber: 91,
+                                lineNumber: 99,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/Navbar.tsx",
-                        lineNumber: 59,
+                        lineNumber: 67,
                         columnNumber: 11
                     }, this)
                 ]
@@ -814,19 +821,15 @@ function HeroSection() {
                                 lineNumber: 26,
                                 columnNumber: 11
                             }, this),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$next$2f$link$2e$js__$5b$client$5d$__$28$ecmascript$29$__["default"], {
-                                href: "#speisekarte",
-                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                    className: "px-10 py-4 bg-white text-black font-medium text-sm uppercase tracking-wider hover:bg-gray-100 transition",
-                                    children: "Jetzt bestellen"
-                                }, void 0, false, {
-                                    fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                    lineNumber: 30,
-                                    columnNumber: 13
-                                }, this)
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                onClick: ()=>document.getElementById('speisekarte')?.scrollIntoView({
+                                        behavior: 'smooth'
+                                    }),
+                                className: "px-10 py-4 bg-white text-black font-medium text-sm uppercase tracking-wider hover:bg-gray-100 transition",
+                                children: "Jetzt bestellen"
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                lineNumber: 29,
+                                lineNumber: 30,
                                 columnNumber: 11
                             }, this)
                         ]
@@ -856,7 +859,7 @@ function HeroSection() {
                                         children: "🇮🇹"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 43,
+                                        lineNumber: 45,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -864,7 +867,7 @@ function HeroSection() {
                                         children: "Traditionell"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 44,
+                                        lineNumber: 46,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -872,13 +875,13 @@ function HeroSection() {
                                         children: "Nach original italienischer Rezeptur handwerklich gefertigt"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 45,
+                                        lineNumber: 47,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                lineNumber: 42,
+                                lineNumber: 44,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -889,7 +892,7 @@ function HeroSection() {
                                         children: "🌿"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 51,
+                                        lineNumber: 53,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -897,7 +900,7 @@ function HeroSection() {
                                         children: "Natürlich"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 52,
+                                        lineNumber: 54,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -905,13 +908,13 @@ function HeroSection() {
                                         children: "100% natürliche Zutaten, keine künstlichen Aromen"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 53,
+                                        lineNumber: 55,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                lineNumber: 50,
+                                lineNumber: 52,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -922,7 +925,7 @@ function HeroSection() {
                                         children: "🏆"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 59,
+                                        lineNumber: 61,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -930,7 +933,7 @@ function HeroSection() {
                                         children: "Qualität"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 60,
+                                        lineNumber: 62,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -938,29 +941,29 @@ function HeroSection() {
                                         children: "Täglich frisch zubereitet in unserer Manufaktur"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 61,
+                                        lineNumber: 63,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                lineNumber: 58,
+                                lineNumber: 60,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                        lineNumber: 40,
+                        lineNumber: 42,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                    lineNumber: 39,
+                    lineNumber: 41,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                lineNumber: 38,
+                lineNumber: 40,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -977,7 +980,7 @@ function HeroSection() {
                                         children: "Unsere Geschichte"
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 76,
+                                        lineNumber: 78,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -985,7 +988,7 @@ function HeroSection() {
                                         children: "Seit über 40 Jahren verwöhnen wir unsere Gäste mit dem besten Gelato der Stadt. Was als kleine Eisdiele begann, ist heute eine Institution in Langenfeld."
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 79,
+                                        lineNumber: 81,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -993,7 +996,7 @@ function HeroSection() {
                                         children: "Jede Sorte wird täglich frisch in unserer eigenen Manufaktur hergestellt – mit Leidenschaft, Erfahrung und den besten Zutaten."
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 83,
+                                        lineNumber: 85,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$next$2f$link$2e$js__$5b$client$5d$__$28$ecmascript$29$__["default"], {
@@ -1003,18 +1006,18 @@ function HeroSection() {
                                             children: "Mehr erfahren"
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                            lineNumber: 88,
+                                            lineNumber: 90,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                        lineNumber: 87,
+                                        lineNumber: 89,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                lineNumber: 75,
+                                lineNumber: 77,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1026,28 +1029,28 @@ function HeroSection() {
                                     className: "object-cover"
                                 }, void 0, false, {
                                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                    lineNumber: 95,
+                                    lineNumber: 97,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                lineNumber: 94,
+                                lineNumber: 96,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                        lineNumber: 73,
+                        lineNumber: 75,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                    lineNumber: 72,
+                    lineNumber: 74,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                lineNumber: 71,
+                lineNumber: 73,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -1060,7 +1063,7 @@ function HeroSection() {
                             children: "Bestellen Sie jetzt"
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                            lineNumber: 110,
+                            lineNumber: 112,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1068,33 +1071,29 @@ function HeroSection() {
                             children: "Lieferung direkt zu Ihnen nach Hause in 30-45 Minuten"
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                            lineNumber: 113,
+                            lineNumber: 115,
                             columnNumber: 11
                         }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$next$2f$link$2e$js__$5b$client$5d$__$28$ecmascript$29$__["default"], {
-                            href: "#speisekarte",
-                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                className: "px-10 py-4 bg-black text-white font-medium text-sm uppercase tracking-wider hover:bg-gray-900 transition",
-                                children: "Zur Speisekarte"
-                            }, void 0, false, {
-                                fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                                lineNumber: 117,
-                                columnNumber: 13
-                            }, this)
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                            onClick: ()=>document.getElementById('speisekarte')?.scrollIntoView({
+                                    behavior: 'smooth'
+                                }),
+                            className: "px-10 py-4 bg-black text-white font-medium text-sm uppercase tracking-wider hover:bg-gray-900 transition",
+                            children: "Zur Speisekarte"
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                            lineNumber: 116,
+                            lineNumber: 118,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                    lineNumber: 109,
+                    lineNumber: 111,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/HeroSection.tsx",
-                lineNumber: 108,
+                lineNumber: 110,
                 columnNumber: 7
             }, this)
         ]
@@ -1447,7 +1446,7 @@ function ProductCard({ product, onAddToCart }) {
         className: "group relative bg-white overflow-hidden transition-all duration-300 hover:shadow-xl",
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "relative aspect-square overflow-hidden bg-gray-100",
+                className: "relative aspect-[4/3] overflow-hidden bg-gray-100",
                 children: [
                     product.image_url ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$next$2f$image$2e$js__$5b$client$5d$__$28$ecmascript$29$__["default"], {
                         src: product.image_url,
@@ -1459,7 +1458,7 @@ function ProductCard({ product, onAddToCart }) {
                         lineNumber: 24,
                         columnNumber: 11
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "w-full h-full flex items-center justify-center text-8xl",
+                        className: "w-full h-full flex items-center justify-center text-6xl",
                         children: "🍦"
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx",
@@ -1467,11 +1466,11 @@ function ProductCard({ product, onAddToCart }) {
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity",
+                        className: "absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity",
                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$components$2f$FavoriteButton$2e$tsx__$5b$client$5d$__$28$ecmascript$29$__["default"], {
                             productId: product.id,
-                            size: 24,
-                            className: "bg-white/90 backdrop-blur-sm p-2 rounded-full"
+                            size: 20,
+                            className: "bg-white/90 backdrop-blur-sm p-1.5 rounded-full"
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx",
                             lineNumber: 38,
@@ -1483,9 +1482,9 @@ function ProductCard({ product, onAddToCart }) {
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "absolute top-4 left-4",
+                        className: "absolute top-3 left-3",
                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                            className: "px-3 py-1 bg-black/80 backdrop-blur-sm text-white text-xs font-medium uppercase tracking-wider",
+                            className: "px-2.5 py-1 bg-black/80 backdrop-blur-sm text-white text-xs font-medium uppercase tracking-wider",
                             children: product.category
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx",
@@ -1504,10 +1503,10 @@ function ProductCard({ product, onAddToCart }) {
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "p-6",
+                className: "p-4",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
-                        className: "font-display text-2xl font-bold mb-2 text-gray-900",
+                        className: "font-display text-xl font-bold mb-1 text-gray-900",
                         children: product.name
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx",
@@ -1515,7 +1514,7 @@ function ProductCard({ product, onAddToCart }) {
                         columnNumber: 9
                     }, this),
                     product.description && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                        className: "text-gray-600 text-sm mb-4 line-clamp-2",
+                        className: "text-gray-600 text-xs mb-3 line-clamp-2",
                         children: product.description
                     }, void 0, false, {
                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx",
@@ -1523,10 +1522,10 @@ function ProductCard({ product, onAddToCart }) {
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex items-center justify-between mt-4",
+                        className: "flex items-center justify-between mt-3",
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "font-display text-3xl font-bold text-black",
+                                className: "font-display text-2xl font-bold text-black",
                                 children: [
                                     product.price.toFixed(2),
                                     " €"
@@ -1538,10 +1537,10 @@ function ProductCard({ product, onAddToCart }) {
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                 onClick: onAddToCart,
-                                className: "flex items-center gap-2 px-6 py-3 bg-black text-white text-sm font-medium uppercase tracking-wide transition hover:bg-gray-900",
+                                className: "flex items-center gap-1.5 px-4 py-2 bg-black text-white text-xs font-medium uppercase tracking-wide transition hover:bg-gray-900",
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shopping$2d$cart$2e$js__$5b$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ShoppingCart$3e$__["ShoppingCart"], {
-                                        size: 16
+                                        size: 14
                                     }, void 0, false, {
                                         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx",
                                         lineNumber: 72,
@@ -1583,7 +1582,7 @@ function ProductCard({ product, onAddToCart }) {
 _c = ProductCard;
 function ProductGrid({ children }) {
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-        className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8",
+        className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6",
         children: children
     }, void 0, false, {
         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx",
@@ -1594,10 +1593,10 @@ function ProductGrid({ children }) {
 _c1 = ProductGrid;
 function CategoryHeader({ title, description }) {
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-        className: "text-center mb-16",
+        className: "text-center mb-12",
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h2", {
-                className: "font-display text-5xl font-bold mb-4 text-black",
+                className: "font-display text-4xl font-bold mb-3 text-black",
                 children: title
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx",
@@ -1605,7 +1604,7 @@ function CategoryHeader({ title, description }) {
                 columnNumber: 7
             }, this),
             description && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                className: "text-xl text-gray-600 max-w-2xl mx-auto",
+                className: "text-lg text-gray-600 max-w-2xl mx-auto",
                 children: description
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/components/ProductCard.tsx",
@@ -1651,25 +1650,37 @@ var _s = __turbopack_context__.k.signature();
 function Home() {
     _s();
     const [products, setProducts] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$index$2e$js__$5b$client$5d$__$28$ecmascript$29$__["useState"])([]);
+    const [categories, setCategories] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$index$2e$js__$5b$client$5d$__$28$ecmascript$29$__["useState"])([]);
+    const [selectedCategory, setSelectedCategory] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$index$2e$js__$5b$client$5d$__$28$ecmascript$29$__["useState"])('all');
     const [session, setSession] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$index$2e$js__$5b$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$index$2e$js__$5b$client$5d$__$28$ecmascript$29$__["useState"])(true);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$index$2e$js__$5b$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "Home.useEffect": ()=>{
-            // Session laden
             __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$lib$2f$supabase$2e$ts__$5b$client$5d$__$28$ecmascript$29$__["supabase"].auth.getSession().then({
                 "Home.useEffect": ({ data })=>{
                     setSession(data.session);
                 }
             }["Home.useEffect"]);
-            // Produkte laden
             loadProducts();
         }
     }["Home.useEffect"], []);
     const loadProducts = async ()=>{
-        const { data } = await __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$lib$2f$supabase$2e$ts__$5b$client$5d$__$28$ecmascript$29$__["supabase"].from('products').select('*').eq('active', true).order('category', {
+        setLoading(true);
+        const { data, error } = await __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$lib$2f$supabase$2e$ts__$5b$client$5d$__$28$ecmascript$29$__["supabase"].from('products').select('*').eq('active', true).order('category', {
             ascending: true
         });
-        if (data) setProducts(data);
+        if (data) {
+            setProducts(data);
+            // Kategorien extrahieren
+            const uniqueCategories = [
+                ...new Set(data.map((p)=>p.category))
+            ].filter(Boolean);
+            setCategories(uniqueCategories);
+        }
+        setLoading(false);
     };
+    // Gefilterte Produkte
+    const filteredProducts = selectedCategory === 'all' ? products : products.filter((p)=>p.category === selectedCategory);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: "min-h-screen bg-white",
         children: [
@@ -1679,12 +1690,12 @@ function Home() {
                 onCartClick: ()=>{}
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                lineNumber: 33,
+                lineNumber: 48,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$components$2f$HeroSection$2e$tsx__$5b$client$5d$__$28$ecmascript$29$__["default"], {}, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                lineNumber: 35,
+                lineNumber: 50,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -1698,32 +1709,121 @@ function Home() {
                             description: "Täglich frisch hergestellt nach traditioneller italienischer Rezeptur"
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                            lineNumber: 41,
+                            lineNumber: 56,
                             columnNumber: 11
                         }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$components$2f$ProductCard$2e$tsx__$5b$client$5d$__$28$ecmascript$29$__["ProductGrid"], {
-                            children: products.map((product)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$components$2f$ProductCard$2e$tsx__$5b$client$5d$__$28$ecmascript$29$__["ProductCard"], {
+                        categories.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "flex flex-wrap justify-center gap-3 mb-12",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                    onClick: ()=>setSelectedCategory('all'),
+                                    className: `px-6 py-2.5 text-sm font-medium uppercase tracking-wider transition ${selectedCategory === 'all' ? 'bg-black text-white' : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-400'}`,
+                                    children: [
+                                        "Alle (",
+                                        products.length,
+                                        ")"
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
+                                    lineNumber: 64,
+                                    columnNumber: 15
+                                }, this),
+                                categories.map((category)=>{
+                                    const count = products.filter((p)=>p.category === category).length;
+                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                        onClick: ()=>setSelectedCategory(category),
+                                        className: `px-6 py-2.5 text-sm font-medium uppercase tracking-wider transition ${selectedCategory === category ? 'bg-black text-white' : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-400'}`,
+                                        children: [
+                                            category,
+                                            " (",
+                                            count,
+                                            ")"
+                                        ]
+                                    }, category, true, {
+                                        fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
+                                        lineNumber: 78,
+                                        columnNumber: 19
+                                    }, this);
+                                })
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
+                            lineNumber: 63,
+                            columnNumber: 13
+                        }, this),
+                        loading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "text-center py-12",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "text-6xl mb-4 animate-pulse",
+                                    children: "🍦"
+                                }, void 0, false, {
+                                    fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
+                                    lineNumber: 97,
+                                    columnNumber: 15
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    className: "text-gray-600",
+                                    children: "Lädt Produkte..."
+                                }, void 0, false, {
+                                    fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
+                                    lineNumber: 98,
+                                    columnNumber: 15
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
+                            lineNumber: 96,
+                            columnNumber: 13
+                        }, this) : filteredProducts.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "text-center py-12",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "text-6xl mb-4",
+                                    children: "😔"
+                                }, void 0, false, {
+                                    fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
+                                    lineNumber: 102,
+                                    columnNumber: 15
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    className: "text-gray-600 text-xl",
+                                    children: "Keine Produkte in dieser Kategorie"
+                                }, void 0, false, {
+                                    fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
+                                    lineNumber: 103,
+                                    columnNumber: 15
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
+                            lineNumber: 101,
+                            columnNumber: 13
+                        }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$components$2f$ProductCard$2e$tsx__$5b$client$5d$__$28$ecmascript$29$__["ProductGrid"], {
+                            children: filteredProducts.map((product)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$components$2f$ProductCard$2e$tsx__$5b$client$5d$__$28$ecmascript$29$__["default"], {
                                     product: product,
-                                    onAddToCart: ()=>{}
+                                    onAddToCart: ()=>{
+                                        console.log('Add to cart:', product.name);
+                                    }
                                 }, product.id, false, {
                                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                    lineNumber: 48,
-                                    columnNumber: 15
+                                    lineNumber: 108,
+                                    columnNumber: 17
                                 }, this))
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                            lineNumber: 46,
-                            columnNumber: 11
+                            lineNumber: 106,
+                            columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                    lineNumber: 39,
+                    lineNumber: 54,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                lineNumber: 38,
+                lineNumber: 53,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("footer", {
@@ -1741,28 +1841,21 @@ function Home() {
                                             children: "Simonetti"
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                            lineNumber: 65,
+                                            lineNumber: 128,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                             className: "text-gray-400",
-                                            children: [
-                                                "Italienisches Gelato aus Liebe zum Handwerk",
-                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
-                                                    fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                                    lineNumber: 67,
-                                                    columnNumber: 60
-                                                }, this)
-                                            ]
-                                        }, void 0, true, {
+                                            children: "Italienisches Gelato aus Liebe zum Handwerk"
+                                        }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                            lineNumber: 66,
+                                            lineNumber: 129,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                    lineNumber: 64,
+                                    lineNumber: 127,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1772,7 +1865,7 @@ function Home() {
                                             children: "Öffnungszeiten"
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                            lineNumber: 73,
+                                            lineNumber: 135,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1781,20 +1874,20 @@ function Home() {
                                                 "Mo - Sa: 09:00 - 19:00 Uhr",
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                                    lineNumber: 75,
+                                                    lineNumber: 137,
                                                     columnNumber: 43
                                                 }, this),
                                                 "So: 13:00 - 19:00 Uhr"
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                            lineNumber: 74,
+                                            lineNumber: 136,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                    lineNumber: 72,
+                                    lineNumber: 134,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1804,7 +1897,7 @@ function Home() {
                                             children: "Kontakt"
                                         }, void 0, false, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                            lineNumber: 81,
+                                            lineNumber: 143,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1813,32 +1906,32 @@ function Home() {
                                                 "Konrad-Adenauer-Platz 2",
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                                    lineNumber: 83,
+                                                    lineNumber: 145,
                                                     columnNumber: 40
                                                 }, this),
                                                 "40764 Langenfeld",
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("br", {}, void 0, false, {
                                                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                                    lineNumber: 84,
+                                                    lineNumber: 146,
                                                     columnNumber: 33
                                                 }, this),
                                                 "Tel: 02173 1622780"
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                            lineNumber: 82,
+                                            lineNumber: 144,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                                    lineNumber: 80,
+                                    lineNumber: 142,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                            lineNumber: 62,
+                            lineNumber: 125,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$OneDrive$2f$Desktop$2f$simonetti$2d$hybrid$2f$node_modules$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1846,28 +1939,28 @@ function Home() {
                             children: "© 2026 Eiscafe Simonetti. Alle Rechte vorbehalten."
                         }, void 0, false, {
                             fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                            lineNumber: 91,
+                            lineNumber: 153,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                    lineNumber: 61,
+                    lineNumber: 124,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-                lineNumber: 60,
+                lineNumber: 123,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/OneDrive/Desktop/simonetti-hybrid/pages/index.tsx",
-        lineNumber: 32,
+        lineNumber: 47,
         columnNumber: 5
     }, this);
 }
-_s(Home, "lcdnSuNwzqI8bz1IeW+i4mq9o8k=");
+_s(Home, "wX5Ebyq5Bvesx0wpBzu0DBmjQ10=");
 _c = Home;
 var _c;
 __turbopack_context__.k.register(_c, "Home");
