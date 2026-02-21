@@ -378,4 +378,5 @@ Deine Plattform ist jetzt bereit! Nach dem Setup kannst du:
 **Geschätzter Zeitaufwand:** 30-40 Minuten vom Code bis zum Live-Shop!
 #   D e p l o y e d !  
  D e p l o y   n o w !  
+ D e p l o y   n o w !  
  
