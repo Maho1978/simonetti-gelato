@@ -6,6 +6,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import Navbar from '@/components/Navbar'
 import { AlertCircle, Tag, X, Check, Loader2, MapPin, CreditCard, User } from 'lucide-react'
+import { searchStreets, type Street } from '@/lib/langenfeld-streets'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -342,10 +343,10 @@ export default function Checkout({ session }: { session: Session | null }) {
         )}
 
         {shopOpen !== false && (
-          <div className="grid lg:grid-cols-5 gap-6">
+          <div className="grid lg:grid-cols-11 gap-6">
 
             {/* ── Links (3/5): Übersicht + Gutschein + Trinkgeld ── */}
-            <div className="lg:col-span-3 space-y-5">
+            <div className="lg:col-span-6 space-y-5">
 
               {/* Bestellübersicht */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
@@ -430,7 +431,7 @@ export default function Checkout({ session }: { session: Session | null }) {
             </div>
 
             {/* ── Rechts (2/5): Checkout-Formular ── */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-5">
               <div className="sticky top-6">
                 {clientSecret ? (
                   <Elements
@@ -492,9 +493,11 @@ function CheckoutForm({
   const [name,    setName]    = useState('')
   const [email,   setEmail]   = useState(session?.user?.email || '')
   const [phone,   setPhone]   = useState('')
-  const [street,  setStreet]  = useState('')
-  const [zip,     setZip]     = useState('')
-  const [city,    setCity]    = useState('')
+  const [street,  setStreet]       = useState('')
+  const [zip,     setZip]          = useState('40764')
+  const [city,    setCity]         = useState('Langenfeld')
+  const [streetSuggestions, setStreetSuggestions] = useState<Street[]>([])
+  const [showSuggestions,   setShowSuggestions]   = useState(false)
   const [notes,   setNotes]   = useState('')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
@@ -561,7 +564,7 @@ function CheckoutForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 space-y-6">
 
       {/* Form Header */}
       <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
@@ -623,14 +626,44 @@ function CheckoutForm({
         </Field>
 
         <Field label="Straße & Hausnummer" required>
-          <input
-            type="text"
-            value={street}
-            onChange={e => setStreet(e.target.value)}
-            required
-            placeholder="Musterstraße 42"
-            className={inputClass}
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={street}
+              onChange={e => {
+                setStreet(e.target.value)
+                setStreetSuggestions(searchStreets(e.target.value))
+                setShowSuggestions(true)
+              }}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              onFocus={() => street.length >= 2 && setShowSuggestions(true)}
+              required
+              placeholder="z.B. Hauptstraße 5"
+              className={inputClass}
+              autoComplete="off"
+            />
+            {showSuggestions && streetSuggestions.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                {streetSuggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onMouseDown={() => {
+                      setStreet(s.name + ' ')
+                      setShowSuggestions(false)
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition flex items-center gap-2"
+                  >
+                    <MapPin size={13} className="text-gray-400 flex-shrink-0" />
+                    <span className="font-medium text-gray-800">{s.name}</span>
+                    {s.district && (
+                      <span className="text-xs text-gray-400 ml-auto">{s.district}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </Field>
 
         <div className="grid grid-cols-5 gap-3">
@@ -641,8 +674,8 @@ function CheckoutForm({
                 value={zip}
                 onChange={e => setZip(e.target.value)}
                 required
-                placeholder="40764"
-                className={inputClass}
+                readOnly
+                className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`}
               />
             </Field>
           </div>
@@ -653,8 +686,8 @@ function CheckoutForm({
                 value={city}
                 onChange={e => setCity(e.target.value)}
                 required
-                placeholder="Langenfeld"
-                className={inputClass}
+                readOnly
+                className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`}
               />
             </Field>
           </div>
