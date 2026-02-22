@@ -1,4 +1,3 @@
-Set-Content pages\api\driver\login.js @'
 import { createClient } from "@supabase/supabase-js";
 import bcrypt from "bcryptjs";
 
@@ -22,4 +21,3 @@ export default async function handler(req, res) {
   const { password_hash, ...safeDriver } = driver;
   return res.status(200).json({ success: true, driver: safeDriver });
 }
-'@
