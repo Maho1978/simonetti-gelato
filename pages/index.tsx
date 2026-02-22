@@ -12,7 +12,7 @@ export default function Home() {
   const [products, setProducts]               = useState<any[]>([])
   const [extras, setExtras]                   = useState<any[]>([])
   const [categories, setCategories]           = useState<string[]>([])
-  const [flavors, setFlavors]                 = useState<string[]>([])   // ← NEU: dynamische Eissorten
+  const [flavors, setFlavors]                 = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState('')
   const [session, setSession]                 = useState<any>(null)
   const [loading, setLoading]                 = useState(true)
@@ -59,17 +59,13 @@ export default function Home() {
       .from('categories').select('*').order('sort_order', { ascending: true })
 
     if (catData) {
-      // ── Sichtbare Kategorien → als Tab-Buttons anzeigen ──────
       const visibleCats = catData
-        .filter(c => c.visible !== false)            // null oder true = sichtbar
+        .filter(c => c.visible !== false)
         .map(c => c.name)
         .filter(name => activeProducts.some(p => p.category === name))
 
       setCategories(visibleCats)
 
-      // ── Versteckte Kategorien → deren Produkt-Namen als Eissorten ──
-      // z.B. Kategorie "Eissorte" mit visible=false
-      // Jedes Produkt darin = eine wählbare Sorte beim 4er/5er Becher
       const hiddenCatNames = catData
         .filter(c => c.visible === false)
         .map(c => c.name)
@@ -82,7 +78,6 @@ export default function Home() {
       setFlavors(dynamicFlavors)
 
     } else {
-      // Fallback: alle Kategorien aus Produkten ableiten
       const cats = [...new Set(activeProducts.map(p => p.category))].filter(Boolean) as string[]
       setCategories(cats)
       setFlavors([])
@@ -116,6 +111,17 @@ export default function Home() {
     ))
   }
 
+  // FIX: Anmerkungen updaten ohne den Cart neu zu mounten
+  const updateCartNotes = (cartId: string, notes: string) => {
+    setCart(prev => {
+      const updated = prev.map(item =>
+        item.cartId === cartId ? { ...item, notes } : item
+      )
+      localStorage.setItem('simonetti-cart', JSON.stringify(updated))
+      return updated
+    })
+  }
+
   const removeFromCart = (cartId: string) => saveCart(cart.filter(item => item.cartId !== cartId))
   const clearCart = () => saveCart([])
 
@@ -135,6 +141,7 @@ export default function Home() {
         cart={cart}
         onUpdateQuantity={updateCartQuantity}
         onRemoveItem={removeFromCart}
+        onUpdateNotes={updateCartNotes}
         onClearCart={clearCart}
         total={cartTotal}
       />
@@ -181,7 +188,7 @@ export default function Home() {
                   key={product.id}
                   product={product}
                   extras={extras}
-                  flavors={flavors}          // ← dynamische Sorten weitergeben
+                  flavors={flavors}
                   onAddToCart={handleAddToCart}
                 />
               ))}
