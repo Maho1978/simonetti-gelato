@@ -50,20 +50,23 @@ function formatAddress(addr: any): string {
   return String(addr)
 }
 
-function playSound() {
+function playSound(volume: number = 1.0) {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    for (let i = 0; i < 4; i++) {
-      ;[880, 1100, 880, 1100].forEach((freq, j) => {
-        const osc = ctx.createOscillator()
+    const vol = Math.max(0.1, Math.min(2.0, volume))
+    const pattern = [880, 1100]
+    for (let i = 0; i < 3; i++) {
+      pattern.forEach((freq, j) => {
+        const osc  = ctx.createOscillator()
         const gain = ctx.createGain()
         osc.connect(gain); gain.connect(ctx.destination)
-        osc.frequency.value = freq; osc.type = 'square'
-        const start = ctx.currentTime + i * 0.7 + j * 0.12
+        osc.frequency.value = freq
+        osc.type = 'square'
+        const start = ctx.currentTime + i * 0.5 + j * 0.18
         gain.gain.setValueAtTime(0, start)
-        gain.gain.linearRampToValueAtTime(0.7, start + 0.01)
-        gain.gain.exponentialRampToValueAtTime(0.01, start + 0.28)
-        osc.start(start); osc.stop(start + 0.28)
+        gain.gain.linearRampToValueAtTime(vol, start + 0.01)
+        gain.gain.exponentialRampToValueAtTime(0.01, start + 0.35)
+        osc.start(start); osc.stop(start + 0.35)
       })
     }
   } catch (e) {}
@@ -123,28 +126,28 @@ function printOrder(order: any) {
 
   const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
 <style>
-  @page { margin: 4mm; size: 80mm auto; }
+  @page { margin: 3mm; size: 80mm auto; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Courier New', Courier, monospace; font-size: 12px; width: 100%; color: #000; background: #fff; }
-  .div-solid  { font-size: 12px; margin: 5px 0; }
-  .div-dashed { font-size: 12px; margin: 4px 0; color: #666; }
-  .header     { text-align: center; padding: 4px 0 6px; }
-  .logo       { font-size: 20px; font-weight: bold; letter-spacing: 2px; }
-  .tagline    { font-size: 9px; letter-spacing: 4px; color: #444; margin-top: 1px; }
-  .shop-info  { font-size: 10px; margin-top: 5px; line-height: 1.8; }
-  .row        { display: flex; justify-content: space-between; margin: 2px 0; }
-  .section-title { font-weight: bold; font-size: 10px; letter-spacing: 1px; margin-bottom: 3px; }
-  .customer   { margin: 4px 0; line-height: 1.7; }
-  .item       { margin: 5px 0; }
-  .item-main  { display: flex; justify-content: space-between; }
-  .item-name  { font-weight: bold; flex: 1; }
-  .item-price { white-space: nowrap; margin-left: 8px; }
-  .item-detail { font-size: 10px; color: #555; margin-left: 4px; margin-top: 1px; }
-  .total-row  { display: flex; justify-content: space-between; margin: 3px 0; }
-  .grand-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; padding: 4px 0; }
-  .footer     { text-align: center; margin-top: 8px; }
-  .thank-you  { font-size: 13px; font-weight: bold; margin-bottom: 3px; }
-  .footer-small { font-size: 10px; color: #555; line-height: 1.7; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 14px; font-weight: bold; width: 100%; color: #000; background: #fff; line-height: 1.6; }
+  .div-solid  { font-size: 13px; margin: 6px 0; letter-spacing: 1px; }
+  .div-dashed { font-size: 13px; margin: 5px 0; }
+  .header     { text-align: center; padding: 6px 0 8px; }
+  .logo       { font-size: 24px; font-weight: 900; letter-spacing: 3px; }
+  .tagline    { font-size: 10px; letter-spacing: 5px; color: #222; margin-top: 2px; font-weight: bold; }
+  .shop-info  { font-size: 11px; margin-top: 6px; line-height: 1.9; font-weight: normal; }
+  .row        { display: flex; justify-content: space-between; margin: 3px 0; font-size: 13px; }
+  .section-title { font-weight: 900; font-size: 12px; letter-spacing: 2px; margin-bottom: 5px; margin-top: 3px; }
+  .customer   { margin: 5px 0; line-height: 1.8; font-size: 13px; }
+  .item       { margin: 6px 0; }
+  .item-main  { display: flex; justify-content: space-between; font-size: 14px; }
+  .item-name  { font-weight: 900; flex: 1; }
+  .item-price { white-space: nowrap; margin-left: 8px; font-weight: 900; }
+  .item-detail { font-size: 11px; color: #333; margin-left: 6px; margin-top: 2px; font-weight: normal; }
+  .total-row  { display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px; }
+  .grand-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 900; padding: 5px 0; }
+  .footer     { text-align: center; margin-top: 10px; }
+  .thank-you  { font-size: 15px; font-weight: 900; margin-bottom: 4px; }
+  .footer-small { font-size: 11px; color: #333; line-height: 1.8; font-weight: normal; }
 </style></head><body>
 <div class="header">
   <div class="logo">🍦 SIMONETTI</div>
@@ -413,6 +416,7 @@ export default function KanbanPage() {
   const [drivers, setDrivers]         = useState<any[]>([])
   const [showAllDays, setShowAllDays] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [soundVolume,  setSoundVolume]  = useState(1.0)
   const [popupOrder, setPopupOrder]   = useState<any>(null)
   const [rejectTarget, setRejectTarget] = useState<any>(null)
   const [newOrderBanner, setNewOrderBanner] = useState(false)
@@ -423,9 +427,11 @@ export default function KanbanPage() {
 
   // FIX: soundEnabled und showAllDays als Refs um Reload-Loop zu vermeiden
   const soundRef     = useRef(soundEnabled)
+  const volumeRef    = useRef(soundVolume)
   const showAllRef   = useRef(showAllDays)
   const popupRef     = useRef(popupOrder)
   useEffect(() => { soundRef.current = soundEnabled },   [soundEnabled])
+  useEffect(() => { volumeRef.current = soundVolume },  [soundVolume])
   useEffect(() => { showAllRef.current = showAllDays },  [showAllDays])
   useEffect(() => { popupRef.current  = popupOrder },    [popupOrder])
 
@@ -439,7 +445,7 @@ export default function KanbanPage() {
     if (!isFirstLoad.current) {
       const newOnes = data.filter(o => !knownIds.current.has(o.id) && o.status === 'OFFEN')
       if (newOnes.length > 0) {
-        if (soundRef.current) playSound()
+        if (soundRef.current) playSound(volumeRef.current)
         setNewOrderBanner(true)
         setTimeout(() => setNewOrderBanner(false), 5000)
         if (!popupRef.current) {
@@ -583,11 +589,30 @@ export default function KanbanPage() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border-2 border-gray-200 hover:border-black transition">
               <TrendingUp size={15} /> Reports
             </button>
-            <button onClick={() => setSoundEnabled(!soundEnabled)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition border-2 ${soundEnabled ? 'border-yellow-300 text-yellow-700 bg-yellow-50' : 'border-gray-200 text-gray-400'}`}>
-              {soundEnabled ? <Bell size={15} /> : <BellOff size={15} />}
-              {soundEnabled ? 'Ton an' : 'Ton aus'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setSoundEnabled(!soundEnabled)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition border-2 ${soundEnabled ? 'border-yellow-300 text-yellow-700 bg-yellow-50' : 'border-gray-200 text-gray-400'}`}>
+                {soundEnabled ? <Bell size={15} /> : <BellOff size={15} />}
+                {soundEnabled ? 'Ton an' : 'Ton aus'}
+              </button>
+              {soundEnabled && (
+                <div className="flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 rounded-lg px-3 py-1.5">
+                  <span className="text-xs">🔈</span>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="2.0"
+                    step="0.1"
+                    value={soundVolume}
+                    onChange={e => setSoundVolume(parseFloat(e.target.value))}
+                    className="w-20 accent-yellow-500"
+                    title={`Lautstärke: ${Math.round(soundVolume * 100)}%`}
+                  />
+                  <span className="text-xs font-bold text-yellow-700 w-8">{Math.round(soundVolume * 100)}%</span>
+                  <button onClick={() => playSound(soundVolume)} className="text-xs text-yellow-600 hover:text-yellow-800 font-semibold" title="Test">▶</button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
