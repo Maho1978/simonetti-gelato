@@ -90,7 +90,7 @@ function Field({
 
 // Gemeinsame Input-Klasse
 const inputClass =
-  'w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 transition-all duration-200 outline-none focus:border-gray-900 focus:ring-4 focus:ring-gray-900/8'
+  'w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 transition-all duration-200 outline-none focus:border-gray-900 focus:ring-4 focus:ring-gray-900/8'
 
 // ── Gutschein-Widget ──────────────────────────────────────────
 function VoucherInput({ subtotal, onApply }: {
@@ -253,12 +253,28 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [shopMessage, setShopMessage]       = useState('')
   const [voucher, setVoucher]               = useState<AppliedVoucher | null>(null)
   const [tip, setTip]                       = useState(0)
+  const [showVoucher, setShowVoucher]       = useState(true)
+  const [showTip, setShowTip]               = useState(true)
 
   useEffect(() => {
     fetch('/api/shop-status')
       .then(r => r.json())
       .then(data => { setShopOpen(data.isOpen); setShopMessage(data.message || '') })
       .catch(() => setShopOpen(true))
+
+    // Feature-Toggles laden
+    supabase
+      .from('feature_toggles')
+      .select('id, enabled')
+      .in('id', ['vouchers', 'tip_option'])
+      .then(({ data }) => {
+        if (data) {
+          const v = data.find(f => f.id === 'vouchers')
+          const t = data.find(f => f.id === 'tip_option')
+          if (v) setShowVoucher(v.enabled)
+          if (t) setShowTip(t.enabled)
+        }
+      })
 
     const savedCart = localStorage.getItem('simonetti-cart') || localStorage.getItem('cart')
     if (savedCart) {
@@ -318,7 +334,7 @@ export default function Checkout({ session }: { session: Session | null }) {
     <div className="min-h-screen bg-gray-50">
       <Navbar session={session} cartCount={0} onCartClick={() => {}} />
 
-      <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="max-w-6xl mx-auto px-4 py-10">
 
         {/* Header */}
         <div className="mb-8">
@@ -416,18 +432,24 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
               </div>
 
-              {/* Gutschein + Trinkgeld */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  <h3 className="font-bold text-sm mb-3 text-gray-700 flex items-center gap-2">
-                    🎟️ Gutscheincode
-                  </h3>
-                  <VoucherInput subtotal={subtotal} onApply={handleVoucherApply} />
+              {/* Gutschein + Trinkgeld – nur wenn Feature aktiv */}
+              {(showVoucher || showTip) && (
+                <div className={`grid grid-cols-1 ${showVoucher && showTip ? 'sm:grid-cols-2' : ''} gap-4`}>
+                  {showVoucher && (
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                      <h3 className="font-bold text-sm mb-3 text-gray-700 flex items-center gap-2">
+                        🎟️ Gutscheincode
+                      </h3>
+                      <VoucherInput subtotal={subtotal} onApply={handleVoucherApply} />
+                    </div>
+                  )}
+                  {showTip && (
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                      <TipSelector subtotal={subtotal} onTipChange={handleTipChange} />
+                    </div>
+                  )}
                 </div>
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  <TipSelector subtotal={subtotal} onTipChange={handleTipChange} />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* ── Rechts (2/5): Checkout-Formular ── */}
