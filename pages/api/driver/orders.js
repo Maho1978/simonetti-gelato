@@ -1,4 +1,3 @@
-Set-Content pages\api\driver\orders.js @'
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -23,4 +22,3 @@ export default async function handler(req, res) {
   }));
   return res.status(200).json({ success: true, orders: ordersWithNav });
 }
-'@
