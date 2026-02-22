@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/AdminLayout'
 import {
-  User, Phone, Mail, MapPin, ShoppingBag, Euro,
-  Search, ChevronDown, ChevronUp, MessageSquare, X, Plus, Trash2
+  User, Phone, Mail, ShoppingBag,
+  Search, ChevronDown, ChevronUp, MessageSquare, X, Plus, Trash2, Edit2, Check
 } from 'lucide-react'
 
 interface Order {
@@ -35,11 +35,11 @@ interface Customer {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; color: string }> = {
-    OFFEN:          { label: 'Offen',         color: 'bg-red-100 text-red-700' },
-    IN_BEARBEITUNG: { label: 'In Arbeit',      color: 'bg-blue-100 text-blue-700' },
-    AN_FAHRER:      { label: 'Unterwegs',      color: 'bg-orange-100 text-orange-700' },
-    GELIEFERT:      { label: 'Geliefert',      color: 'bg-green-100 text-green-700' },
-    ABGELEHNT:      { label: 'Abgelehnt',      color: 'bg-gray-100 text-gray-500' },
+    OFFEN:          { label: 'Offen',     color: 'bg-red-100 text-red-700' },
+    IN_BEARBEITUNG: { label: 'In Arbeit', color: 'bg-blue-100 text-blue-700' },
+    AN_FAHRER:      { label: 'Unterwegs', color: 'bg-orange-100 text-orange-700' },
+    GELIEFERT:      { label: 'Geliefert', color: 'bg-green-100 text-green-700' },
+    ABGELEHNT:      { label: 'Abgelehnt',  color: 'bg-gray-100 text-gray-500' },
   }
   const s = map[status] || { label: status, color: 'bg-gray-100 text-gray-500' }
   return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${s.color}`}>{s.label}</span>
@@ -78,14 +78,21 @@ function CustomerRow({ customer, onSelect, isSelected }: {
   )
 }
 
-function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete }: {
+function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete, onDelete, onReload }: {
   customer: Customer
   onClose: () => void
   onNoteAdd: (email: string, text: string) => Promise<void>
   onNoteDelete: (email: string, noteId: string) => Promise<void>
+  onDelete: (email: string) => Promise<void>
+  onReload: () => void
 }) {
-  const [newNote, setNewNote] = useState('')
-  const [savingNote, setSavingNote] = useState(false)
+  const [newNote, setNewNote]         = useState('')
+  const [savingNote, setSavingNote]   = useState(false)
+  const [editing, setEditing]         = useState(false)
+  const [editName, setEditName]       = useState(customer.name)
+  const [editPhone, setEditPhone]     = useState(customer.phone)
+  const [saving, setSaving]           = useState(false)
+  const [deleting, setDeleting]       = useState(false)
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return
@@ -93,6 +100,26 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete }: {
     await onNoteAdd(customer.email, newNote.trim())
     setNewNote('')
     setSavingNote(false)
+  }
+
+  const handleSaveEdit = async () => {
+    setSaving(true)
+    // Alle Bestellungen dieses Kunden aktualisieren
+    await supabase
+      .from('orders')
+      .update({ customer_name: editName, customer_phone: editPhone })
+      .eq('customer_email', customer.email)
+    setSaving(false)
+    setEditing(false)
+    onReload()
+  }
+
+  const handleDelete = async () => {
+    if (!confirm(`Kunde "${customer.name}" und alle zugehörigen Notizen löschen?\n\nBestellungen bleiben erhalten.`)) return
+    setDeleting(true)
+    await onDelete(customer.email)
+    setDeleting(false)
+    onClose()
   }
 
   return (
@@ -108,10 +135,65 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete }: {
             <div className="text-gray-300 text-sm">{customer.email}</div>
           </div>
         </div>
-        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition"><X size={20} /></button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setEditing(!editing)}
+            className="p-2 hover:bg-white/10 rounded-xl transition"
+            title="Bearbeiten">
+            <Edit2 size={16} />
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="p-2 hover:bg-red-500/30 rounded-xl transition text-red-300"
+            title="Kunden löschen">
+            <Trash2 size={16} />
+          </button>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition">
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="p-5 space-y-5">
+
+        {/* Edit-Formular */}
+        {editing && (
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 space-y-3">
+            <div className="font-bold text-sm text-blue-800 mb-2">✏️ Daten bearbeiten</div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold block mb-1">Name</label>
+              <input
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-black focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold block mb-1">Telefon</label>
+              <input
+                value={editPhone}
+                onChange={e => setEditPhone(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-black focus:outline-none"
+              />
+            </div>
+            <div className="text-xs text-gray-400">Email kann nicht geändert werden (Login-Daten)</div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving}
+                className="flex-1 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 disabled:opacity-40 transition flex items-center justify-center gap-1">
+                <Check size={14} /> {saving ? 'Speichert...' : 'Speichern'}
+              </button>
+              <button
+                onClick={() => { setEditing(false); setEditName(customer.name); setEditPhone(customer.phone) }}
+                className="px-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold hover:border-gray-400 transition">
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* KPIs */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-green-50 rounded-xl p-3 text-center">
@@ -134,8 +216,18 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete }: {
         <div className="bg-gray-50 rounded-xl p-4 space-y-2">
           <div className="font-bold text-xs text-gray-400 uppercase tracking-widest mb-2">Kontakt</div>
           <div className="flex items-center gap-2 text-sm"><Mail size={14} className="text-gray-400" />{customer.email}</div>
-          {customer.phone && <div className="flex items-center gap-2 text-sm"><Phone size={14} className="text-gray-400" /><a href={`tel:${customer.phone}`} className="text-blue-600 hover:underline">{customer.phone}</a></div>}
-          {customer.lastOrder && <div className="flex items-center gap-2 text-sm text-gray-500"><ShoppingBag size={14} className="text-gray-400" />Letzte Bestellung: {new Date(customer.lastOrder).toLocaleDateString('de-DE')}</div>}
+          {customer.phone && (
+            <div className="flex items-center gap-2 text-sm">
+              <Phone size={14} className="text-gray-400" />
+              <a href={`tel:${customer.phone}`} className="text-blue-600 hover:underline">{customer.phone}</a>
+            </div>
+          )}
+          {customer.lastOrder && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <ShoppingBag size={14} className="text-gray-400" />
+              Letzte Bestellung: {new Date(customer.lastOrder).toLocaleDateString('de-DE')}
+            </div>
+          )}
         </div>
 
         {/* Bestellhistorie */}
@@ -180,9 +272,15 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete }: {
               <div key={note.id} className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-start justify-between gap-2">
                 <div>
                   <div className="text-sm text-gray-800">{note.text}</div>
-                  <div className="text-xs text-gray-400 mt-1">{new Date(note.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {new Date(note.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </div>
-                <button onClick={() => onNoteDelete(customer.email, note.id)} className="text-gray-300 hover:text-red-500 transition flex-shrink-0"><Trash2 size={14} /></button>
+                <button
+                  onClick={() => onNoteDelete(customer.email, note.id)}
+                  className="text-gray-300 hover:text-red-500 transition flex-shrink-0">
+                  <Trash2 size={14} />
+                </button>
               </div>
             ))}
           </div>
@@ -209,23 +307,21 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete }: {
 
 // ── Hauptseite ────────────────────────────────────────────────
 export default function CustomersPage() {
-  const [customers, setCustomers]       = useState<Customer[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [search, setSearch]             = useState('')
+  const [customers, setCustomers]         = useState<Customer[]>([])
+  const [loading, setLoading]             = useState(true)
+  const [search, setSearch]               = useState('')
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null)
-  const [sortBy, setSortBy]             = useState<'name' | 'spent' | 'orders' | 'last'>('spent')
+  const [sortBy, setSortBy]               = useState<'name' | 'spent' | 'orders' | 'last'>('spent')
 
   const loadCustomers = useCallback(async () => {
     setLoading(true)
 
-    // Alle Bestellungen laden
     const { data: orders } = await supabase
       .from('orders')
       .select('*')
       .not('customer_email', 'is', null)
       .order('created_at', { ascending: false })
 
-    // Alle Notizen laden
     const { data: notesData } = await supabase
       .from('customer_notes')
       .select('*')
@@ -233,7 +329,6 @@ export default function CustomersPage() {
 
     if (!orders) { setLoading(false); return }
 
-    // Kunden aus Bestellungen aggregieren
     const customerMap: Record<string, Customer> = {}
 
     for (const order of orders) {
@@ -243,13 +338,13 @@ export default function CustomersPage() {
       if (!customerMap[email]) {
         customerMap[email] = {
           email,
-          name:        order.customer_name || '–',
-          phone:       order.customer_phone || '',
-          orders:      [],
-          notes:       [],
-          totalSpent:  0,
-          orderCount:  0,
-          lastOrder:   null,
+          name:       order.customer_name || '–',
+          phone:      order.customer_phone || '',
+          orders:     [],
+          notes:      [],
+          totalSpent: 0,
+          orderCount: 0,
+          lastOrder:  null,
         }
       }
 
@@ -265,12 +360,10 @@ export default function CustomersPage() {
         c.lastOrder = order.created_at
       }
 
-      // Neuesten Namen / Telefon verwenden
       if (order.customer_name && order.customer_name !== '–') c.name  = order.customer_name
       if (order.customer_phone)                                c.phone = order.customer_phone
     }
 
-    // Notizen zuordnen
     if (notesData) {
       for (const note of notesData) {
         if (customerMap[note.customer_email]) {
@@ -290,10 +383,8 @@ export default function CustomersPage() {
   useEffect(() => { loadCustomers() }, [loadCustomers])
 
   const handleAddNote = async (email: string, text: string) => {
-    const { error } = await supabase
-      .from('customer_notes')
-      .insert({ customer_email: email, note: text })
-    if (!error) await loadCustomers()
+    await supabase.from('customer_notes').insert({ customer_email: email, note: text })
+    await loadCustomers()
   }
 
   const handleDeleteNote = async (email: string, noteId: string) => {
@@ -302,7 +393,17 @@ export default function CustomersPage() {
     await loadCustomers()
   }
 
-  // Filter + Sort
+  const handleDeleteCustomer = async (email: string) => {
+    // Nur Notizen löschen — Bestellungen bleiben erhalten
+    await supabase.from('customer_notes').delete().eq('customer_email', email)
+    await supabase.from('customer_favorites').delete().eq('user_id',
+      // customer_favorites nutzt user_id, nicht email — nur Notizen löschen reicht
+      email
+    )
+    setSelectedEmail(null)
+    await loadCustomers()
+  }
+
   const filtered = customers
     .filter(c => {
       if (!search) return true
@@ -319,9 +420,8 @@ export default function CustomersPage() {
 
   const selected = customers.find(c => c.email === selectedEmail) || null
 
-  const totalRevenue  = customers.reduce((s, c) => s + c.totalSpent, 0)
-  const totalOrders   = customers.reduce((s, c) => s + c.orderCount, 0)
-  const repeatBuyers  = customers.filter(c => c.orderCount > 1).length
+  const totalRevenue = customers.reduce((s, c) => s + c.totalSpent, 0)
+  const repeatBuyers = customers.filter(c => c.orderCount > 1).length
 
   return (
     <AdminLayout>
@@ -349,10 +449,9 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        <div className={`grid gap-6 ${selected ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {/* Linke Spalte – Kundenliste */}
+        <div className={`grid gap-6 ${selected ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Kundenliste */}
           <div>
-            {/* Suche + Sort */}
             <div className="flex gap-3 mb-4 flex-wrap">
               <div className="relative flex-1 min-w-48">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -392,7 +491,7 @@ export default function CustomersPage() {
             )}
           </div>
 
-          {/* Rechte Spalte – Detail */}
+          {/* Detail */}
           {selected && (
             <div className="sticky top-6">
               <CustomerDetail
@@ -400,6 +499,8 @@ export default function CustomersPage() {
                 onClose={() => setSelectedEmail(null)}
                 onNoteAdd={handleAddNote}
                 onNoteDelete={handleDeleteNote}
+                onDelete={handleDeleteCustomer}
+                onReload={loadCustomers}
               />
             </div>
           )}
