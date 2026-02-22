@@ -9,14 +9,15 @@ import ShopStatusBanner from '@/components/ShopStatusBanner'
 import { supabase } from '@/lib/supabase'
 
 export default function Home() {
-  const [products, setProducts] = useState([])
-  const [extras, setExtras] = useState([])
-  const [categories, setCategories] = useState([])
+  const [products, setProducts]               = useState<any[]>([])
+  const [extras, setExtras]                   = useState<any[]>([])
+  const [categories, setCategories]           = useState<string[]>([])
+  const [flavors, setFlavors]                 = useState<string[]>([])   // ← NEU: dynamische Eissorten
   const [selectedCategory, setSelectedCategory] = useState('')
-  const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [cart, setCart] = useState([])
-  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [session, setSession]                 = useState<any>(null)
+  const [loading, setLoading]                 = useState(true)
+  const [cart, setCart]                       = useState<any[]>([])
+  const [isCartOpen, setIsCartOpen]           = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -32,11 +33,11 @@ export default function Home() {
   }, [categories])
 
   const loadCart = () => {
-    const savedCart = localStorage.getItem('simonetti-cart')
-    if (savedCart) setCart(JSON.parse(savedCart))
+    const saved = localStorage.getItem('simonetti-cart')
+    if (saved) setCart(JSON.parse(saved))
   }
 
-  const saveCart = (newCart) => {
+  const saveCart = (newCart: any[]) => {
     setCart(newCart)
     localStorage.setItem('simonetti-cart', JSON.stringify(newCart))
   }
@@ -44,33 +45,47 @@ export default function Home() {
   const loadProducts = async () => {
     setLoading(true)
     const { data } = await supabase
-      .from('products').select('*').eq('active', true).order('category', { ascending: true })
+      .from('products').select('*').eq('active', true).order('category').order('name')
+
     if (data) {
       setProducts(data)
-      await loadVisibleCategories(data)
+      await loadCategories(data)
     }
     setLoading(false)
   }
 
-  const loadVisibleCategories = async (activeProducts) => {
-    const { data: categoriesData } = await supabase
-      .from('categories').select('name').order('sort_order', { ascending: true })
+  const loadCategories = async (activeProducts: any[]) => {
+    const { data: catData } = await supabase
+      .from('categories').select('*').order('sort_order', { ascending: true })
 
-    if (categoriesData) {
-      // Nur Kategorien zeigen die mindestens 1 aktives Produkt haben
-      const categoriesWithProducts = categoriesData
+    if (catData) {
+      // ── Sichtbare Kategorien → als Tab-Buttons anzeigen ──────
+      const visibleCats = catData
+        .filter(c => c.visible !== false)            // null oder true = sichtbar
         .map(c => c.name)
-        .filter(catName => activeProducts.some((p: any) => p.category === catName))
+        .filter(name => activeProducts.some(p => p.category === name))
 
-      // Kategorien die in DB fehlen aber Produkte haben auch anzeigen (Fallback)
-      const extraCats = [...new Set(activeProducts.map((p: any) => p.category))]
-        .filter(cat => !categoriesWithProducts.includes(cat))
+      setCategories(visibleCats)
 
-      setCategories([...categoriesWithProducts, ...extraCats])
+      // ── Versteckte Kategorien → deren Produkt-Namen als Eissorten ──
+      // z.B. Kategorie "Eissorte" mit visible=false
+      // Jedes Produkt darin = eine wählbare Sorte beim 4er/5er Becher
+      const hiddenCatNames = catData
+        .filter(c => c.visible === false)
+        .map(c => c.name)
+
+      const dynamicFlavors = activeProducts
+        .filter(p => hiddenCatNames.includes(p.category))
+        .map(p => p.name)
+        .sort()
+
+      setFlavors(dynamicFlavors)
+
     } else {
-      // Fallback: Kategorien direkt aus den Produkten ableiten
-      const cats = [...new Set(activeProducts.map((p: any) => p.category))].filter(Boolean)
+      // Fallback: alle Kategorien aus Produkten ableiten
+      const cats = [...new Set(activeProducts.map(p => p.category))].filter(Boolean) as string[]
       setCategories(cats)
+      setFlavors([])
     }
   }
 
@@ -79,7 +94,7 @@ export default function Home() {
     if (data) setExtras(data)
   }
 
-  const handleAddToCart = (product, portions = 1, selectedFlavors = [], selectedExtras = []) => {
+  const handleAddToCart = (product: any, portions = 1, selectedFlavors: string[] = [], selectedExtras: any[] = []) => {
     const cartItem = {
       ...product,
       quantity: portions,
@@ -92,16 +107,16 @@ export default function Home() {
     setIsCartOpen(true)
   }
 
-  const updateCartQuantity = (cartId, newQuantity) => {
+  const updateCartQuantity = (cartId: string, newQuantity: number) => {
     if (newQuantity === 0) { removeFromCart(cartId); return }
     saveCart(cart.map(item =>
       item.cartId === cartId
-        ? { ...item, quantity: newQuantity, totalPrice: (item.price * newQuantity) + item.selectedExtras.reduce((sum, e) => sum + e.price, 0) }
+        ? { ...item, quantity: newQuantity, totalPrice: (item.price * newQuantity) + (item.selectedExtras || []).reduce((sum: number, e: any) => sum + e.price, 0) }
         : item
     ))
   }
 
-  const removeFromCart = (cartId) => saveCart(cart.filter(item => item.cartId !== cartId))
+  const removeFromCart = (cartId: string) => saveCart(cart.filter(item => item.cartId !== cartId))
   const clearCart = () => saveCart([])
 
   const filteredProducts = products.filter(p => p.category === selectedCategory)
@@ -110,10 +125,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-
-      {/* Öffnungszeiten-Banner ganz oben */}
       <ShopStatusBanner />
-
       <Navbar session={session} cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
       <HeroSection />
 
@@ -169,6 +181,7 @@ export default function Home() {
                   key={product.id}
                   product={product}
                   extras={extras}
+                  flavors={flavors}          // ← dynamische Sorten weitergeben
                   onAddToCart={handleAddToCart}
                 />
               ))}
@@ -178,8 +191,6 @@ export default function Home() {
       </section>
 
       <Footer />
-
-      {/* Cookie Banner */}
       <CookieBanner />
     </div>
   )
