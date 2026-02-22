@@ -28,12 +28,15 @@ interface ProductCardProps {
     is_lactosefree?: boolean
   }
   extras: Extra[]
+  flavors?: string[]   // dynamische Eissorten aus DB
   onAddToCart: (product: any, portions: number, selectedFlavors: string[], selectedExtras: Extra[]) => void
 }
 
-export default function ProductCard({ product, extras, onAddToCart }: ProductCardProps) {
+export default function ProductCard({ product, extras, flavors = [], onAddToCart }: ProductCardProps) {
   const [showModal, setShowModal] = useState(false)
   const portionSize = product.portion_size || 1
+  // Dynamische Sorten aus DB, fallback auf statisches available_flavors
+  const availableFlavors = flavors.length > 0 ? flavors : (product.available_flavors || [])
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>([])
   const [selectedExtras, setSelectedExtras] = useState<Extra[]>([])
 
@@ -183,7 +186,7 @@ export default function ProductCard({ product, extras, onAddToCart }: ProductCar
             <div className="p-6 space-y-6">
 
               {/* SORTEN AUSWAHL */}
-              {product.has_portions && product.available_flavors && product.available_flavors.length > 0 && (
+              {product.has_portions && availableFlavors.length > 0 && (
                 <div>
                   <h3 className="font-bold text-lg mb-1">
                     Sorten auswählen
@@ -204,7 +207,7 @@ export default function ProductCard({ product, extras, onAddToCart }: ProductCar
                     </div>
                   )}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {product.available_flavors.map(flavor => (
+                    {availableFlavors.map(flavor => (
                       <button
                         key={flavor}
                         onClick={() => toggleFlavor(flavor)}
