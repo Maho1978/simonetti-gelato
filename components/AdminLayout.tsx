@@ -9,17 +9,17 @@ interface AdminLayoutProps {
 }
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',  href: '/admin',            icon: '📊' },
-  { label: 'Kanban',     href: '/admin/kanban',     icon: '🗂️' },
-  { label: 'Produkte',   href: '/admin/products',   icon: '🍦' },
-  { label: 'Extras',     href: '/admin/extras',     icon: '➕' },
-  { label: 'Kategorien', href: '/admin/categories', icon: '📂' },
-  { label: 'Fahrer',     href: '/admin/drivers',    icon: '🚗' },
-  { label: 'Reports',    href: '/admin/reports',    icon: '📈' },
-  { label: 'Gutscheine', href: '/admin/vouchers',   icon: '🎟️' },
-  { label: 'Kunden',     href: '/admin/customers',  icon: '👥' },
-  { label: 'Features',   href: '/admin/features',   icon: '⚡' },
-  { label: 'Setup',      href: '/admin/settings',   icon: '⚙️' },
+  { label: 'Dashboard',   href: '/admin',            icon: '📊' },
+  { label: 'Kanban',      href: '/admin/kanban',     icon: '🗂️' },
+  { label: 'Produkte',    href: '/admin/products',   icon: '🍦' },
+  { label: 'Extras',      href: '/admin/extras',     icon: '➕' },
+  { label: 'Kategorien',  href: '/admin/categories', icon: '📂' },
+  { label: 'Fahrer',      href: '/admin/drivers',    icon: '🚗' },
+  { label: 'Reports',     href: '/admin/reports',    icon: '📈' },
+  { label: 'Gutscheine',  href: '/admin/vouchers',   icon: '🎟️' },
+  { label: 'Kunden',      href: '/admin/customers',  icon: '👥' },
+  { label: 'Bewertungen', href: '/admin/reviews',    icon: '⭐' },
+  { label: 'Setup',       href: '/admin/settings',   icon: '⚙️' },
 ]
 
 export default function AdminLayout({ children }: AdminLayoutProps) {

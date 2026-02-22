@@ -4,7 +4,7 @@ import AdminLayout from '@/components/AdminLayout'
 import {
   Clock, DollarSign, Save, PowerOff, Power, Calendar as CalendarIcon,
   Plus, Trash2, Edit2, X, Mail, ToggleLeft, ToggleRight, Share2,
-  CreditCard, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle
+  CreditCard, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Zap
 } from 'lucide-react'
 
 const DAYS = {
@@ -27,81 +27,105 @@ const DEFAULT_EMAIL_SETTINGS = {
 }
 
 const SOCIAL_PLATFORMS = [
-  { id: 'instagram',   label: 'Instagram',   icon: '📸', placeholder: 'https://www.instagram.com/eiscafe_simonetti'           },
-  { id: 'facebook',    label: 'Facebook',    icon: '👤', placeholder: 'https://www.facebook.com/eiscafe.simonetti'            },
-  { id: 'tiktok',      label: 'TikTok',      icon: '🎵', placeholder: 'https://www.tiktok.com/@eiscafe_simonetti'             },
-  { id: 'youtube',     label: 'YouTube',     icon: '▶️', placeholder: 'https://www.youtube.com/@eiscafe_simonetti'            },
-  { id: 'whatsapp',    label: 'WhatsApp',    icon: '💬', placeholder: 'https://wa.me/4921731622780'                           },
-  { id: 'google',      label: 'Google Maps', icon: '🗺️', placeholder: 'https://maps.google.com/?q=Eiscafe+Simonetti+Langenfeld'},
-  { id: 'tripadvisor', label: 'TripAdvisor', icon: '🦉', placeholder: 'https://www.tripadvisor.de/...'                        },
-  { id: 'yelp',        label: 'Yelp',        icon: '⭐', placeholder: 'https://www.yelp.de/biz/eiscafe-simonetti'             },
-  { id: 'lieferando',  label: 'Lieferando',  icon: '🛵', placeholder: 'https://www.lieferando.de/...'                        },
-  { id: 'x',           label: 'X (Twitter)', icon: '🐦', placeholder: 'https://x.com/eiscafe_simonetti'                      },
-  { id: 'pinterest',   label: 'Pinterest',   icon: '📌', placeholder: 'https://www.pinterest.de/eiscafe_simonetti'            },
-  { id: 'linkedin',    label: 'LinkedIn',    icon: '💼', placeholder: 'https://www.linkedin.com/company/...'                  },
+  { id: 'instagram',   label: 'Instagram',   icon: '📸', placeholder: 'https://www.instagram.com/eiscafe_simonetti'            },
+  { id: 'facebook',    label: 'Facebook',    icon: '👤', placeholder: 'https://www.facebook.com/eiscafe.simonetti'             },
+  { id: 'tiktok',      label: 'TikTok',      icon: '🎵', placeholder: 'https://www.tiktok.com/@eiscafe_simonetti'              },
+  { id: 'youtube',     label: 'YouTube',     icon: '▶️', placeholder: 'https://www.youtube.com/@eiscafe_simonetti'             },
+  { id: 'whatsapp',    label: 'WhatsApp',    icon: '💬', placeholder: 'https://wa.me/4921731622780'                            },
+  { id: 'google',      label: 'Google Maps', icon: '🗺️', placeholder: 'https://maps.google.com/?q=Eiscafe+Simonetti+Langenfeld' },
+  { id: 'tripadvisor', label: 'TripAdvisor', icon: '🦉', placeholder: 'https://www.tripadvisor.de/...'                         },
+  { id: 'yelp',        label: 'Yelp',        icon: '⭐', placeholder: 'https://www.yelp.de/biz/eiscafe-simonetti'              },
+  { id: 'lieferando',  label: 'Lieferando',  icon: '🛵', placeholder: 'https://www.lieferando.de/...'                         },
+  { id: 'x',           label: 'X (Twitter)', icon: '🐦', placeholder: 'https://x.com/eiscafe_simonetti'                       },
+  { id: 'pinterest',   label: 'Pinterest',   icon: '📌', placeholder: 'https://www.pinterest.de/eiscafe_simonetti'             },
+  { id: 'linkedin',    label: 'LinkedIn',    icon: '💼', placeholder: 'https://www.linkedin.com/company/...'                   },
 ]
 
 const DEFAULT_SOCIAL = Object.fromEntries(SOCIAL_PLATFORMS.map(p => [p.id, { url: '', enabled: false }]))
 
 const DEFAULT_PAYMENT_KEYS = {
   stripe: {
-    mode:           'test',        // 'test' | 'live'
-    test_public:    '',
-    test_secret:    '',
-    live_public:    '',
-    live_secret:    '',
-    webhook_secret: '',
+    mode: 'test', test_public: '', test_secret: '', live_public: '', live_secret: '', webhook_secret: '',
   },
   paypal: {
-    mode:          'sandbox',      // 'sandbox' | 'live'
-    sandbox_client_id:     '',
-    sandbox_client_secret: '',
-    live_client_id:        '',
-    live_client_secret:    '',
+    mode: 'sandbox', sandbox_client_id: '', sandbox_client_secret: '', live_client_id: '', live_client_secret: '',
   },
   wero: {
-    // Wird befüllt sobald Wero API verfügbar ist
-    api_key:     '',
-    merchant_id: '',
-    note: 'Wero-Integration kommt sobald die offizielle API verfügbar ist.'
+    api_key: '', merchant_id: '', note: 'Wero-Integration kommt sobald die offizielle API verfügbar ist.'
   }
 }
 
-// ── Hilfsfunktion: Keys maskieren ─────────────────────────────
+// ── Feature-Definitionen ──────────────────────────────────────
+const FEATURE_DEFINITIONS = [
+  {
+    id:          'reviews',
+    icon:        '⭐',
+    label:       'Bewertungssystem',
+    description: 'Kunden können bestellte Produkte mit 1–5 Sternen bewerten. Bewertungen erscheinen erst nach Freigabe im Admin.',
+    adminLink:   '/admin/reviews',
+    adminLabel:  'Bewertungen verwalten →',
+    comingSoon:  false,
+  },
+  {
+    id:          'payment_paypal',
+    icon:        '🅿️',
+    label:       'PayPal',
+    description: 'PayPal als Zahlungsmethode im Checkout anzeigen. Voraussetzung: PayPal muss im Stripe-Dashboard unter Settings → Payment Methods aktiviert sein.',
+    adminLink:   '/admin/settings',
+    adminLabel:  'Stripe-Keys konfigurieren →',
+    comingSoon:  false,
+  },
+  {
+    id:          'payment_klarna',
+    icon:        '🛒',
+    label:       'Klarna (Ratenkauf)',
+    description: 'Klarna als Zahlungsmethode im Checkout anzeigen. Voraussetzung: Klarna muss im Stripe-Dashboard aktiviert sein.',
+    adminLink:   null,
+    adminLabel:  null,
+    comingSoon:  false,
+  },
+  {
+    id:          'loyalty',
+    icon:        '🎁',
+    label:       'Treueprogramm',
+    description: 'Jede 10. Bestellung gratis. Kunden sehen ihren Fortschritt im Kundenkonto.',
+    adminLink:   null,
+    adminLabel:  null,
+    comingSoon:  true,
+  },
+  {
+    id:          'favorites',
+    icon:        '❤️',
+    label:       'Favoriten',
+    description: 'Kunden können Produkte als Favoriten speichern und schneller nachbestellen.',
+    adminLink:   null,
+    adminLabel:  null,
+    comingSoon:  true,
+  },
+]
+
 function mask(val: string): string {
   if (!val || val.length < 8) return val
   return val.slice(0, 6) + '••••••••' + val.slice(-4)
 }
 
-// ── Key Input Feld ────────────────────────────────────────────
 function KeyField({ label, value, onChange, placeholder, help, isSecret = false }: {
   label: string; value: string; onChange: (v: string) => void
   placeholder?: string; help?: string; isSecret?: boolean
 }) {
   const [show, setShow] = useState(false)
   const hasValue = value && value.trim() !== ''
-
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between mb-1.5">
         <label className="text-sm font-semibold text-gray-700">{label}</label>
-        {hasValue && (
-          <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
-            <CheckCircle size={12} /> Eingetragen
-          </span>
-        )}
+        {hasValue && <span className="flex items-center gap-1 text-xs text-green-600 font-semibold"><CheckCircle size={12} /> Eingetragen</span>}
       </div>
       <div className="relative">
-        <input
-          type={isSecret && !show ? 'password' : 'text'}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm font-mono"
-        />
+        <input type={isSecret && !show ? 'password' : 'text'} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+          className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm font-mono" />
         {isSecret && (
-          <button type="button" onClick={() => setShow(!show)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
             {show ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
@@ -111,7 +135,6 @@ function KeyField({ label, value, onChange, placeholder, help, isSecret = false 
   )
 }
 
-// ── Provider Card ─────────────────────────────────────────────
 function ProviderCard({ icon, title, subtitle, badge, badgeColor, children, docsUrl, isComingSoon }: {
   icon: string; title: string; subtitle: string; badge?: string
   badgeColor?: string; children?: React.ReactNode; docsUrl?: string; isComingSoon?: boolean
@@ -119,45 +142,30 @@ function ProviderCard({ icon, title, subtitle, badge, badgeColor, children, docs
   const [open, setOpen] = useState(false)
   return (
     <div className={`bg-white rounded-2xl border-2 overflow-hidden ${isComingSoon ? 'border-gray-100 opacity-70' : 'border-gray-200'}`}>
-      <div
-        className={`flex items-center justify-between px-6 py-4 ${!isComingSoon ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-        onClick={() => !isComingSoon && setOpen(!open)}
-      >
+      <div className={`flex items-center justify-between px-6 py-4 ${!isComingSoon ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+        onClick={() => !isComingSoon && setOpen(!open)}>
         <div className="flex items-center gap-4">
           <span className="text-3xl">{icon}</span>
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-900">{title}</span>
-              {badge && (
-                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badgeColor || 'bg-gray-100 text-gray-500'}`}>
-                  {badge}
-                </span>
-              )}
-              {isComingSoon && (
-                <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-semibold">Bald verfügbar</span>
-              )}
+              {badge && <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badgeColor || 'bg-gray-100 text-gray-500'}`}>{badge}</span>}
+              {isComingSoon && <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-semibold">Bald verfügbar</span>}
             </div>
             <div className="text-sm text-gray-400">{subtitle}</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {docsUrl && !isComingSoon && (
-            <a href={docsUrl} target="_blank" rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
+            <a href={docsUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
               className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 font-semibold">
               <ExternalLink size={13} /> Anleitung
             </a>
           )}
-          {!isComingSoon && (
-            <div className={`transition-transform duration-200 text-gray-400 ${open ? 'rotate-180' : ''}`}>▼</div>
-          )}
+          {!isComingSoon && <div className={`transition-transform duration-200 text-gray-400 ${open ? 'rotate-180' : ''}`}>▼</div>}
         </div>
       </div>
-      {open && !isComingSoon && (
-        <div className="px-6 pb-6 border-t border-gray-100 pt-5">
-          {children}
-        </div>
-      )}
+      {open && !isComingSoon && <div className="px-6 pb-6 border-t border-gray-100 pt-5">{children}</div>}
     </div>
   )
 }
@@ -175,24 +183,25 @@ export default function SettingsPage() {
     close_message: '', opening_hours: {} as any
   })
 
-  const [emailSettings, setEmailSettings]       = useState<any>(DEFAULT_EMAIL_SETTINGS)
-  const [emailSaving, setEmailSaving]           = useState(false)
-  const [emailTestSending, setEmailTestSending] = useState<string | null>(null)
-
-  const [socialLinks, setSocialLinks]   = useState<any>(DEFAULT_SOCIAL)
-  const [socialSaving, setSocialSaving] = useState(false)
-
-  const [paymentKeys, setPaymentKeys]   = useState<any>(DEFAULT_PAYMENT_KEYS)
-  const [paymentSaving, setPaymentSaving] = useState(false)
-
-  const [specialHours, setSpecialHours] = useState<any[]>([])
-  const [showModal, setShowModal]       = useState(false)
-  const [editingId, setEditingId]       = useState<any>(null)
+  const [emailSettings, setEmailSettings]           = useState<any>(DEFAULT_EMAIL_SETTINGS)
+  const [emailSaving, setEmailSaving]               = useState(false)
+  const [emailTestSending, setEmailTestSending]     = useState<string | null>(null)
+  const [socialLinks, setSocialLinks]               = useState<any>(DEFAULT_SOCIAL)
+  const [socialSaving, setSocialSaving]             = useState(false)
+  const [paymentKeys, setPaymentKeys]               = useState<any>(DEFAULT_PAYMENT_KEYS)
+  const [paymentSaving, setPaymentSaving]           = useState(false)
+  const [specialHours, setSpecialHours]             = useState<any[]>([])
+  const [showModal, setShowModal]                   = useState(false)
+  const [editingId, setEditingId]                   = useState<any>(null)
   const [formData, setFormData] = useState({
     date: '', is_closed: true, custom_open: '14:00', custom_close: '22:00', label: '', notes: ''
   })
 
-  useEffect(() => { loadSettings(); loadSpecialHours() }, [])
+  // ── Features State ──────────────────────────────────────────
+  const [features, setFeatures]       = useState<Record<string, boolean>>({})
+  const [featuresSaving, setFeaturesSaving] = useState(false)
+
+  useEffect(() => { loadSettings(); loadSpecialHours(); loadFeatures() }, [])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -211,10 +220,19 @@ export default function SettingsPage() {
         opening_hours: data.opening_hours || {}
       })
       if (data.email_notifications) setEmailSettings({ ...DEFAULT_EMAIL_SETTINGS, ...data.email_notifications })
-      if (data.social_links) setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
-      if (data.payment_keys) setPaymentKeys({ ...DEFAULT_PAYMENT_KEYS, ...data.payment_keys })
+      if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
+      if (data.payment_keys)        setPaymentKeys({ ...DEFAULT_PAYMENT_KEYS, ...data.payment_keys })
     }
     setLoading(false)
+  }
+
+  const loadFeatures = async () => {
+    const { data } = await supabase.from('feature_toggles').select('id, enabled')
+    if (data) {
+      const map: Record<string, boolean> = {}
+      data.forEach((f: any) => { map[f.id] = f.enabled })
+      setFeatures(map)
+    }
   }
 
   const loadSpecialHours = async () => {
@@ -252,6 +270,20 @@ export default function SettingsPage() {
     if (!error) showToast('✅ Zahlungs-Keys gespeichert!')
     else showToast('❌ Fehler: ' + error.message)
     setPaymentSaving(false)
+  }
+
+  const handleSaveFeatures = async () => {
+    setFeaturesSaving(true)
+    // Jedes Feature einzeln upserten
+    for (const def of FEATURE_DEFINITIONS) {
+      if (!def.comingSoon) {
+        await supabase.from('feature_toggles').upsert({
+          id: def.id, name: def.label, description: def.description, enabled: features[def.id] ?? false
+        }, { onConflict: 'id' })
+      }
+    }
+    showToast('✅ Features gespeichert!')
+    setFeaturesSaving(false)
   }
 
   const toggleManualClose = async () => {
@@ -337,11 +369,12 @@ export default function SettingsPage() {
     return grouped
   }
 
-  const stripe  = paymentKeys.stripe  || DEFAULT_PAYMENT_KEYS.stripe
-  const paypal  = paymentKeys.paypal  || DEFAULT_PAYMENT_KEYS.paypal
-  const wero    = paymentKeys.wero    || DEFAULT_PAYMENT_KEYS.wero
-  const isLive  = stripe.mode === 'live'
-  const activeSocialCount = Object.values(socialLinks).filter((s: any) => s.enabled && s.url).length
+  const stripe             = paymentKeys.stripe  || DEFAULT_PAYMENT_KEYS.stripe
+  const paypal             = paymentKeys.paypal  || DEFAULT_PAYMENT_KEYS.paypal
+  const wero               = paymentKeys.wero    || DEFAULT_PAYMENT_KEYS.wero
+  const isLive             = stripe.mode === 'live'
+  const activeSocialCount  = Object.values(socialLinks).filter((s: any) => s.enabled && s.url).length
+  const activeFeatureCount = FEATURE_DEFINITIONS.filter(f => !f.comingSoon && features[f.id]).length
 
   const TABS = [
     { key: 'general',  label: '⚙️ Allgemein' },
@@ -350,6 +383,7 @@ export default function SettingsPage() {
     { key: 'payment',  label: '💳 Zahlungsanbieter' },
     { key: 'emails',   label: '📧 Emails' },
     { key: 'social',   label: `📱 Social Media${activeSocialCount > 0 ? ` (${activeSocialCount})` : ''}` },
+    { key: 'features', label: `⚡ Features${activeFeatureCount > 0 ? ` (${activeFeatureCount})` : ''}` },
   ]
 
   if (loading) return <AdminLayout><div className="p-8 text-gray-400">Lädt...</div></AdminLayout>
@@ -366,7 +400,6 @@ export default function SettingsPage() {
         <div className="max-w-5xl">
           <h1 className="text-3xl font-bold mb-8">Shop-Einstellungen</h1>
 
-          {/* Tabs */}
           <div className="flex gap-1 mb-6 border-b border-gray-200 flex-wrap">
             {TABS.map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
@@ -399,7 +432,6 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><DollarSign size={22} /> Preise & Gebühren</h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -417,7 +449,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
-
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><Clock size={22} /> Lieferdauer</h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -436,7 +467,6 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-sm text-gray-400 mt-3">Kunden sehen: „Lieferung in ca. {settings.delivery_duration_min}–{settings.delivery_duration_max} Minuten"</p>
               </div>
-
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{saving ? 'Speichert...' : 'Einstellungen speichern'}
@@ -535,17 +565,12 @@ export default function SettingsPage() {
             <div className="space-y-5">
               <div>
                 <h2 className="text-2xl font-bold flex items-center gap-2"><CreditCard size={24} /> Zahlungsanbieter</h2>
-                <p className="text-gray-500 text-sm mt-1">Klicke auf einen Anbieter um die Zugangsdaten einzugeben. Die Keys werden sicher gespeichert.</p>
+                <p className="text-gray-500 text-sm mt-1">Klicke auf einen Anbieter um die Zugangsdaten einzugeben.</p>
               </div>
-
-              {/* ── STRIPE ── */}
-              <ProviderCard
-                icon="💳" title="Stripe" badge={isLive ? '🟢 Live-Modus' : '🟡 Test-Modus'}
+              <ProviderCard icon="💳" title="Stripe" badge={isLive ? '🟢 Live-Modus' : '🟡 Test-Modus'}
                 badgeColor={isLive ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}
                 subtitle="Kreditkarte, SEPA, Apple Pay, Google Pay, giropay, Sofort"
-                docsUrl="https://dashboard.stripe.com/apikeys"
-              >
-                {/* Test / Live Umschalter */}
+                docsUrl="https://dashboard.stripe.com/apikeys">
                 <div className="flex gap-2 mb-5">
                   {['test', 'live'].map(m => (
                     <button key={m} onClick={() => updatePayment('stripe', 'mode', m)}
@@ -554,50 +579,32 @@ export default function SettingsPage() {
                     </button>
                   ))}
                 </div>
-
                 {stripe.mode === 'test' ? (
                   <>
                     <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 mb-4 text-xs text-yellow-700">
                       ⚠️ <strong>Test-Modus:</strong> Keine echten Zahlungen. Testkarte: <code className="bg-yellow-100 px-1 rounded">4242 4242 4242 4242</code>
                     </div>
-                    <KeyField label="Test Publishable Key" value={stripe.test_public} onChange={v => updatePayment('stripe', 'test_public', v)}
-                      placeholder="pk_test_..." isSecret={false}
-                      help="Beginnt mit pk_test_ → Stripe Dashboard → Entwickler → API-Schlüssel" />
-                    <KeyField label="Test Secret Key" value={stripe.test_secret} onChange={v => updatePayment('stripe', 'test_secret', v)}
-                      placeholder="sk_test_..." isSecret={true}
-                      help="Beginnt mit sk_test_ → niemals öffentlich teilen!" />
+                    <KeyField label="Test Publishable Key" value={stripe.test_public} onChange={v => updatePayment('stripe', 'test_public', v)} placeholder="pk_test_..." isSecret={false} help="Beginnt mit pk_test_ → Stripe Dashboard → Entwickler → API-Schlüssel" />
+                    <KeyField label="Test Secret Key"      value={stripe.test_secret} onChange={v => updatePayment('stripe', 'test_secret', v)} placeholder="sk_test_..." isSecret={true}  help="Beginnt mit sk_test_ → niemals öffentlich teilen!" />
                   </>
                 ) : (
                   <>
                     <div className="bg-green-50 border border-green-100 rounded-xl p-3 mb-4 text-xs text-green-700">
                       ✅ <strong>Live-Modus:</strong> Echte Zahlungen aktiv. Nur aktivieren wenn der Shop bereit ist!
                     </div>
-                    <KeyField label="Live Publishable Key" value={stripe.live_public} onChange={v => updatePayment('stripe', 'live_public', v)}
-                      placeholder="pk_live_..." isSecret={false}
-                      help="Beginnt mit pk_live_ → Stripe Dashboard → Entwickler → API-Schlüssel" />
-                    <KeyField label="Live Secret Key" value={stripe.live_secret} onChange={v => updatePayment('stripe', 'live_secret', v)}
-                      placeholder="sk_live_..." isSecret={true}
-                      help="Beginnt mit sk_live_ → niemals öffentlich teilen!" />
+                    <KeyField label="Live Publishable Key" value={stripe.live_public} onChange={v => updatePayment('stripe', 'live_public', v)} placeholder="pk_live_..." isSecret={false} help="Beginnt mit pk_live_ → Stripe Dashboard → Entwickler → API-Schlüssel" />
+                    <KeyField label="Live Secret Key"      value={stripe.live_secret} onChange={v => updatePayment('stripe', 'live_secret', v)} placeholder="sk_live_..." isSecret={true}  help="Beginnt mit sk_live_ → niemals öffentlich teilen!" />
                   </>
                 )}
-
-                <KeyField label="Webhook Secret" value={stripe.webhook_secret} onChange={v => updatePayment('stripe', 'webhook_secret', v)}
-                  placeholder="whsec_..." isSecret={true}
-                  help="Stripe Dashboard → Entwickler → Webhooks → Signatur-Geheimnis" />
-
+                <KeyField label="Webhook Secret" value={stripe.webhook_secret} onChange={v => updatePayment('stripe', 'webhook_secret', v)} placeholder="whsec_..." isSecret={true} help="Stripe Dashboard → Entwickler → Webhooks → Signatur-Geheimnis" />
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 mt-2">
                   📖 <strong>Wo finde ich die Keys?</strong><br />
                   <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="underline font-semibold">dashboard.stripe.com</a> → Entwickler → API-Schlüssel
                 </div>
               </ProviderCard>
-
-              {/* ── PAYPAL ── */}
-              <ProviderCard
-                icon="🅿️" title="PayPal" badge="Code bereit"
-                badgeColor="bg-blue-100 text-blue-700"
+              <ProviderCard icon="🅿️" title="PayPal" badge="Code bereit" badgeColor="bg-blue-100 text-blue-700"
                 subtitle="PayPal Zahlungen – einfach Keys eintragen und aktivieren"
-                docsUrl="https://developer.paypal.com/dashboard/applications"
-              >
+                docsUrl="https://developer.paypal.com/dashboard/applications">
                 <div className="flex gap-2 mb-5">
                   {['sandbox', 'live'].map(m => (
                     <button key={m} onClick={() => updatePayment('paypal', 'mode', m)}
@@ -606,54 +613,29 @@ export default function SettingsPage() {
                     </button>
                   ))}
                 </div>
-
                 {paypal.mode === 'sandbox' ? (
                   <>
-                    <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 mb-4 text-xs text-yellow-700">
-                      ⚠️ <strong>Sandbox:</strong> Nur Testmodus – keine echten Zahlungen.
-                    </div>
-                    <KeyField label="Sandbox Client ID" value={paypal.sandbox_client_id} onChange={v => updatePayment('paypal', 'sandbox_client_id', v)}
-                      placeholder="AXxx..." isSecret={false}
-                      help="PayPal Developer Dashboard → Apps → Sandbox → Client ID" />
-                    <KeyField label="Sandbox Client Secret" value={paypal.sandbox_client_secret} onChange={v => updatePayment('paypal', 'sandbox_client_secret', v)}
-                      placeholder="EXxx..." isSecret={true}
-                      help="PayPal Developer Dashboard → Apps → Sandbox → Secret" />
+                    <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 mb-4 text-xs text-yellow-700">⚠️ <strong>Sandbox:</strong> Nur Testmodus – keine echten Zahlungen.</div>
+                    <KeyField label="Sandbox Client ID"     value={paypal.sandbox_client_id}     onChange={v => updatePayment('paypal', 'sandbox_client_id', v)}     placeholder="AXxx..." isSecret={false} help="PayPal Developer Dashboard → Apps → Sandbox → Client ID" />
+                    <KeyField label="Sandbox Client Secret" value={paypal.sandbox_client_secret} onChange={v => updatePayment('paypal', 'sandbox_client_secret', v)} placeholder="EXxx..." isSecret={true}  help="PayPal Developer Dashboard → Apps → Sandbox → Secret" />
                   </>
                 ) : (
                   <>
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4 text-xs text-blue-700">
-                      ✅ <strong>Live-Modus:</strong> Echte PayPal-Zahlungen aktiv.
-                    </div>
-                    <KeyField label="Live Client ID" value={paypal.live_client_id} onChange={v => updatePayment('paypal', 'live_client_id', v)}
-                      placeholder="AXxx..." isSecret={false}
-                      help="PayPal Developer Dashboard → Apps → Live → Client ID" />
-                    <KeyField label="Live Client Secret" value={paypal.live_client_secret} onChange={v => updatePayment('paypal', 'live_client_secret', v)}
-                      placeholder="EXxx..." isSecret={true}
-                      help="PayPal Developer Dashboard → Apps → Live → Secret" />
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4 text-xs text-blue-700">✅ <strong>Live-Modus:</strong> Echte PayPal-Zahlungen aktiv.</div>
+                    <KeyField label="Live Client ID"     value={paypal.live_client_id}     onChange={v => updatePayment('paypal', 'live_client_id', v)}     placeholder="AXxx..." isSecret={false} help="PayPal Developer Dashboard → Apps → Live → Client ID" />
+                    <KeyField label="Live Client Secret" value={paypal.live_client_secret} onChange={v => updatePayment('paypal', 'live_client_secret', v)} placeholder="EXxx..." isSecret={true}  help="PayPal Developer Dashboard → Apps → Live → Secret" />
                   </>
                 )}
-
                 <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 mt-2">
-                  📖 <strong>Wo finde ich die Keys?</strong><br />
-                  <a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noopener noreferrer" className="underline font-semibold">developer.paypal.com</a> → My Apps → App auswählen → Credentials
+                  📖 <a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noopener noreferrer" className="underline font-semibold">developer.paypal.com</a> → My Apps → App auswählen → Credentials
                 </div>
               </ProviderCard>
-
-              {/* ── WERO ── */}
-              <ProviderCard
-                icon="🇩🇪" title="Wero" isComingSoon
-                subtitle="Deutsche P2P-Zahlungsmethode (Deutsche Bank, Commerzbank, Sparkasse etc.)"
-              >
-                <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500">
-                  {wero.note}
-                </div>
+              <ProviderCard icon="🇩🇪" title="Wero" isComingSoon subtitle="Deutsche P2P-Zahlungsmethode (Deutsche Bank, Commerzbank, Sparkasse etc.)">
+                <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500">{wero.note}</div>
               </ProviderCard>
-
-              {/* Speichern + Hinweis */}
               <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-700">
-                <strong>⚠️ Wichtig:</strong> Nach dem Speichern hier müssen die Keys auch in der <code className="bg-amber-100 px-1 rounded">.env.local</code> Datei auf dem Server aktualisiert werden – einmalig beim ersten Einrichten. Danach reicht das Speichern hier.
+                <strong>⚠️ Wichtig:</strong> Nach dem Speichern hier müssen die Keys auch in der <code className="bg-amber-100 px-1 rounded">.env.local</code> Datei auf dem Server aktualisiert werden.
               </div>
-
               <button onClick={handleSavePayment} disabled={paymentSaving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{paymentSaving ? 'Speichert...' : 'Zahlungs-Keys speichern'}
@@ -693,14 +675,12 @@ export default function SettingsPage() {
                     </div>
                     <div className="mb-4">
                       <label className="block text-sm font-semibold mb-2">Betreff</label>
-                      <input type="text" value={typeSetting.subject || ''}
-                        onChange={e => updateEmailSetting(emailType.key, 'subject', e.target.value)}
+                      <input type="text" value={typeSetting.subject || ''} onChange={e => updateEmailSetting(emailType.key, 'subject', e.target.value)}
                         className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm" />
                     </div>
                     <div className="mb-4">
-                      <label className="block text-sm font-semibold mb-2">Zusatztext <span className="text-gray-400 font-normal">(gelber Hinweisblock in der Email)</span></label>
-                      <textarea value={typeSetting.custom_text || ''}
-                        onChange={e => updateEmailSetting(emailType.key, 'custom_text', e.target.value)}
+                      <label className="block text-sm font-semibold mb-2">Zusatztext <span className="text-gray-400 font-normal">(gelber Hinweisblock)</span></label>
+                      <textarea value={typeSetting.custom_text || ''} onChange={e => updateEmailSetting(emailType.key, 'custom_text', e.target.value)}
                         rows={2} className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm"
                         placeholder="z.B. Bitte halte den Betrag in bar bereit!" />
                     </div>
@@ -757,6 +737,63 @@ export default function SettingsPage() {
               <button onClick={handleSaveSocial} disabled={socialSaving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{socialSaving ? 'Speichert...' : 'Social Media speichern'}
+              </button>
+            </div>
+          )}
+
+          {/* ── TAB: FEATURES ── */}
+          {activeTab === 'features' && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2"><Zap size={24} /> Features</h2>
+                <p className="text-gray-500 text-sm mt-1">Optionale Funktionen aktivieren oder deaktivieren.</p>
+              </div>
+
+              <div className="space-y-3">
+                {FEATURE_DEFINITIONS.map(feature => {
+                  const isEnabled = features[feature.id] ?? false
+                  return (
+                    <div key={feature.id}
+                      className={`bg-white rounded-2xl border-2 p-5 transition ${feature.comingSoon ? 'opacity-50 border-gray-100' : isEnabled ? 'border-green-200' : 'border-gray-200'}`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <span className="text-3xl mt-0.5">{feature.icon}</span>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-gray-900">{feature.label}</span>
+                              {feature.comingSoon && (
+                                <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-semibold">Bald verfügbar</span>
+                              )}
+                              {!feature.comingSoon && isEnabled && (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✅ Aktiv</span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-400">{feature.description}</p>
+                            {feature.adminLink && isEnabled && (
+                              <a href={feature.adminLink}
+                                className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-800 font-semibold">
+                                <ExternalLink size={12} /> {feature.adminLabel}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+
+                        {!feature.comingSoon && (
+                          <button
+                            onClick={() => setFeatures(prev => ({ ...prev, [feature.id]: !isEnabled }))}
+                            className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors ${isEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <button onClick={handleSaveFeatures} disabled={featuresSaving}
+                className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
+                <Save size={22} />{featuresSaving ? 'Speichert...' : 'Features speichern'}
               </button>
             </div>
           )}
@@ -819,8 +856,7 @@ export default function SettingsPage() {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={resetForm}
                   className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-semibold hover:bg-gray-50">Abbrechen</button>
-                <button type="submit"
-                  className="flex-1 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-900">
+                <button type="submit" className="flex-1 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-900">
                   {editingId ? 'Aktualisieren' : 'Hinzufügen'}
                 </button>
               </div>
