@@ -162,11 +162,18 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              {/* Map Placeholder */}
-              <div className="bg-gray-200 rounded-lg h-48 flex items-center justify-center">
-                <p className="text-gray-500">
-                  🗺️ Google Maps Integration
-                </p>
+              {/* Google Maps */}
+              <div className="rounded-xl overflow-hidden" style={{ height: '220px' }}>
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2504.7945246600675!2d6.949083976946619!3d51.11225113949294!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47bf2d30273bfa4f%3A0x21b61a6be3eb26e0!2sEiscafe%20Simonetti!5e0!3m2!1sde!2sde!4v1771752134071!5m2!1sde!2sde"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Eiscafé Simonetti"
+                />
               </div>
             </div>
           </div>
