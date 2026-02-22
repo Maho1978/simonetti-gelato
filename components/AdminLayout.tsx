@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { label: 'Gutscheine',  href: '/admin/vouchers',   icon: '🎟️' },
   { label: 'Kunden',      href: '/admin/customers',  icon: '👥' },
   { label: 'Bewertungen', href: '/admin/reviews',    icon: '⭐' },
+  { label: 'Features',    href: '/admin/features',   icon: '⚡' },
   { label: 'Setup',       href: '/admin/settings',   icon: '⚙️' },
 ]
 
