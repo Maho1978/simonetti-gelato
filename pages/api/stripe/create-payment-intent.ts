@@ -11,13 +11,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Ungültiger Betrag: ' + amount })
     }
 
+    // Stripe Metadata: max 500 Zeichen pro Wert – items weglassen, kommt in die Order DB
+    const safeMetadata: Record<string, string> = {}
+    if (metadata) {
+      const allowed = ['voucher_code', 'voucher_id', 'discount', 'tip', 'order_id']
+      for (const key of allowed) {
+        if (metadata[key] != null) {
+          safeMetadata[key] = String(metadata[key]).slice(0, 500)
+        }
+      }
+    }
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount:   Math.round(amount * 100),
-      currency: 'eur',
-      // Stripe zeigt automatisch alle im Dashboard aktivierten Methoden:
-      // Kreditkarte, SEPA, PayPal, Klarna, giropay etc.
+      amount:                    Math.round(amount * 100),
+      currency:                  'eur',
       automatic_payment_methods: { enabled: true },
-      metadata: metadata || {},
+      metadata:                  safeMetadata,
     })
 
     res.status(200).json({ clientSecret: paymentIntent.client_secret })
