@@ -5,8 +5,8 @@ import ProductCard, { ProductGrid, CategoryHeader } from '@/components/ProductCa
 import MiniCart from '@/components/MiniCart'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
-import { supabase } from '@/lib/supabase'
 import ShopStatusBanner from '@/components/ShopStatusBanner'
+import { supabase } from '@/lib/supabase'
 
 export default function Home() {
   const [products, setProducts] = useState([])
@@ -15,36 +15,27 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  
-  // CART STATE
   const [cart, setCart] = useState([])
   const [isCartOpen, setIsCartOpen] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-    })
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
     loadProducts()
     loadExtras()
     loadCart()
   }, [])
 
-  // Setze erste Kategorie als ausgewählt
   useEffect(() => {
     if (categories.length > 0 && !selectedCategory) {
       setSelectedCategory(categories[0])
     }
   }, [categories])
 
-  // Cart aus localStorage laden
   const loadCart = () => {
     const savedCart = localStorage.getItem('simonetti-cart')
-    if (savedCart) {
-      setCart(JSON.parse(savedCart))
-    }
+    if (savedCart) setCart(JSON.parse(savedCart))
   }
 
-  // Cart speichern
   const saveCart = (newCart) => {
     setCart(newCart)
     localStorage.setItem('simonetti-cart', JSON.stringify(newCart))
@@ -52,13 +43,8 @@ export default function Home() {
 
   const loadProducts = async () => {
     setLoading(true)
-    
     const { data } = await supabase
-      .from('products')
-      .select('*')
-      .eq('active', true)
-      .order('category', { ascending: true })
-
+      .from('products').select('*').eq('active', true).order('category', { ascending: true })
     if (data) {
       setProducts(data)
       await loadVisibleCategories(data)
@@ -66,69 +52,57 @@ export default function Home() {
     setLoading(false)
   }
 
-  const loadVisibleCategories = async (products) => {
+  const loadVisibleCategories = async (activeProducts) => {
     const { data: categoriesData } = await supabase
-      .from('categories')
-      .select('name')
-      .eq('visible', true)
-      .is('parent_id', null)
-      .order('sort_order', { ascending: true })
-    
+      .from('categories').select('name').order('sort_order', { ascending: true })
+
     if (categoriesData) {
+      // Nur Kategorien zeigen die mindestens 1 aktives Produkt haben
       const categoriesWithProducts = categoriesData
         .map(c => c.name)
-        .filter(catName => products.some(p => p.category === catName))
-      
-      setCategories(categoriesWithProducts)
+        .filter(catName => activeProducts.some((p: any) => p.category === catName))
+
+      // Kategorien die in DB fehlen aber Produkte haben auch anzeigen (Fallback)
+      const extraCats = [...new Set(activeProducts.map((p: any) => p.category))]
+        .filter(cat => !categoriesWithProducts.includes(cat))
+
+      setCategories([...categoriesWithProducts, ...extraCats])
+    } else {
+      // Fallback: Kategorien direkt aus den Produkten ableiten
+      const cats = [...new Set(activeProducts.map((p: any) => p.category))].filter(Boolean)
+      setCategories(cats)
     }
   }
 
   const loadExtras = async () => {
-    const { data } = await supabase
-      .from('extras')
-      .select('*')
-      .eq('active', true)
-    
+    const { data } = await supabase.from('extras').select('*').eq('active', true)
     if (data) setExtras(data)
   }
 
-  // ADD TO CART mit Portionen & Extras
   const handleAddToCart = (product, portions = 1, selectedFlavors = [], selectedExtras = []) => {
     const cartItem = {
       ...product,
       quantity: portions,
-      selectedFlavors: selectedFlavors,
-      selectedExtras: selectedExtras,
+      selectedFlavors,
+      selectedExtras,
       totalPrice: (product.price * portions) + selectedExtras.reduce((sum, e) => sum + e.price, 0),
       cartId: `${product.id}-${Date.now()}`
     }
-
-    const newCart = [...cart, cartItem]
-    saveCart(newCart)
+    saveCart([...cart, cartItem])
     setIsCartOpen(true)
   }
 
   const updateCartQuantity = (cartId, newQuantity) => {
-    if (newQuantity === 0) {
-      removeFromCart(cartId)
-      return
-    }
-    const newCart = cart.map(item => 
-      item.cartId === cartId 
+    if (newQuantity === 0) { removeFromCart(cartId); return }
+    saveCart(cart.map(item =>
+      item.cartId === cartId
         ? { ...item, quantity: newQuantity, totalPrice: (item.price * newQuantity) + item.selectedExtras.reduce((sum, e) => sum + e.price, 0) }
         : item
-    )
-    saveCart(newCart)
+    ))
   }
 
-  const removeFromCart = (cartId) => {
-    const newCart = cart.filter(item => item.cartId !== cartId)
-    saveCart(newCart)
-  }
-
-  const clearCart = () => {
-    saveCart([])
-  }
+  const removeFromCart = (cartId) => saveCart(cart.filter(item => item.cartId !== cartId))
+  const clearCart = () => saveCart([])
 
   const filteredProducts = products.filter(p => p.category === selectedCategory)
   const cartTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0)
@@ -136,17 +110,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Navbar 
-        session={session} 
-        cartCount={cartCount}
-        onCartClick={() => setIsCartOpen(true)}
-      />
+
+      {/* Öffnungszeiten-Banner ganz oben */}
       <ShopStatusBanner />
 
-      {/* Hero Section */}
+      <Navbar session={session} cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
       <HeroSection />
 
-      {/* MiniCart */}
       <MiniCart
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -157,30 +127,24 @@ export default function Home() {
         total={cartTotal}
       />
 
-      {/* Speisekarte */}
       <section id="speisekarte" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
-          
-          <CategoryHeader 
+          <CategoryHeader
             title="Unsere Gelato-Sorten"
             description="Täglich frisch hergestellt nach traditioneller italienischer Rezeptur"
           />
 
-          {/* Category Filter */}
           {categories.length > 0 && (
             <div className="flex flex-wrap gap-3 justify-center mb-12">
               {categories.map(cat => {
                 const count = products.filter(p => p.category === cat).length
                 return (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
+                  <button key={cat} onClick={() => setSelectedCategory(cat)}
                     className={`px-6 py-2.5 text-sm font-medium uppercase tracking-wider transition ${
                       selectedCategory === cat
                         ? 'bg-black text-white'
                         : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-400'
-                    }`}
-                  >
+                    }`}>
                     {cat} ({count})
                   </button>
                 )
@@ -188,7 +152,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Products Grid */}
           {loading ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4 animate-pulse">🍦</div>
@@ -211,14 +174,12 @@ export default function Home() {
               ))}
             </ProductGrid>
           )}
-
         </div>
       </section>
 
-      {/* Footer */}
       <Footer />
 
-      {/* Cookie Banner – immer zuletzt damit es über allem liegt */}
+      {/* Cookie Banner */}
       <CookieBanner />
     </div>
   )
