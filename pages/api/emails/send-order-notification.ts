@@ -1,357 +1,452 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { Resend } from 'resend'
-import { createClient } from '@supabase/supabase-js'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-interface EmailRequest {
-  type: 'order_confirmed' | 'new_order_admin' | 'order_out_for_delivery' | 'order_delivered'
-  order: any
-  recipientEmail: string
+// ── Helpers ───────────────────────────────────────────────────
+function formatAddress(addr: any): string {
+  if (!addr) return '–'
+  if (typeof addr === 'string') return addr
+  return [addr.street, addr.zip && addr.city ? addr.zip + ' ' + addr.city : addr.city].filter(Boolean).join(', ')
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+function formatItems(items: any[]): string {
+  if (!items?.length) return '<tr><td colspan="2" style="color:#888;font-size:13px;padding:8px 0;">Keine Artikel</td></tr>'
+  return items.map(item => {
+    const flavors  = (item.selectedFlavors || item.flavors || []).join(', ')
+    const extras   = (item.selectedExtras  || item.extras  || []).map((e: any) => e.name || e).join(', ')
+    const lineTotal = ((item.totalPrice || (item.price * item.quantity)) || 0).toFixed(2)
+    return `
+      <tr>
+        <td style="padding:10px 0;border-bottom:1px solid #f0ede8;vertical-align:top;">
+          <strong style="color:#2d2d2d;">${item.quantity}x ${item.name}</strong>
+          ${flavors ? `<br><span style="font-size:12px;color:#8da399;">🍦 ${flavors}</span>` : ''}
+          ${extras  ? `<br><span style="font-size:12px;color:#8da399;">➕ ${extras}</span>`  : ''}
+        </td>
+        <td style="padding:10px 0;border-bottom:1px solid #f0ede8;text-align:right;white-space:nowrap;vertical-align:top;">
+          <strong>${lineTotal} €</strong>
+        </td>
+      </tr>`
+  }).join('')
+}
+
+function subtotal(items: any[]): number {
+  return (items || []).reduce((s: number, i: any) => s + ((i.totalPrice || (i.price * i.quantity)) || 0), 0)
+}
+
+// ── Basis-Layout ──────────────────────────────────────────────
+function baseLayout(content: string, previewText = ''): string {
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Eiscafé Simonetti</title>
+</head>
+<body style="margin:0;padding:0;background-color:#faf9f7;font-family:'Segoe UI',Arial,sans-serif;color:#2d2d2d;">
+${previewText ? `<span style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${previewText}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</span>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#faf9f7;padding:30px 10px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;">
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background-color:#2d2d2d;border-radius:16px 16px 0 0;padding:28px 40px;text-align:center;">
+      <div style="font-size:32px;margin-bottom:8px;">🍦</div>
+      <div style="color:#ffffff;font-size:22px;font-weight:900;letter-spacing:3px;text-transform:uppercase;">Simonetti</div>
+      <div style="color:#888888;font-size:11px;letter-spacing:5px;margin-top:4px;">E I S C A F É</div>
+    </td>
+  </tr>
+
+  <!-- CONTENT -->
+  <tr>
+    <td style="background-color:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
+      ${content}
+
+      <!-- FOOTER -->
+      <div style="margin-top:40px;padding-top:24px;border-top:1px solid #f0ede8;text-align:center;">
+        <p style="color:#aaaaaa;font-size:12px;line-height:2;margin:0;">
+          Eiscafé Simonetti · Konrad-Adenauer-Platz 2 · 40764 Langenfeld<br/>
+          📞 <a href="tel:+4921731622780" style="color:#8da399;text-decoration:none;">02173 / 16 22 780</a>
+          &nbsp;·&nbsp;
+          <a href="mailto:bestellung@eiscafe-simonetti.de" style="color:#8da399;text-decoration:none;">bestellung@eiscafe-simonetti.de</a><br/>
+          <a href="https://www.eiscafe-simonetti.de" style="color:#8da399;text-decoration:none;">www.eiscafe-simonetti.de</a>
+        </p>
+        <p style="color:#cccccc;font-size:11px;margin-top:12px;margin-bottom:0;">
+          © ${new Date().getFullYear()} Eiscafé Simonetti · Langenfeld
+        </p>
+      </div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`
+}
+
+// ══════════════════════════════════════════════════════════════
+// 1. BESTELLBESTÄTIGUNG
+// ══════════════════════════════════════════════════════════════
+function emailOrderConfirmed(order: any): string {
+  const fee   = order.delivery_fee ?? 3.00
+  const tip   = order.tip ?? 0
+  const total = order.total ?? 0
+  const sub   = subtotal(order.items)
+
+  return baseLayout(`
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:60px;margin-bottom:12px;">✅</div>
+      <h1 style="margin:0 0 8px;font-size:26px;font-weight:900;color:#2d2d2d;">Bestellung bestätigt!</h1>
+      <p style="margin:0;color:#8da399;font-size:15px;">Danke, <strong>${order.customer_name || 'lieber Kunde'}</strong>! Wir haben deine Bestellung erhalten.</p>
+    </div>
+
+    <!-- Bestellnummer -->
+    <div style="background:#f0ede8;border-radius:12px;padding:14px 20px;text-align:center;margin-bottom:28px;">
+      <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">Bestellnummer</div>
+      <div style="font-size:24px;font-weight:900;color:#2d2d2d;margin-top:4px;">#${order.order_number || (order.id || '').slice(-6).toUpperCase()}</div>
+    </div>
+
+    <!-- Status Steps -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+      <tr>
+        <td align="center" width="22%">
+          <div style="width:38px;height:38px;background:#4a5d54;border-radius:50%;margin:0 auto 6px;display:table;"><div style="display:table-cell;vertical-align:middle;text-align:center;color:white;font-size:16px;">✓</div></div>
+          <div style="font-size:10px;color:#4a5d54;font-weight:700;">Bestellt</div>
+        </td>
+        <td style="vertical-align:middle;padding-bottom:20px;"><div style="height:2px;background:#e5e1da;"></div></td>
+        <td align="center" width="22%">
+          <div style="width:38px;height:38px;background:#e5e1da;border-radius:50%;margin:0 auto 6px;display:table;"><div style="display:table-cell;vertical-align:middle;text-align:center;color:#aaa;font-size:16px;">👨‍🍳</div></div>
+          <div style="font-size:10px;color:#aaa;">In Arbeit</div>
+        </td>
+        <td style="vertical-align:middle;padding-bottom:20px;"><div style="height:2px;background:#e5e1da;"></div></td>
+        <td align="center" width="22%">
+          <div style="width:38px;height:38px;background:#e5e1da;border-radius:50%;margin:0 auto 6px;display:table;"><div style="display:table-cell;vertical-align:middle;text-align:center;color:#aaa;font-size:16px;">🚗</div></div>
+          <div style="font-size:10px;color:#aaa;">Unterwegs</div>
+        </td>
+        <td style="vertical-align:middle;padding-bottom:20px;"><div style="height:2px;background:#e5e1da;"></div></td>
+        <td align="center" width="22%">
+          <div style="width:38px;height:38px;background:#e5e1da;border-radius:50%;margin:0 auto 6px;display:table;"><div style="display:table-cell;vertical-align:middle;text-align:center;color:#aaa;font-size:16px;">🎉</div></div>
+          <div style="font-size:10px;color:#aaa;">Geliefert</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Artikel -->
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:10px;">Deine Bestellung</div>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+      ${formatItems(order.items || [])}
+      <tr><td colspan="2" style="padding:6px 0;"></td></tr>
+      <tr>
+        <td style="padding:4px 0;color:#888;font-size:13px;">Zwischensumme</td>
+        <td style="padding:4px 0;text-align:right;font-size:13px;">${sub.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:#888;font-size:13px;">Liefergebühr</td>
+        <td style="padding:4px 0;text-align:right;font-size:13px;">${fee.toFixed(2)} €</td>
+      </tr>
+      ${tip > 0 ? `<tr><td style="padding:4px 0;color:#888;font-size:13px;">Trinkgeld</td><td style="padding:4px 0;text-align:right;font-size:13px;">${tip.toFixed(2)} €</td></tr>` : ''}
+      <tr>
+        <td style="padding:14px 0 4px;border-top:2px solid #2d2d2d;font-size:16px;font-weight:900;">Gesamt</td>
+        <td style="padding:14px 0 4px;border-top:2px solid #2d2d2d;text-align:right;font-size:18px;font-weight:900;">${total.toFixed(2)} €</td>
+      </tr>
+    </table>
+
+    <!-- Lieferadresse -->
+    <div style="background:#f8f7f5;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:8px;">📍 Lieferadresse</div>
+      <div style="font-weight:700;">${order.customer_name || ''}</div>
+      ${order.customer_phone ? `<div style="color:#666;font-size:13px;margin-top:2px;">📞 ${order.customer_phone}</div>` : ''}
+      <div style="color:#666;font-size:13px;margin-top:2px;">${formatAddress(order.delivery_address)}</div>
+    </div>
+
+    <!-- Lieferzeit -->
+    <div style="background:#e8f5ec;border-radius:12px;padding:18px 20px;text-align:center;margin-bottom:20px;">
+      <div style="font-size:26px;margin-bottom:6px;">⏱️</div>
+      <div style="font-weight:700;color:#2d6a4f;font-size:13px;text-transform:uppercase;letter-spacing:1px;">Voraussichtliche Lieferzeit</div>
+      <div style="font-size:26px;font-weight:900;color:#2d6a4f;margin-top:4px;">30 – 45 Minuten</div>
+    </div>
+
+    ${order.notes ? `
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:20px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#92400e;margin-bottom:4px;">💬 Anmerkung</div>
+      <div style="color:#78350f;font-size:13px;">${order.notes}</div>
+    </div>` : ''}
+
+    <p style="text-align:center;color:#aaa;font-size:13px;margin:0;line-height:1.8;">
+      Wir bereiten dein Eis jetzt frisch für dich zu. 🍦<br/>
+      Bei Fragen: <a href="tel:+4921731622780" style="color:#4a5d54;text-decoration:none;font-weight:700;">02173 / 16 22 780</a>
+    </p>
+  `, `Deine Bestellung #${order.order_number || ''} ist bei uns eingegangen!`)
+}
+
+// ══════════════════════════════════════════════════════════════
+// 2. UNTERWEGS
+// ══════════════════════════════════════════════════════════════
+function emailOutForDelivery(order: any): string {
+  return baseLayout(`
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:64px;margin-bottom:12px;">🚗</div>
+      <h1 style="margin:0 0 8px;font-size:26px;font-weight:900;color:#2d2d2d;">Dein Eis ist unterwegs!</h1>
+      <p style="margin:0;color:#8da399;font-size:15px;">Hey <strong>${order.customer_name || ''}</strong>! Unser Fahrer ist auf dem Weg zu dir.</p>
+    </div>
+
+    <div style="background:#fff7ed;border-radius:16px;padding:24px;text-align:center;margin-bottom:28px;">
+      <div style="font-size:36px;margin-bottom:8px;">⏱️</div>
+      <div style="font-size:12px;color:#9a6726;text-transform:uppercase;letter-spacing:1px;">Ankunft in ca.</div>
+      <div style="font-size:32px;font-weight:900;color:#d97706;margin-top:4px;">15 – 20 Minuten</div>
+    </div>
+
+    <div style="background:#f8f7f5;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:8px;">📍 Lieferung an</div>
+      <div style="font-weight:700;">${order.customer_name || ''}</div>
+      <div style="color:#666;font-size:13px;margin-top:2px;">${formatAddress(order.delivery_address)}</div>
+    </div>
+
+    <div style="background:#e8f5ec;border-radius:12px;padding:16px 20px;text-align:center;margin-bottom:24px;">
+      <div style="font-size:13px;color:#2d6a4f;margin-bottom:4px;">💰 Bitte Betrag bereithalten</div>
+      <div style="font-size:30px;font-weight:900;color:#2d6a4f;">${(order.total || 0).toFixed(2)} €</div>
+      <div style="font-size:12px;color:#888;margin-top:4px;">Zahlung: ${order.payment_method || 'Online'}</div>
+    </div>
+
+    <p style="text-align:center;color:#aaa;font-size:13px;margin:0;line-height:1.8;">
+      Guten Appetit! 🍦<br/>
+      Dein Simonetti Team
+    </p>
+  `, `Dein Eis ist unterwegs – Ankunft in ca. 15-20 Minuten!`)
+}
+
+// ══════════════════════════════════════════════════════════════
+// 3. ZUGESTELLT
+// ══════════════════════════════════════════════════════════════
+function emailDelivered(order: any): string {
+  return baseLayout(`
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:64px;margin-bottom:12px;">🎉</div>
+      <h1 style="margin:0 0 8px;font-size:26px;font-weight:900;color:#2d2d2d;">Guten Appetit!</h1>
+      <p style="margin:0;color:#8da399;font-size:15px;">Deine Bestellung wurde erfolgreich zugestellt.</p>
+    </div>
+
+    <div style="background:#e8f5ec;border-radius:16px;padding:24px;text-align:center;margin-bottom:28px;">
+      <div style="font-size:36px;margin-bottom:8px;">🍦</div>
+      <div style="font-weight:900;color:#2d6a4f;font-size:18px;">Vielen Dank für deine Bestellung!</div>
+      <div style="color:#888;font-size:13px;margin-top:6px;">Bestellung #${order.order_number || (order.id || '').slice(-6).toUpperCase()}</div>
+    </div>
+
+    <p style="color:#666;font-size:14px;line-height:1.8;text-align:center;margin-bottom:28px;">
+      Wir hoffen, dass dir dein Eis geschmeckt hat! 😊<br/>
+      Wir würden uns sehr über eine Bewertung freuen –<br/>
+      es hilft uns, noch besser zu werden.
+    </p>
+
+    <div style="text-align:center;margin-bottom:24px;">
+      <a href="https://www.google.com/maps/place/Eiscafe+Simonetti+Langenfeld"
+        style="display:inline-block;background:#4a5d54;color:white;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:14px;">
+        ⭐ Bei Google bewerten
+      </a>
+    </div>
+
+    <div style="background:#f8f7f5;border-radius:12px;padding:18px 20px;text-align:center;">
+      <div style="font-size:13px;color:#888;margin-bottom:10px;">Wieder Lust auf Eis?</div>
+      <a href="https://www.eiscafe-simonetti.de"
+        style="display:inline-block;background:#2d2d2d;color:white;text-decoration:none;padding:12px 28px;border-radius:10px;font-weight:700;font-size:14px;">
+        🍦 Erneut bestellen
+      </a>
+    </div>
+  `, `Deine Bestellung wurde zugestellt – Guten Appetit! 🍦`)
+}
+
+// ══════════════════════════════════════════════════════════════
+// 4. ABGELEHNT
+// ══════════════════════════════════════════════════════════════
+function emailOrderRejected(order: any): string {
+  return baseLayout(`
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:56px;margin-bottom:12px;">😔</div>
+      <h1 style="margin:0 0 8px;font-size:26px;font-weight:900;color:#2d2d2d;">Bestellung leider nicht möglich</h1>
+      <p style="margin:0;color:#888;font-size:15px;">Hallo <strong>${order.customer_name || ''}</strong>! Wir müssen deine Bestellung leider ablehnen.</p>
+    </div>
+
+    <div style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:8px;padding:18px 20px;margin-bottom:28px;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#991b1b;margin-bottom:6px;">
+        Bestellung #${order.order_number || (order.id || '').slice(-6).toUpperCase()}
+      </div>
+      ${order.reject_reason ? `<div style="color:#7f1d1d;font-weight:600;font-size:14px;">Grund: ${order.reject_reason}</div>` : ''}
+    </div>
+
+    <div style="background:#f0fdf4;border-radius:12px;padding:16px 20px;margin-bottom:24px;text-align:center;">
+      <div style="font-size:20px;margin-bottom:6px;">✅</div>
+      <div style="font-weight:700;color:#166534;font-size:14px;">Du wurdest nicht belastet</div>
+      <div style="color:#4b7a5e;font-size:13px;margin-top:4px;">Eine eventuelle Zahlung wird automatisch zurückgebucht.</div>
+    </div>
+
+    <p style="color:#666;font-size:14px;line-height:1.8;text-align:center;margin-bottom:24px;">
+      Wir entschuldigen uns für die Unannehmlichkeiten.<br/>
+      Bitte versuche es später noch einmal!
+    </p>
+
+    <div style="text-align:center;margin-bottom:24px;">
+      <a href="https://www.eiscafe-simonetti.de"
+        style="display:inline-block;background:#4a5d54;color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;">
+        🍦 Erneut versuchen
+      </a>
+    </div>
+
+    <div style="background:#f8f7f5;border-radius:12px;padding:16px 20px;text-align:center;">
+      <div style="font-size:13px;color:#888;margin-bottom:6px;">Fragen? Wir helfen gerne!</div>
+      <a href="tel:+4921731622780" style="color:#4a5d54;font-weight:700;text-decoration:none;font-size:16px;">02173 / 16 22 780</a>
+    </div>
+  `, `Deine Bestellung konnte leider nicht bearbeitet werden.`)
+}
+
+// ══════════════════════════════════════════════════════════════
+// 5. ADMIN – NEUE BESTELLUNG
+// ══════════════════════════════════════════════════════════════
+function emailNewOrderAdmin(order: any): string {
+  const fee   = order.delivery_fee ?? 3.00
+  const tip   = order.tip ?? 0
+  const total = order.total ?? 0
+  const sub   = subtotal(order.items)
+
+  return baseLayout(`
+    <div style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;padding:18px 20px;margin-bottom:24px;">
+      <div style="font-size:20px;font-weight:900;color:#92400e;">🔔 NEUE BESTELLUNG!</div>
+      <div style="color:#92400e;font-size:13px;margin-top:4px;">
+        #${order.order_number || (order.id || '').slice(-6).toUpperCase()} ·
+        ${new Date(order.created_at || Date.now()).toLocaleString('de-DE')}
+      </div>
+    </div>
+
+    <div style="background:#f8f7f5;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:8px;">Kunde</div>
+      <div style="font-weight:700;font-size:16px;">${order.customer_name || '–'}</div>
+      ${order.customer_phone ? `<div style="color:#555;margin-top:4px;font-size:13px;">📞 <a href="tel:${order.customer_phone}" style="color:#4a5d54;text-decoration:none;">${order.customer_phone}</a></div>` : ''}
+      <div style="color:#555;margin-top:4px;font-size:13px;">📍 ${formatAddress(order.delivery_address)}</div>
+      ${order.customer_email ? `<div style="color:#555;margin-top:4px;font-size:13px;">✉️ ${order.customer_email}</div>` : ''}
+    </div>
+
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:10px;">Bestellte Artikel</div>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+      ${formatItems(order.items || [])}
+      <tr><td colspan="2" style="padding:6px 0;"></td></tr>
+      <tr>
+        <td style="padding:4px 0;color:#888;font-size:13px;">Zwischensumme</td>
+        <td style="padding:4px 0;text-align:right;font-size:13px;">${sub.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:#888;font-size:13px;">Liefergebühr</td>
+        <td style="padding:4px 0;text-align:right;font-size:13px;">${fee.toFixed(2)} €</td>
+      </tr>
+      ${tip > 0 ? `<tr><td style="padding:4px 0;color:#888;font-size:13px;">Trinkgeld</td><td style="padding:4px 0;text-align:right;font-size:13px;">${tip.toFixed(2)} €</td></tr>` : ''}
+      <tr>
+        <td style="padding:14px 0 4px;border-top:2px solid #2d2d2d;font-size:16px;font-weight:900;">Gesamt</td>
+        <td style="padding:14px 0 4px;border-top:2px solid #2d2d2d;text-align:right;font-size:20px;font-weight:900;color:#2d2d2d;">${total.toFixed(2)} €</td>
+      </tr>
+    </table>
+
+    ${order.notes ? `
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin-bottom:20px;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#92400e;margin-bottom:4px;">💬 Anmerkung des Kunden</div>
+      <div style="color:#78350f;font-size:13px;">${order.notes}</div>
+    </div>` : ''}
+
+    <div style="text-align:center;margin-top:24px;">
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.eiscafe-simonetti.de'}/admin/kanban"
+        style="display:inline-block;background:#2d2d2d;color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;">
+        🗂️ Jetzt im Kanban bearbeiten →
+      </a>
+    </div>
+  `, `Neue Bestellung #${order.order_number || ''} – ${total.toFixed(2)} € von ${order.customer_name || 'Gast'}`)
+}
+
+// ══════════════════════════════════════════════════════════════
+// API HANDLER
+// ══════════════════════════════════════════════════════════════
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  const { type, order, recipientEmail } = req.body
+  if (!type || !order) return res.status(400).json({ error: 'Missing type or order' })
 
   try {
-    const { type, order, recipientEmail }: EmailRequest = req.body
+    // Email-Settings laden für aktiviert/deaktiviert Check + custom Betreff
+    let emailSettings: any = null
+    try {
+      const { createClient } = await import('@supabase/supabase-js')
+      const sb = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      const { data } = await sb.from('shop_settings').select('email_notifications').eq('id', 'main').single()
+      emailSettings = data?.email_notifications
+    } catch (_) {}
 
-    if (!recipientEmail) {
-      return res.status(400).json({ error: 'Recipient email required' })
+    // Prüfen ob deaktiviert (außer Bestellbestätigung – immer senden)
+    if (emailSettings && type !== 'order_confirmed') {
+      const cfg = emailSettings[type]
+      if (cfg && cfg.enabled === false) {
+        return res.status(200).json({ success: true, skipped: true, reason: 'disabled' })
+      }
     }
 
-    // Email-Einstellungen aus DB laden
-    const { data: settings } = await supabaseAdmin
-      .from('shop_settings')
-      .select('email_notifications')
-      .eq('id', 'main')
-      .single()
+    const orderNr = order.order_number || (order.id || '').slice(-6).toUpperCase()
 
-    const emailSettings = settings?.email_notifications || {}
-    const typeSettings = emailSettings[type] || {}
-
-    // order_confirmed ist IMMER aktiv
-    if (type !== 'order_confirmed' && typeSettings.enabled === false) {
-      return res.status(200).json({ success: true, skipped: true, reason: 'Email type disabled' })
+    const getSubject = (fallback: string) => {
+      const tmpl = emailSettings?.[type]?.subject
+      if (!tmpl) return fallback
+      return tmpl
+        .replace('#{orderNumber}', orderNr)
+        .replace('#{customerName}', order.customer_name || '')
+        .replace('#{total}', (order.total || 0).toFixed(2))
     }
 
-    // Admin-Emails gehen an info@, Kunden-Emails an bestellung@
-    const fromAddress = type === 'new_order_admin'
-      ? 'Simonetti Admin <info@eiscafe-simonetti.de>'
-      : 'Simonetti Gelateria <bestellung@eiscafe-simonetti.de>'
+    let subject = ''
+    let html    = ''
 
-    let emailContent = getEmailContent(type, order, typeSettings)
+    switch (type) {
+      case 'order_confirmed':
+        subject = getSubject(`✅ Bestellung #${orderNr} bestätigt – Eiscafé Simonetti`)
+        html    = emailOrderConfirmed(order)
+        break
+      case 'order_out_for_delivery':
+        subject = getSubject(`🚗 Dein Eis ist unterwegs! #${orderNr}`)
+        html    = emailOutForDelivery(order)
+        break
+      case 'order_delivered':
+        subject = getSubject(`🎉 Zugestellt! Guten Appetit! #${orderNr}`)
+        html    = emailDelivered(order)
+        break
+      case 'order_rejected':
+        subject = getSubject(`❌ Bestellung #${orderNr} konnte leider nicht bearbeitet werden`)
+        html    = emailOrderRejected(order)
+        break
+      case 'new_order_admin':
+        subject = getSubject(`🔔 Neue Bestellung #${orderNr} – ${(order.total || 0).toFixed(2)} €`)
+        html    = emailNewOrderAdmin(order)
+        break
+      default:
+        return res.status(400).json({ error: `Unknown email type: ${type}` })
+    }
+
+    if (!recipientEmail) return res.status(400).json({ error: 'No recipient email' })
 
     const { data, error } = await resend.emails.send({
-      from: fromAddress,
-      to: recipientEmail,
-      reply_to: 'info@eiscafe-simonetti.de', // Antworten kommen bei Hetzner an
-      subject: emailContent.subject,
-      html: emailContent.html,
+      from:    'Eiscafé Simonetti <bestellung@eiscafe-simonetti.de>',
+      to:      [recipientEmail],
+      subject,
+      html,
     })
 
     if (error) {
       console.error('Resend error:', error)
-      return res.status(500).json({ error: error.message })
+      return res.status(500).json({ success: false, error: error.message })
     }
 
-    res.status(200).json({ success: true, messageId: data?.id })
-  } catch (error: any) {
-    console.error('Email error:', error)
-    res.status(500).json({ error: error.message || 'Failed to send email' })
-  }
-}
+    return res.status(200).json({ success: true, id: data?.id })
 
-function replaceVars(text: string, order: any) {
-  const orderNumber = order.order_number || order.id?.slice(-6) || 'N/A'
-  return text
-    .replace(/#\{orderNumber\}/g, orderNumber)
-    .replace(/#\{customerName\}/g, order.customer_name || '')
-    .replace(/#\{total\}/g, order.total?.toFixed(2) + '€' || '')
-}
-
-function getEmailContent(type: string, order: any, typeSettings: any = {}) {
-  const orderNumber = order.order_number || order.id?.slice(-6) || 'N/A'
-  const items = order.items || []
-  const total = order.total || 0
-  const deliveryAddress = order.delivery_address || {}
-
-  const defaultSubjects: any = {
-    order_confirmed: `✅ Bestellung bestätigt #${orderNumber} - Simonetti Gelateria`,
-    order_out_for_delivery: `🚗 Dein Eis ist unterwegs! #${orderNumber}`,
-    order_delivered: `✅ Bestellung zugestellt #${orderNumber} - Guten Appetit!`,
-    new_order_admin: `🔔 Neue Bestellung #${orderNumber} - Sofort bearbeiten!`,
-  }
-
-  const subject = typeSettings.subject
-    ? replaceVars(typeSettings.subject, order)
-    : defaultSubjects[type]
-
-  const customText = typeSettings.custom_text
-    ? `<div style="background:#fffbeb;border-left:4px solid #f59e0b;padding:15px;border-radius:8px;margin:20px 0;">
-        <p style="margin:0;">${replaceVars(typeSettings.custom_text, order)}</p>
-       </div>`
-    : ''
-
-  switch (type) {
-    case 'order_confirmed':
-      return {
-        subject,
-        html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #4a5d54 0%, #8da399 100%); color: white; padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }
-    .content { background: #fff; padding: 30px; border: 2px solid #f0ede8; border-radius: 0 0 12px 12px; }
-    .order-items { background: #f9f8f4; padding: 20px; border-radius: 8px; margin: 20px 0; }
-    .item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
-    .total { font-size: 24px; font-weight: bold; color: #4a5d54; text-align: right; margin-top: 15px; }
-    .status-badge { display: inline-block; background: #10b981; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; }
-    .footer { text-align: center; color: #8da399; font-size: 12px; margin-top: 30px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 style="margin: 0; font-size: 32px;">🍦 Simonetti Gelateria</h1>
-      <p style="margin: 10px 0 0; opacity: 0.9;">Ihre Bestellung wurde bestätigt!</p>
-    </div>
-    <div class="content">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <span class="status-badge">✅ Bestätigt</span>
-      </div>
-      <h2 style="color: #4a5d54;">Bestellung #${orderNumber}</h2>
-      <p>Vielen Dank für Ihre Bestellung! Wir bereiten Ihre Leckereien gerade zu.</p>
-      ${customText}
-      <div class="order-items">
-        <h3 style="margin-top: 0; color: #4a5d54;">Ihre Bestellung:</h3>
-        ${items.map((item: any) => `
-          <div class="item">
-            <span>${item.quantity}x ${item.name}${item.selectedFlavors?.length ? ' (' + item.selectedFlavors.join(', ') + ')' : ''}</span>
-            <span style="font-weight: 600;">${(item.price * item.quantity).toFixed(2)} €</span>
-          </div>
-        `).join('')}
-        <div class="total">${total.toFixed(2)} €</div>
-      </div>
-      ${typeof deliveryAddress === 'string' && deliveryAddress ? `
-        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 20px;">
-          <strong style="color: #4a5d54;">📍 Lieferadresse:</strong><br>${deliveryAddress}
-        </div>
-      ` : deliveryAddress.street ? `
-        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 20px;">
-          <strong style="color: #4a5d54;">📍 Lieferadresse:</strong><br>
-          ${deliveryAddress.name}<br>
-          ${deliveryAddress.street}<br>
-          ${deliveryAddress.zip} ${deliveryAddress.city}
-        </div>
-      ` : ''}
-      <p style="margin-top: 30px; color: #666;">
-        <strong>Geschätzte Lieferzeit:</strong> 30-45 Minuten<br>
-        Sie erhalten eine weitere Email sobald Ihre Bestellung unterwegs ist.
-      </p>
-      <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #f59e0b;">
-        <strong>💡 Tipp:</strong> Halten Sie Ihr Handy bereit - unser Fahrer könnte Sie anrufen falls er die Adresse nicht findet.
-      </div>
-    </div>
-    <div class="footer">
-      <p>Simonetti Gelateria | Langenfeld<br>Bei Fragen: info@eiscafe-simonetti.de</p>
-    </div>
-  </div>
-</body>
-</html>`
-      }
-
-    case 'new_order_admin':
-      return {
-        subject,
-        html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .alert { background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 20px; text-align: center; }
-    .content { background: #fff; padding: 30px; border: 2px solid #f0ede8; border-radius: 12px; margin-top: 20px; }
-    .order-items { background: #f9f8f4; padding: 20px; border-radius: 8px; margin: 20px 0; }
-    .item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
-    .total { font-size: 24px; font-weight: bold; color: #4a5d54; text-align: right; margin-top: 15px; }
-    .btn { display: inline-block; background: #4a5d54; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin-top: 20px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="alert">
-      <h1 style="margin: 0; color: #dc2626; font-size: 28px;">🔔 NEUE BESTELLUNG!</h1>
-      <p style="margin: 10px 0 0; font-size: 18px; font-weight: 600;">Bestellung #${orderNumber}</p>
-    </div>
-    <div class="content">
-      ${order.customer_name ? `
-        <div style="background: #f9f8f4; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-          <strong style="color: #4a5d54;">Kunde:</strong><br>
-          <span style="font-size: 16px; font-weight: 600;">${order.customer_name}</span><br>
-          ${order.customer_phone ? `📞 ${order.customer_phone}<br>` : ''}
-          📍 ${typeof deliveryAddress === 'string' ? deliveryAddress : deliveryAddress.street ? `${deliveryAddress.street}, ${deliveryAddress.zip} ${deliveryAddress.city}` : 'Abholung'}
-        </div>` : ''}
-      <div class="order-items">
-        <h3 style="margin-top: 0; color: #4a5d54;">Bestellte Artikel:</h3>
-        ${items.map((item: any) => `
-          <div class="item">
-            <span><strong>${item.quantity}x</strong> ${item.name}${item.selectedFlavors?.length ? ' (' + item.selectedFlavors.join(', ') + ')' : ''}</span>
-            <span style="font-weight: 600;">${(item.price * item.quantity).toFixed(2)} €</span>
-          </div>
-        `).join('')}
-        <div class="total">${total.toFixed(2)} €</div>
-      </div>
-      ${order.notes ? `
-        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 20px;">
-          <strong>💬 Kundennotiz:</strong><br>${order.notes}
-        </div>` : ''}
-      <div style="background: #dcfce7; padding: 15px; border-radius: 8px; margin-top: 20px;">
-        <strong>💳 Zahlung:</strong> ${order.payment_method === 'stripe' ? 'Kreditkarte (bereits bezahlt)' : order.payment_method || 'N/A'}<br>
-        <strong>⏰ Bestellzeit:</strong> ${new Date(order.created_at || Date.now()).toLocaleString('de-DE')}
-      </div>
-      <div style="text-align: center;">
-        <a href="https://eiscafe-simonetti.de/admin/kanban" class="btn">🎯 Zum Kanban Board</a>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`
-      }
-
-    case 'order_out_for_delivery':
-      return {
-        subject,
-        html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }
-    .content { background: #fff; padding: 30px; border: 2px solid #f0ede8; border-radius: 0 0 12px 12px; }
-    .status-badge { display: inline-block; background: #3b82f6; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; }
-    .highlight { background: #dbeafe; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0; }
-    .footer { text-align: center; color: #8da399; font-size: 12px; margin-top: 30px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 style="margin: 0; font-size: 32px;">🚗 Unterwegs zu Ihnen!</h1>
-      <p style="margin: 10px 0 0; opacity: 0.9;">Ihr Eis ist gleich da!</p>
-    </div>
-    <div class="content">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <span class="status-badge">🚗 An Fahrer übergeben</span>
-      </div>
-      <h2 style="color: #3b82f6;">Bestellung #${orderNumber}</h2>
-      <div class="highlight">
-        <p style="margin: 0; font-size: 18px; font-weight: 600;">
-          ⏱️ Voraussichtliche Ankunft: <span style="color: #3b82f6;">5-15 Minuten</span>
-        </p>
-      </div>
-      ${customText}
-      <p>Ihr Fahrer ist bereits auf dem Weg zu Ihnen!</p>
-      ${typeof deliveryAddress === 'string' && deliveryAddress ? `
-        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 20px;">
-          <strong style="color: #3b82f6;">📍 Lieferadresse:</strong><br>${deliveryAddress}
-        </div>
-      ` : deliveryAddress.street ? `
-        <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 20px;">
-          <strong style="color: #3b82f6;">📍 Lieferadresse:</strong><br>
-          ${deliveryAddress.name}<br>${deliveryAddress.street}<br>${deliveryAddress.zip} ${deliveryAddress.city}
-        </div>
-      ` : ''}
-      <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #f59e0b;">
-        <strong>💡 Hinweis:</strong> Unser Fahrer könnte Sie anrufen falls er Hilfe beim Finden der Adresse benötigt.
-      </div>
-      <p style="margin-top: 30px; text-align: center; color: #666;">
-        Guten Appetit! 🍦<br><strong>Ihr Simonetti Team</strong>
-      </p>
-    </div>
-    <div class="footer">
-      <p>Simonetti Gelateria | Langenfeld<br>Bei Fragen: info@eiscafe-simonetti.de</p>
-    </div>
-  </div>
-</body>
-</html>`
-      }
-
-    case 'order_delivered':
-      return {
-        subject,
-        html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); color: white; padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }
-    .content { background: #fff; padding: 30px; border: 2px solid #f0ede8; border-radius: 0 0 12px 12px; }
-    .status-badge { display: inline-block; background: #10b981; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; }
-    .footer { text-align: center; color: #8da399; font-size: 12px; margin-top: 30px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 style="margin: 0; font-size: 32px;">✅ Zugestellt!</h1>
-      <p style="margin: 10px 0 0; opacity: 0.9;">Guten Appetit!</p>
-    </div>
-    <div class="content">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <span class="status-badge">✅ Geliefert</span>
-      </div>
-      <h2 style="color: #10b981; text-align: center;">Bestellung #${orderNumber}</h2>
-      <p style="text-align: center; font-size: 18px;">
-        Ihre Bestellung wurde erfolgreich zugestellt!<br>
-        Wir wünschen Ihnen einen guten Appetit! 🍦
-      </p>
-      ${customText}
-      <div style="background: #dcfce7; padding: 20px; border-radius: 8px; margin: 30px 0; text-align: center;">
-        <p style="margin: 0; font-size: 16px;">
-          <strong>❤️ Hat es geschmeckt?</strong><br>
-          Wir würden uns über Ihr Feedback freuen!
-        </p>
-      </div>
-      <p style="text-align: center; color: #666; margin-top: 30px;">
-        Vielen Dank für Ihre Bestellung!<br>
-        <strong>Bis zum nächsten Mal! 👋</strong>
-      </p>
-    </div>
-    <div class="footer">
-      <p>Simonetti Gelateria | Langenfeld<br>info@eiscafe-simonetti.de</p>
-    </div>
-  </div>
-</body>
-</html>`
-      }
-
-    default:
-      return {
-        subject: `Simonetti Gelateria - Bestellung #${orderNumber}`,
-        html: `<p>Ihre Bestellung wurde aktualisiert.</p>`
-      }
+  } catch (err: any) {
+    console.error('Email handler error:', err)
+    return res.status(500).json({ success: false, error: err.message })
   }
 }

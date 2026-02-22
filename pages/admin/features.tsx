@@ -10,13 +10,35 @@ interface Feature {
   enabled: boolean
 }
 
-const PAYMENT_FEATURES = ['card', 'sepa', 'giropay', 'sofort', 'apple_pay', 'google_pay', 'paypal']
+const PAYMENT_FEATURES = ['card', 'sepa', 'giropay', 'sofort', 'apple_pay', 'google_pay', 'paypal', 'wero']
+
+const FEATURE_ICONS: Record<string, string> = {
+  card:                '💳',
+  sepa:                '🏦',
+  giropay:             '⚡',
+  sofort:              '🚀',
+  apple_pay:           '🍎',
+  google_pay:          '🤖',
+  paypal:              '🅿️',
+  wero:                '🇩🇪',
+  tip_option:          '💰',
+  guest_checkout:      '👤',
+  favorites:           '❤️',
+  email_notifications: '📧',
+}
+
+const FEATURE_EXTRAS: Record<string, string> = {
+  paypal:    '💡 Code bereit – Toggle AN und Kunden sehen PayPal sofort',
+  wero:      '🔜 Kommt bald – deutsche P2P-Zahlungsmethode (Deutsche Bank, Commerzbank etc.)',
+  apple_pay: 'Erscheint automatisch auf iOS Safari',
+  google_pay:'Erscheint automatisch auf Android Chrome',
+}
 
 export default function FeaturesPage() {
   const [features, setFeatures] = useState<Feature[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null)
-  const [toast, setToast] = useState('')
+  const [loading, setLoading]   = useState(true)
+  const [saving, setSaving]     = useState<string | null>(null)
+  const [toast, setToast]       = useState('')
 
   useEffect(() => { loadFeatures() }, [])
 
@@ -27,10 +49,11 @@ export default function FeaturesPage() {
   }
 
   const toggleFeature = async (id: string, currentEnabled: boolean) => {
+    // Wero noch nicht aktivierbar
+    if (id === 'wero') { showToast('🔜 Wero ist noch nicht verfügbar – kommt bald!'); return }
+
     setSaving(id)
     const newEnabled = !currentEnabled
-
-    // Optimistic update
     setFeatures(prev => prev.map(f => f.id === id ? { ...f, enabled: newEnabled } : f))
 
     const { error } = await supabase
@@ -39,37 +62,30 @@ export default function FeaturesPage() {
       .eq('id', id)
 
     if (error) {
-      // Rollback
       setFeatures(prev => prev.map(f => f.id === id ? { ...f, enabled: currentEnabled } : f))
       showToast('❌ Fehler beim Speichern')
     } else {
-      showToast(newEnabled ? `✅ ${features.find(f => f.id === id)?.name} aktiviert` : `⏸️ ${features.find(f => f.id === id)?.name} deaktiviert`)
+      const name = features.find(f => f.id === id)?.name || id
+      showToast(newEnabled ? `✅ ${name} aktiviert` : `⏸️ ${name} deaktiviert`)
     }
     setSaving(null)
   }
 
   const showToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3000)
+    setToast(msg); setTimeout(() => setToast(''), 3000)
   }
 
   const paymentFeatures = features.filter(f => PAYMENT_FEATURES.includes(f.id))
-  const shopFeatures = features.filter(f => !PAYMENT_FEATURES.includes(f.id))
+  const shopFeatures    = features.filter(f => !PAYMENT_FEATURES.includes(f.id))
 
-  const FEATURE_ICONS: Record<string, string> = {
-    card: '💳',
-    sepa: '🏦',
-    giropay: '⚡',
-    sofort: '🚀',
-    apple_pay: '🍎',
-    google_pay: '🤖',
-    paypal: '🅿️',
-    tip_option: '💰',
-    guest_checkout: '👤',
-    favorites: '❤️',
-    email_notifications: '📧',
-    card_kreditkarte: '💳',
-  }
+  // Wero als "virtuellen" Eintrag hinzufügen falls nicht in DB
+  const weroInDb = features.find(f => f.id === 'wero')
+  const allPaymentFeatures = weroInDb
+    ? paymentFeatures
+    : [
+        ...paymentFeatures,
+        { id: 'wero', name: 'Wero', description: 'Deutsche P2P-Zahlungsmethode (in Entwicklung)', enabled: false }
+      ]
 
   if (loading) return (
     <AdminLayout>
@@ -81,7 +97,6 @@ export default function FeaturesPage() {
 
   return (
     <AdminLayout>
-      {/* Toast */}
       {toast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl font-semibold text-sm">
           {toast}
@@ -106,30 +121,17 @@ export default function FeaturesPage() {
             <h2 className="font-bold text-gray-900">Zahlungsmethoden</h2>
           </div>
           <div className="divide-y divide-gray-50">
-            {paymentFeatures.length === 0 ? (
-              <div className="px-6 py-8 text-center text-gray-400 text-sm">
-                Keine Zahlungsmethoden gefunden.<br/>
-                <span className="text-xs">Prüfe ob die <code>feature_toggles</code> Tabelle befüllt ist.</span>
-              </div>
-            ) : (
-              paymentFeatures.map(feature => (
-                <FeatureRow
-                  key={feature.id}
-                  feature={feature}
-                  icon={FEATURE_ICONS[feature.id] || '💳'}
-                  saving={saving === feature.id}
-                  onToggle={() => toggleFeature(feature.id, feature.enabled)}
-                  extra={feature.id === 'paypal' && !feature.enabled
-                    ? '💡 Code bereit – Toggle AN und Kunden sehen PayPal sofort'
-                    : feature.id === 'apple_pay'
-                    ? 'Erscheint automatisch auf iOS Safari'
-                    : feature.id === 'google_pay'
-                    ? 'Erscheint automatisch auf Android Chrome'
-                    : undefined
-                  }
-                />
-              ))
-            )}
+            {allPaymentFeatures.map(feature => (
+              <FeatureRow
+                key={feature.id}
+                feature={feature}
+                icon={FEATURE_ICONS[feature.id] || '💳'}
+                saving={saving === feature.id}
+                onToggle={() => toggleFeature(feature.id, feature.enabled)}
+                extra={FEATURE_EXTRAS[feature.id]}
+                locked={feature.id === 'wero'}
+              />
+            ))}
           </div>
         </div>
 
@@ -141,9 +143,7 @@ export default function FeaturesPage() {
           </div>
           <div className="divide-y divide-gray-50">
             {shopFeatures.length === 0 ? (
-              <div className="px-6 py-8 text-center text-gray-400 text-sm">
-                Keine Shop-Features gefunden.
-              </div>
+              <div className="px-6 py-8 text-center text-gray-400 text-sm">Keine Shop-Features gefunden.</div>
             ) : (
               shopFeatures.map(feature => (
                 <FeatureRow
@@ -158,7 +158,6 @@ export default function FeaturesPage() {
           </div>
         </div>
 
-        {/* Info */}
         <div className="mt-6 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
           <strong>💡 Hinweis:</strong> Zahlungsmethoden müssen auch im{' '}
           <a href="https://dashboard.stripe.com/settings/payment_methods" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
@@ -171,19 +170,19 @@ export default function FeaturesPage() {
   )
 }
 
-function FeatureRow({ feature, icon, saving, onToggle, extra }: {
-  feature: Feature
-  icon: string
-  saving: boolean
-  onToggle: () => void
-  extra?: string
+function FeatureRow({ feature, icon, saving, onToggle, extra, locked }: {
+  feature: Feature; icon: string; saving: boolean
+  onToggle: () => void; extra?: string; locked?: boolean
 }) {
   return (
-    <div className={`flex items-center justify-between px-6 py-4 transition ${saving ? 'opacity-60' : 'hover:bg-gray-50'}`}>
+    <div className={`flex items-center justify-between px-6 py-4 transition ${saving ? 'opacity-60' : locked ? 'bg-gray-50' : 'hover:bg-gray-50'}`}>
       <div className="flex items-center gap-3">
         <span className="text-2xl">{icon}</span>
         <div>
-          <div className="font-semibold text-gray-900">{feature.name}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-gray-900">{feature.name}</span>
+            {locked && <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Bald verfügbar</span>}
+          </div>
           <div className="text-xs text-gray-400">{feature.description}</div>
           {extra && <div className="text-xs text-green-600 mt-0.5">{extra}</div>}
         </div>
@@ -191,13 +190,10 @@ function FeatureRow({ feature, icon, saving, onToggle, extra }: {
       <button
         onClick={onToggle}
         disabled={saving}
-        className="transition-all hover:scale-110 disabled:cursor-not-allowed flex-shrink-0 ml-4"
+        className={`transition-all flex-shrink-0 ml-4 ${locked ? 'opacity-30 cursor-not-allowed' : 'hover:scale-110'} disabled:cursor-not-allowed`}
         style={{ color: feature.enabled ? '#22c55e' : '#d1d5db' }}
       >
-        {feature.enabled
-          ? <ToggleRight size={48} />
-          : <ToggleLeft size={48} />
-        }
+        {feature.enabled ? <ToggleRight size={48} /> : <ToggleLeft size={48} />}
       </button>
     </div>
   )
