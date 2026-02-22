@@ -66,144 +66,137 @@ function OrderTimer({ createdAt }: { createdAt: string }) {
   return <span className={`text-xs ${color}`}>⏱ {label}</span>
 }
 
+// ── Thermodrucker Bon 80mm ────────────────────────────────────
 function printOrder(order: any) {
   const items = (order.items || []).map((item: any) => {
-    const flavors = (item.flavors || item.selectedFlavors || []).join(', ')
-    const extras = (item.extras || item.selectedExtras || []).map((e: any) => e.name || e).join(', ')
-    return `${item.quantity}x ${item.name}${flavors ? ' (' + flavors + ')' : ''}${extras ? ' + ' + extras : ''} — ${((item.price || 0) * item.quantity).toFixed(2)}€`
-  }).join('\n')
-  const win = window.open('', '_blank'); if (!win) return
-  win.document.write(`<html><head><title>Bestellung</title>
-    <style>body{font-family:monospace;font-size:14px;padding:20px;max-width:380px}
-    h2{text-align:center;border-bottom:2px solid #000;padding-bottom:8px}
-    .row{display:flex;justify-content:space-between;margin:4px 0}
-    .section{margin:10px 0;padding:8px;background:#f5f5f5;border-radius:4px}
-    .total{border-top:2px solid #000;margin-top:10px;padding-top:10px;font-weight:bold;font-size:16px}
-    pre{white-space:pre-wrap;font-family:monospace;margin:0}</style></head><body>
-    <h2>🍦 Simonetti Gelateria</h2>
-    <div class="row"><span>Bestellung:</span><span><b>#${order.order_number || order.id?.slice(-6).toUpperCase()}</b></span></div>
-    <div class="row"><span>Zeit:</span><span>${new Date(order.created_at).toLocaleString('de-DE')}</span></div>
-    <div class="section"><b>Kunde:</b><br/>${order.customer_name || ''}<br/>${order.customer_phone || ''}<br/>${order.delivery_address || ''}</div>
-    <div class="section"><b>Bestellung:</b><br/><pre>${items}</pre></div>
-    ${order.notes ? `<div class="section"><b>Notizen:</b><br/>${order.notes}</div>` : ''}
-    <div class="total row"><span>GESAMT:</span><span>${(order.total || 0).toFixed(2)}€</span></div>
-    </body></html>`)
-  win.document.close(); win.print()
-}
+    const flavors  = (item.flavors || item.selectedFlavors || [])
+    const extras   = (item.extras  || item.selectedExtras  || []).map((e: any) => e.name || e)
+    const lineTotal = ((item.totalPrice || (item.price * item.quantity)) || 0).toFixed(2)
+    return { ...item, flavors, extras, lineTotal }
+  })
 
-// ── GROSSES Popup ─────────────────────────────────────────────
-function NewOrderPopup({ order, onAccept, onReject, onLater }: {
-  order: any; onAccept: () => void; onReject: () => void; onLater: () => void
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ animation: 'popIn 0.35s ease-out' }}>
+  const subtotal    = items.reduce((s: number, i: any) => s + parseFloat(i.lineTotal), 0)
+  const deliveryFee = order.delivery_fee ?? 3.00
+  const tip         = order.tip ?? 0
+  const grandTotal  = order.total ?? (subtotal + deliveryFee + tip)
 
-        {/* Header */}
-        <div className="bg-red-500 text-white px-8 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="text-5xl" style={{ animation: 'bellShake 0.5s infinite' }}>🔔</span>
-            <div>
-              <h2 className="font-black text-3xl tracking-tight">NEUE BESTELLUNG!</h2>
-              <p className="text-red-100 text-base">#{order.order_number || order.id?.slice(-6).toUpperCase()}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-4xl font-black">{(order.total || 0).toFixed(2)}€</div>
-            <div className="text-red-200 text-sm">{new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</div>
-          </div>
-        </div>
+  const now     = new Date(order.created_at)
+  const dateStr = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  const orderNr = order.order_number || order.id?.slice(-6).toUpperCase()
 
-        <div className="p-8">
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            {/* Kunde */}
-            <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
-              <h3 className="font-bold text-xs text-gray-400 uppercase tracking-widest">Kunde</h3>
-              <div className="flex items-center gap-2">
-                <User size={18} className="text-gray-400" />
-                <span className="font-bold text-gray-900 text-lg">{order.customer_name}</span>
-              </div>
-              {order.customer_phone && (
-                <div className="flex items-center gap-2">
-                  <Phone size={18} className="text-gray-400" />
-                  <a href={`tel:${order.customer_phone}`} className="text-blue-600 font-bold text-lg hover:underline">{order.customer_phone}</a>
-                </div>
-              )}
-              <div className="flex items-start gap-2">
-                <MapPin size={18} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-700">{order.delivery_address}</span>
-              </div>
-            </div>
+  const addr    = order.delivery_address
+  const addrStr = typeof addr === 'object'
+    ? [addr.street, addr.zip && addr.city ? addr.zip + ' ' + addr.city : addr.city].filter(Boolean).join(', ')
+    : (addr || '–')
 
-            {/* Artikel */}
-            <div className="bg-gray-50 rounded-2xl p-5">
-              <h3 className="font-bold text-xs text-gray-400 uppercase tracking-widest mb-3">Bestellung</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {(order.items || []).map((item: any, i: number) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <div>
-                      <span className="font-bold text-gray-900">{item.quantity}x {item.name}</span>
-                      {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-400">🍦 {item.selectedFlavors.join(', ')}</div>}
-                      {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-400">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
-                    </div>
-                    <span className="text-gray-500 font-semibold ml-2">{((item.price || 0) * item.quantity).toFixed(2)}€</span>
-                  </div>
-                ))}
-              </div>
-              {order.notes && (
-                <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-2.5 text-sm">
-                  💬 {order.notes}
-                </div>
-              )}
-            </div>
-          </div>
+  let itemsHtml = ''
+  for (const item of items) {
+    itemsHtml += '<div class="item">'
+    itemsHtml += '<div class="item-main">'
+    itemsHtml += '<span class="item-name">' + item.quantity + 'x ' + item.name + '</span>'
+    itemsHtml += '<span class="item-price">' + item.lineTotal + ' \u20AC</span>'
+    itemsHtml += '</div>'
+    if (item.flavors.length > 0) itemsHtml += '<div class="item-detail">\uD83C\uDF66 ' + item.flavors.join(', ') + '</div>'
+    if (item.extras.length > 0)  itemsHtml += '<div class="item-detail">\u2795 ' + item.extras.join(', ') + '</div>'
+    itemsHtml += '</div>'
+  }
 
-          {/* ── GROSSE Buttons ── */}
-          <div className="grid grid-cols-2 gap-4 mb-3">
-            {/* ABLEHNEN */}
-            <button onClick={onReject}
-              className="py-5 rounded-2xl border-3 border-red-300 bg-red-50 text-red-600 font-black text-xl hover:bg-red-100 hover:border-red-400 transition flex items-center justify-center gap-3"
-              style={{ border: '3px solid #fca5a5' }}>
-              <XCircle size={28} />
-              Ablehnen
-            </button>
+  const notesHtml   = order.notes ? '<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div><div class="customer"><div class="section-title">ANMERKUNG</div><div>' + order.notes + '</div></div>' : ''
+  const tipHtml     = tip > 0 ? '<div class="total-row"><span>Trinkgeld</span><span>' + tip.toFixed(2) + ' \u20AC</span></div>' : ''
+  const phoneHtml   = order.customer_phone ? '<div>' + order.customer_phone + '</div>' : ''
 
-            {/* ANNEHMEN */}
-            <button onClick={onAccept}
-              className="py-5 rounded-2xl bg-green-500 text-white font-black text-xl hover:bg-green-600 transition flex items-center justify-center gap-3 shadow-xl"
-              style={{ boxShadow: '0 8px 32px rgba(34,197,94,0.4)' }}>
-              <Check size={28} />
-              Annehmen ✓
-            </button>
-          </div>
+  const html = `<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
+<style>
+  @page { margin: 4mm; size: 80mm auto; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 12px; width: 100%; color: #000; background: #fff; }
+  .div-solid  { font-size: 12px; margin: 5px 0; overflow: hidden; white-space: nowrap; }
+  .div-dashed { font-size: 12px; margin: 4px 0; overflow: hidden; white-space: nowrap; color: #666; }
+  .header     { text-align: center; padding: 4px 0 6px; }
+  .logo       { font-size: 20px; font-weight: bold; letter-spacing: 2px; }
+  .tagline    { font-size: 9px; letter-spacing: 4px; color: #444; margin-top: 1px; }
+  .shop-info  { font-size: 10px; margin-top: 5px; line-height: 1.8; }
+  .row        { display: flex; justify-content: space-between; margin: 2px 0; }
+  .label      { color: #444; }
+  .section-title { font-weight: bold; font-size: 10px; letter-spacing: 1px; margin-bottom: 3px; }
+  .customer   { margin: 4px 0; line-height: 1.7; }
+  .item       { margin: 5px 0; }
+  .item-main  { display: flex; justify-content: space-between; }
+  .item-name  { font-weight: bold; flex: 1; }
+  .item-price { white-space: nowrap; margin-left: 8px; }
+  .item-detail { font-size: 10px; color: #555; margin-left: 4px; margin-top: 1px; }
+  .total-row  { display: flex; justify-content: space-between; margin: 3px 0; }
+  .grand-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; padding: 4px 0; }
+  .footer     { text-align: center; margin-top: 8px; }
+  .thank-you  { font-size: 13px; font-weight: bold; margin-bottom: 3px; }
+  .footer-small { font-size: 10px; color: #555; line-height: 1.7; }
+  .emoji      { font-size: 18px; margin: 4px 0; }
+</style></head><body>
 
-          {/* Kleine Aktionen */}
-          <div className="flex items-center justify-between">
-            <button onClick={() => printOrder(order)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-xl text-sm font-semibold hover:bg-gray-900 transition">
-              <Printer size={16} /> Drucken
-            </button>
-            <button onClick={onLater} className="text-gray-400 text-sm hover:text-gray-600 transition">
-              Später entscheiden →
-            </button>
-          </div>
-        </div>
-      </div>
+<div class="header">
+  <div class="logo">&#127846; SIMONETTI</div>
+  <div class="tagline">E I S C A F &Eacute;</div>
+  <div class="div-dashed" style="margin-top:6px">- - - - - - - - - - - - - - - - - - -</div>
+  <div class="shop-info">
+    Konrad-Adenauer-Platz 2<br/>
+    40764 Langenfeld<br/>
+    Tel: 02173 / 16 22 780<br/>
+    bestellung@eiscafe-simonetti.de
+  </div>
+</div>
 
-      <style jsx>{`
-        @keyframes popIn {
-          0%   { transform: scale(0.5) translateY(40px); opacity: 0; }
-          70%  { transform: scale(1.03) translateY(0); opacity: 1; }
-          100% { transform: scale(1) translateY(0); }
-        }
-        @keyframes bellShake {
-          0%, 100% { transform: rotate(0deg); }
-          25%       { transform: rotate(-15deg); }
-          75%       { transform: rotate(15deg); }
-        }
-      `}</style>
-    </div>
-  )
+<div class="div-solid">=====================================</div>
+
+<div class="row"><span class="label">Bestellung:</span><span><b>#${orderNr}</b></span></div>
+<div class="row"><span class="label">Datum:</span><span>${dateStr} ${timeStr} Uhr</span></div>
+<div class="row"><span class="label">Zahlung:</span><span>${order.payment_method || 'Online'}</span></div>
+
+<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div>
+
+<div class="customer">
+  <div class="section-title">LIEFERUNG AN</div>
+  <div><b>${order.customer_name || '–'}</b></div>
+  ${phoneHtml}
+  <div>${addrStr}</div>
+</div>
+
+<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div>
+
+<div class="section-title">BESTELLUNG</div>
+${itemsHtml}
+
+${notesHtml}
+
+<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div>
+
+<div class="total-row"><span>Zwischensumme</span><span>${subtotal.toFixed(2)} &euro;</span></div>
+<div class="total-row"><span>Liefergebühr</span><span>${deliveryFee.toFixed(2)} &euro;</span></div>
+${tipHtml}
+
+<div class="div-solid">=====================================</div>
+<div class="grand-total"><span>GESAMT</span><span>${grandTotal.toFixed(2)} &euro;</span></div>
+<div class="div-solid">=====================================</div>
+
+<div class="footer">
+  <div class="emoji">&#127846;&#127848;&#127847;</div>
+  <div class="thank-you">Vielen Dank &amp; Guten Appetit!</div>
+  <div class="footer-small">
+    Wir freuen uns auf Ihren n&auml;chsten Besuch.<br/>
+    www.eiscafe-simonetti.de
+  </div>
+  <div class="div-dashed" style="margin-top:8px">- - - - - - - - - - - - - - - - - - -</div>
+  <div class="footer-small" style="margin-top:4px">Beleg Nr. #${orderNr} &middot; ${dateStr}</div>
+</div>
+
+<script>window.onload=function(){setTimeout(function(){window.print();},300);}</script>
+</body></html>`
+
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
 }
 
 // ── Ablehnen Modal ────────────────────────────────────────────
@@ -235,15 +228,122 @@ function RejectModal({ order, onConfirm, onCancel }: { order: any; onConfirm: (r
   )
 }
 
+// ── Neues Bestellung Popup (GROSS) ────────────────────────────
+function NewOrderPopup({ order, onAccept, onReject, onLater }: {
+  order: any; onAccept: () => void; onReject: () => void; onLater: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ animation: 'popIn 0.35s ease-out' }}>
+
+        <div className="bg-red-500 text-white px-8 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-5xl" style={{ animation: 'bellShake 0.5s infinite' }}>🔔</span>
+            <div>
+              <h2 className="font-black text-3xl tracking-tight">NEUE BESTELLUNG!</h2>
+              <p className="text-red-100 text-base">#{order.order_number || order.id?.slice(-6).toUpperCase()}</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-4xl font-black">{(order.total || 0).toFixed(2)}€</div>
+            <div className="text-red-200 text-sm">{new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</div>
+          </div>
+        </div>
+
+        <div className="p-8">
+          <div className="grid grid-cols-2 gap-6 mb-6">
+            <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
+              <h3 className="font-bold text-xs text-gray-400 uppercase tracking-widest">Kunde</h3>
+              <div className="flex items-center gap-2">
+                <User size={18} className="text-gray-400" />
+                <span className="font-bold text-gray-900 text-lg">{order.customer_name}</span>
+              </div>
+              {order.customer_phone && (
+                <div className="flex items-center gap-2">
+                  <Phone size={18} className="text-gray-400" />
+                  <a href={`tel:${order.customer_phone}`} className="text-blue-600 font-bold text-lg hover:underline">{order.customer_phone}</a>
+                </div>
+              )}
+              <div className="flex items-start gap-2">
+                <MapPin size={18} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                <span className="text-gray-700">{order.delivery_address}</span>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-2xl p-5">
+              <h3 className="font-bold text-xs text-gray-400 uppercase tracking-widest mb-3">Bestellung</h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {(order.items || []).map((item: any, i: number) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <div>
+                      <span className="font-bold text-gray-900">{item.quantity}x {item.name}</span>
+                      {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-400">🍦 {item.selectedFlavors.join(', ')}</div>}
+                      {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-400">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
+                    </div>
+                    <span className="text-gray-500 font-semibold ml-2">{((item.price || 0) * item.quantity).toFixed(2)}€</span>
+                  </div>
+                ))}
+              </div>
+              {order.notes && (
+                <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-2.5 text-sm">
+                  💬 {order.notes}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="grid grid-cols-2 gap-4 mb-3">
+            <button onClick={onReject}
+              className="py-5 rounded-2xl bg-red-50 text-red-600 font-black text-xl hover:bg-red-100 transition flex items-center justify-center gap-3"
+              style={{ border: '3px solid #fca5a5' }}>
+              <XCircle size={28} /> Ablehnen
+            </button>
+            <button onClick={onAccept}
+              className="py-5 rounded-2xl bg-green-500 text-white font-black text-xl hover:bg-green-600 transition flex items-center justify-center gap-3 shadow-xl"
+              style={{ boxShadow: '0 8px 32px rgba(34,197,94,0.4)' }}>
+              <Check size={28} /> Annehmen ✓
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button onClick={() => printOrder(order)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-xl text-sm font-semibold hover:bg-gray-900 transition">
+              <Printer size={16} /> Drucken
+            </button>
+            <button onClick={onLater} className="text-gray-400 text-sm hover:text-gray-600 transition">
+              Später entscheiden →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes popIn {
+          0%   { transform: scale(0.5) translateY(40px); opacity: 0; }
+          70%  { transform: scale(1.03) translateY(0); opacity: 1; }
+          100% { transform: scale(1) translateY(0); }
+        }
+        @keyframes bellShake {
+          0%, 100% { transform: rotate(0deg); }
+          25%       { transform: rotate(-15deg); }
+          75%       { transform: rotate(15deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 // ── Order Card ────────────────────────────────────────────────
 function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onAccept, onReject, drivers }: any) {
-  const status = COLUMNS[colIdx].id
+  const status     = COLUMNS[colIdx].id
   const isDelivered = status === 'GELIEFERT'
-  const isOffen = status === 'OFFEN'
+  const isOffen    = status === 'OFFEN'
 
   return (
     <div className={`bg-white rounded-xl p-3 shadow-sm border-2 hover:shadow-md transition mb-2 text-xs
       ${isOffen ? 'border-red-300' : isDelivered ? 'border-green-200 opacity-75' : 'border-gray-200'}`}>
+
       <div className="flex items-center justify-between mb-2">
         <button onClick={onMoveLeft} disabled={colIdx === 0 || isDelivered}
           className={`p-1.5 rounded-lg transition ${colIdx > 0 && !isDelivered ? 'hover:bg-gray-100 text-gray-700' : 'text-gray-200 cursor-not-allowed'}`}>
@@ -266,7 +366,7 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
         </div>
         <div className="flex items-center gap-1.5 truncate">
           <MapPin size={11} className="text-gray-400 flex-shrink-0" />
-          <span className="truncate text-gray-500">{order.delivery_address?.split(',')[0]}</span>
+          <span className="truncate text-gray-500">{typeof order.delivery_address === 'object' ? order.delivery_address?.street : order.delivery_address?.split(',')[0]}</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -339,9 +439,9 @@ export default function KanbanPage() {
   const [rejectTarget, setRejectTarget] = useState<any>(null)
   const [newOrderBanner, setNewOrderBanner] = useState(false)
 
-  const knownIds = useRef<Set<string>>(new Set())
+  const knownIds    = useRef<Set<string>>(new Set())
   const isFirstLoad = useRef(true)
-  const popupQueue = useRef<any[]>([])
+  const popupQueue  = useRef<any[]>([])
 
   const loadOrders = useCallback(async () => {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
@@ -364,6 +464,7 @@ export default function KanbanPage() {
         }
       }
     }
+
     data.forEach(o => knownIds.current.add(o.id))
     isFirstLoad.current = false
 
@@ -420,7 +521,7 @@ export default function KanbanPage() {
     const newColIdx = colIdx + dir
     if (newColIdx < 0 || newColIdx > 2) return
     const currentStatus = COLUMNS[colIdx].id
-    const newStatus = COLUMNS[newColIdx].id
+    const newStatus     = COLUMNS[newColIdx].id
     const order = orders[currentStatus]?.find(o => o.id === orderId)
     if (!order) return
     const updateData: any = { status: newStatus }
@@ -428,7 +529,7 @@ export default function KanbanPage() {
     const ok = await apiUpdateOrder(orderId, updateData)
     if (ok) {
       if (newStatus === 'IN_BEARBEITUNG') await sendEmail('order_confirmed', order)
-      if (newStatus === 'AN_FAHRER') await sendEmail('order_out_for_delivery', order)
+      if (newStatus === 'AN_FAHRER')      await sendEmail('order_out_for_delivery', order)
       loadOrders()
     }
   }
@@ -447,14 +548,13 @@ export default function KanbanPage() {
     if (ok) { if (order) await sendEmail('order_out_for_delivery', order); loadOrders() }
   }
 
-  const allOrders = Object.values(orders).flat()
-  const todayTotal = allOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+  const allOrders      = Object.values(orders).flat()
+  const todayTotal     = allOrders.reduce((sum, o) => sum + (o.total || 0), 0)
   const deliveredCount = orders['GELIEFERT']?.length || 0
-  const openCount = orders['OFFEN']?.length || 0
+  const openCount      = orders['OFFEN']?.length || 0
 
   return (
     <AdminLayout>
-      {/* Modals */}
       {rejectTarget && (
         <RejectModal order={rejectTarget} onConfirm={confirmReject} onCancel={() => setRejectTarget(null)} />
       )}
@@ -473,7 +573,6 @@ export default function KanbanPage() {
       )}
 
       <div className="p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold">Bestellungen</h1>
@@ -497,7 +596,6 @@ export default function KanbanPage() {
           </div>
         </div>
 
-        {/* Filter */}
         <div className="flex gap-2 mb-5">
           <button onClick={() => setShowAllDays(false)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition border-2 ${!showAllDays ? 'bg-black text-white border-black' : 'bg-white border-gray-200 hover:border-black'}`}>
@@ -509,7 +607,6 @@ export default function KanbanPage() {
           </button>
         </div>
 
-        {/* Kanban */}
         {loading ? (
           <div className="flex items-center justify-center h-64"><div className="text-5xl animate-pulse">🍦</div></div>
         ) : (
