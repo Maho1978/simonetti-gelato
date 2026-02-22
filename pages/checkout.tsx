@@ -29,20 +29,18 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const [cart, setCart] = useState<CartItem[]>([])
   const [clientSecret, setClientSecret] = useState('')
-  const [shopOpen, setShopOpen] = useState<boolean | null>(null) // null = lädt noch
+  const [shopOpen, setShopOpen] = useState<boolean | null>(null)
   const [shopMessage, setShopMessage] = useState('')
 
   useEffect(() => {
-    // Shop-Status prüfen
     fetch('/api/shop-status')
       .then(r => r.json())
       .then(data => {
         setShopOpen(data.isOpen)
         setShopMessage(data.message || '')
       })
-      .catch(() => setShopOpen(true)) // Im Fehlerfall offen lassen
+      .catch(() => setShopOpen(true))
 
-    // Cart laden
     const savedCart = localStorage.getItem('simonetti-cart') || localStorage.getItem('cart')
     if (savedCart) {
       const parsedCart = JSON.parse(savedCart)
@@ -83,17 +81,23 @@ export default function Checkout({ session }: { session: Session | null }) {
       <div className="max-w-4xl mx-auto px-4 py-12">
         <h1 className="text-4xl font-display font-bold mb-8">Kasse</h1>
 
-        {/* ── Shop geschlossen Banner ── */}
+        {/* ── Shop geschlossen ── */}
         {shopOpen === false && (
           <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-8 text-center mb-8">
             <div className="text-6xl mb-4">🔒</div>
             <h2 className="text-2xl font-bold text-red-800 mb-2">Shop momentan geschlossen</h2>
             <p className="text-red-600">{shopMessage || 'Wir nehmen gerade keine Bestellungen an.'}</p>
             <p className="text-sm text-red-400 mt-2">Bitte schau zu unseren Öffnungszeiten wieder vorbei!</p>
+            <button
+              onClick={() => router.push('/')}
+              className="mt-6 px-6 py-3 bg-white border-2 border-red-200 text-red-700 font-semibold rounded-xl hover:bg-red-100 transition"
+            >
+              ← Zurück zum Shop
+            </button>
           </div>
         )}
 
-        {/* ── Checkout (nur wenn offen oder noch prüfend) ── */}
+        {/* ── Checkout ── */}
         {shopOpen !== false && (
           <div className="grid md:grid-cols-2 gap-8">
 
@@ -189,13 +193,11 @@ function CheckoutForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Button blockiert wenn Shop zu oder Mindestbestellwert nicht erreicht
   const isBlocked = shopOpen === false || subtotal < minimumOrder
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Nochmal serverseitig prüfen – sicher ist sicher
     try {
       const statusRes = await fetch('/api/shop-status')
       const statusData = await statusRes.json()
@@ -322,6 +324,15 @@ function CheckoutForm({
           ? `Mindestbestellwert ${minimumOrder.toFixed(2)} € nicht erreicht`
           : `Jetzt bezahlen ${total.toFixed(2)} €`
         }
+      </button>
+
+      {/* Zurück zum Shop */}
+      <button
+        type="button"
+        onClick={() => router.push('/')}
+        className="w-full text-sm text-gray-400 hover:text-gray-600 transition text-center"
+      >
+        ← Zurück zum Shop
       </button>
     </form>
   )
