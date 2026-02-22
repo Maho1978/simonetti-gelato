@@ -13,10 +13,30 @@ function timeToMinutes(t: string): number {
   return h * 60 + m
 }
 
-function isNowBetween(from: string, until: string): boolean {
+function getBerlinTime() {
   const now = new Date()
-  const nowMins = now.getHours() * 60 + now.getMinutes()
-  return nowMins >= timeToMinutes(from) && nowMins < timeToMinutes(until)
+  // Konvertiert in Berliner Zeit (Europe/Berlin)
+  const berlinStr = now.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hour12: false })
+  const [h, m] = berlinStr.split(':').map(Number)
+  return { hours: h, minutes: m, totalMinutes: h * 60 + m }
+}
+
+function getBerlinDateString() {
+  const now = new Date()
+  return now.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .split('.').reverse().join('-') // DD.MM.YYYY → YYYY-MM-DD
+}
+
+function getBerlinDayOfWeek() {
+  const now = new Date()
+  // toLocaleDateString gibt uns den Wochentag in Berlin
+  const dayName = now.toLocaleDateString('en-US', { timeZone: 'Europe/Berlin', weekday: 'long' }).toLowerCase()
+  return dayName
+}
+
+function isNowBetween(from: string, until: string): boolean {
+  const { totalMinutes } = getBerlinTime()
+  return totalMinutes >= timeToMinutes(from) && totalMinutes < timeToMinutes(until)
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -36,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const todayStr = new Date().toISOString().split('T')[0]
+    const todayStr = getBerlinDateString()
 
     // 2. Sondertag
     const { data: specialDay } = await supabase
@@ -49,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           message: specialDay.label ? `Heute geschlossen: ${specialDay.label}` : 'Heute leider geschlossen.'
         })
       }
-      const from = specialDay.custom_open || '14:00'
+      const from  = specialDay.custom_open  || '14:00'
       const until = specialDay.custom_close || '22:00'
       return res.status(200).json({
         isOpen: isNowBetween(from, until),
@@ -60,14 +80,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 3. Reguläre Öffnungszeiten
-    const dayKey = DAY_KEYS[new Date().getDay()]
-    const hours = settings.opening_hours?.[dayKey]
+    const dayKey = getBerlinDayOfWeek()
+    const hours  = settings.opening_hours?.[dayKey]
 
     if (!hours || hours.closed) {
       return res.status(200).json({ isOpen: false, message: 'Heute haben wir leider geschlossen.' })
     }
 
-    const from = hours.open || '14:00'
+    const from  = hours.open  || '14:00'
     const until = hours.close || '22:00'
 
     return res.status(200).json({

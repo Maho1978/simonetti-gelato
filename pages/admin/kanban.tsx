@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/AdminLayout'
-import { useRouter } from 'next/router'
 import {
   ChevronLeft, ChevronRight, User, MapPin, Clock,
-  Bell, BellOff, Check, Phone, Package, XCircle, Printer
+  Bell, BellOff, Check, Phone, Package, XCircle, Printer,
+  TrendingUp
 } from 'lucide-react'
 
 const COLUMNS = [
@@ -14,6 +14,7 @@ const COLUMNS = [
   { id: 'GELIEFERT',      title: 'Geliefert',      color: 'bg-green-50',  border: 'border-green-200',  icon: '✅' },
 ]
 
+// ── Helpers ───────────────────────────────────────────────────
 async function apiUpdateOrder(orderId: string, data: any) {
   const res = await fetch(`/api/orders/${orderId}`, {
     method: 'PATCH',
@@ -33,6 +34,20 @@ async function sendEmail(type: string, order: any) {
       body: JSON.stringify({ type, order, recipientEmail: order.customer_email }),
     })
   } catch (e) {}
+}
+
+// ── Adresse normalisieren (FIX: verhindert [object Object]) ──
+function formatAddress(addr: any): string {
+  if (!addr) return '–'
+  if (typeof addr === 'string') return addr
+  if (typeof addr === 'object') {
+    const parts = []
+    if (addr.street) parts.push(addr.street)
+    if (addr.zip && addr.city) parts.push(`${addr.zip} ${addr.city}`)
+    else if (addr.city) parts.push(addr.city)
+    return parts.join(', ') || '–'
+  }
+  return String(addr)
 }
 
 function playSound() {
@@ -62,15 +77,18 @@ function OrderTimer({ createdAt }: { createdAt: string }) {
   }, [createdAt])
   const hours = Math.floor(mins / 60)
   const label = hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`
-  const color = mins >= 30 ? 'text-red-600 font-bold animate-pulse' : mins >= 15 ? 'text-orange-500 font-semibold' : mins >= 10 ? 'text-yellow-600' : 'text-green-600'
+  const color = mins >= 30 ? 'text-red-600 font-bold animate-pulse'
+              : mins >= 15 ? 'text-orange-500 font-semibold'
+              : mins >= 10 ? 'text-yellow-600'
+              : 'text-green-600'
   return <span className={`text-xs ${color}`}>⏱ {label}</span>
 }
 
 // ── Thermodrucker Bon 80mm ────────────────────────────────────
 function printOrder(order: any) {
   const items = (order.items || []).map((item: any) => {
-    const flavors  = (item.flavors || item.selectedFlavors || [])
-    const extras   = (item.extras  || item.selectedExtras  || []).map((e: any) => e.name || e)
+    const flavors  = item.flavors || item.selectedFlavors || []
+    const extras   = (item.extras || item.selectedExtras || []).map((e: any) => e.name || e)
     const lineTotal = ((item.totalPrice || (item.price * item.quantity)) || 0).toFixed(2)
     return { ...item, flavors, extras, lineTotal }
   })
@@ -79,47 +97,42 @@ function printOrder(order: any) {
   const deliveryFee = order.delivery_fee ?? 3.00
   const tip         = order.tip ?? 0
   const grandTotal  = order.total ?? (subtotal + deliveryFee + tip)
-
-  const now     = new Date(order.created_at)
-  const dateStr = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-  const orderNr = order.order_number || order.id?.slice(-6).toUpperCase()
-
-  const addr    = order.delivery_address
-  const addrStr = typeof addr === 'object'
-    ? [addr.street, addr.zip && addr.city ? addr.zip + ' ' + addr.city : addr.city].filter(Boolean).join(', ')
-    : (addr || '–')
+  const now         = new Date(order.created_at)
+  const dateStr     = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const timeStr     = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  const orderNr     = order.order_number || order.id?.slice(-6).toUpperCase()
+  const addrStr     = formatAddress(order.delivery_address)
 
   let itemsHtml = ''
   for (const item of items) {
-    itemsHtml += '<div class="item">'
-    itemsHtml += '<div class="item-main">'
-    itemsHtml += '<span class="item-name">' + item.quantity + 'x ' + item.name + '</span>'
-    itemsHtml += '<span class="item-price">' + item.lineTotal + ' \u20AC</span>'
-    itemsHtml += '</div>'
-    if (item.flavors.length > 0) itemsHtml += '<div class="item-detail">\uD83C\uDF66 ' + item.flavors.join(', ') + '</div>'
-    if (item.extras.length > 0)  itemsHtml += '<div class="item-detail">\u2795 ' + item.extras.join(', ') + '</div>'
+    itemsHtml += `<div class="item"><div class="item-main"><span class="item-name">${item.quantity}x ${item.name}</span><span class="item-price">${item.lineTotal} €</span></div>`
+    if (item.flavors.length > 0) itemsHtml += `<div class="item-detail">🍦 ${item.flavors.join(', ')}</div>`
+    if (item.extras.length > 0)  itemsHtml += `<div class="item-detail">➕ ${item.extras.join(', ')}</div>`
     itemsHtml += '</div>'
   }
 
-  const notesHtml   = order.notes ? '<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div><div class="customer"><div class="section-title">ANMERKUNG</div><div>' + order.notes + '</div></div>' : ''
-  const tipHtml     = tip > 0 ? '<div class="total-row"><span>Trinkgeld</span><span>' + tip.toFixed(2) + ' \u20AC</span></div>' : ''
-  const phoneHtml   = order.customer_phone ? '<div>' + order.customer_phone + '</div>' : ''
+  const discount    = order.discount ?? 0
+  const notesHtml   = order.notes
+    ? `<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div><div class="customer"><div class="section-title">ANMERKUNG</div><div>${order.notes}</div></div>`
+    : ''
+  const discountHtml = discount > 0
+    ? `<div class="total-row" style="color:#16a34a"><span>Gutschein${order.voucher_code ? ` (${order.voucher_code})` : ''}</span><span>-${discount.toFixed(2)} €</span></div>`
+    : ''
+  const tipHtml     = tip > 0 ? `<div class="total-row"><span>Trinkgeld</span><span>${tip.toFixed(2)} €</span></div>` : ''
+  const phoneHtml   = order.customer_phone ? `<div>${order.customer_phone}</div>` : ''
 
-  const html = `<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
+  const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
 <style>
   @page { margin: 4mm; size: 80mm auto; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Courier New', Courier, monospace; font-size: 12px; width: 100%; color: #000; background: #fff; }
-  .div-solid  { font-size: 12px; margin: 5px 0; overflow: hidden; white-space: nowrap; }
-  .div-dashed { font-size: 12px; margin: 4px 0; overflow: hidden; white-space: nowrap; color: #666; }
+  .div-solid  { font-size: 12px; margin: 5px 0; }
+  .div-dashed { font-size: 12px; margin: 4px 0; color: #666; }
   .header     { text-align: center; padding: 4px 0 6px; }
   .logo       { font-size: 20px; font-weight: bold; letter-spacing: 2px; }
   .tagline    { font-size: 9px; letter-spacing: 4px; color: #444; margin-top: 1px; }
   .shop-info  { font-size: 10px; margin-top: 5px; line-height: 1.8; }
   .row        { display: flex; justify-content: space-between; margin: 2px 0; }
-  .label      { color: #444; }
   .section-title { font-weight: bold; font-size: 10px; letter-spacing: 1px; margin-bottom: 3px; }
   .customer   { margin: 4px 0; line-height: 1.7; }
   .item       { margin: 5px 0; }
@@ -132,64 +145,41 @@ function printOrder(order: any) {
   .footer     { text-align: center; margin-top: 8px; }
   .thank-you  { font-size: 13px; font-weight: bold; margin-bottom: 3px; }
   .footer-small { font-size: 10px; color: #555; line-height: 1.7; }
-  .emoji      { font-size: 18px; margin: 4px 0; }
 </style></head><body>
-
 <div class="header">
-  <div class="logo">&#127846; SIMONETTI</div>
-  <div class="tagline">E I S C A F &Eacute;</div>
+  <div class="logo">🍦 SIMONETTI</div>
+  <div class="tagline">E I S C A F É</div>
   <div class="div-dashed" style="margin-top:6px">- - - - - - - - - - - - - - - - - - -</div>
-  <div class="shop-info">
-    Konrad-Adenauer-Platz 2<br/>
-    40764 Langenfeld<br/>
-    Tel: 02173 / 16 22 780<br/>
-    bestellung@eiscafe-simonetti.de
-  </div>
+  <div class="shop-info">Konrad-Adenauer-Platz 2<br/>40764 Langenfeld<br/>Tel: 02173 / 16 22 780<br/>bestellung@eiscafe-simonetti.de</div>
 </div>
-
 <div class="div-solid">=====================================</div>
-
-<div class="row"><span class="label">Bestellung:</span><span><b>#${orderNr}</b></span></div>
-<div class="row"><span class="label">Datum:</span><span>${dateStr} ${timeStr} Uhr</span></div>
-<div class="row"><span class="label">Zahlung:</span><span>${order.payment_method || 'Online'}</span></div>
-
+<div class="row"><span>Bestellung:</span><span><b>#${orderNr}</b></span></div>
+<div class="row"><span>Datum:</span><span>${dateStr} ${timeStr} Uhr</span></div>
+<div class="row"><span>Zahlung:</span><span>${order.payment_method || 'Online'}</span></div>
 <div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div>
-
 <div class="customer">
   <div class="section-title">LIEFERUNG AN</div>
   <div><b>${order.customer_name || '–'}</b></div>
   ${phoneHtml}
   <div>${addrStr}</div>
 </div>
-
 <div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div>
-
 <div class="section-title">BESTELLUNG</div>
 ${itemsHtml}
-
 ${notesHtml}
-
 <div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div>
-
-<div class="total-row"><span>Zwischensumme</span><span>${subtotal.toFixed(2)} &euro;</span></div>
-<div class="total-row"><span>Liefergebühr</span><span>${deliveryFee.toFixed(2)} &euro;</span></div>
-${tipHtml}
-
+<div class="total-row"><span>Zwischensumme</span><span>${subtotal.toFixed(2)} €</span></div>
+<div class="total-row"><span>Liefergebühr</span><span>${deliveryFee.toFixed(2)} €</span></div>
+${discountHtml}${tipHtml}
 <div class="div-solid">=====================================</div>
-<div class="grand-total"><span>GESAMT</span><span>${grandTotal.toFixed(2)} &euro;</span></div>
+<div class="grand-total"><span>GESAMT</span><span>${grandTotal.toFixed(2)} €</span></div>
 <div class="div-solid">=====================================</div>
-
 <div class="footer">
-  <div class="emoji">&#127846;&#127848;&#127847;</div>
-  <div class="thank-you">Vielen Dank &amp; Guten Appetit!</div>
-  <div class="footer-small">
-    Wir freuen uns auf Ihren n&auml;chsten Besuch.<br/>
-    www.eiscafe-simonetti.de
-  </div>
+  <div class="thank-you">Vielen Dank &amp; Guten Appetit! 🍦</div>
+  <div class="footer-small">www.eiscafe-simonetti.de</div>
   <div class="div-dashed" style="margin-top:8px">- - - - - - - - - - - - - - - - - - -</div>
-  <div class="footer-small" style="margin-top:4px">Beleg Nr. #${orderNr} &middot; ${dateStr}</div>
+  <div class="footer-small">Beleg Nr. #${orderNr} · ${dateStr}</div>
 </div>
-
 <script>window.onload=function(){setTimeout(function(){window.print();},300);}</script>
 </body></html>`
 
@@ -228,14 +218,13 @@ function RejectModal({ order, onConfirm, onCancel }: { order: any; onConfirm: (r
   )
 }
 
-// ── Neues Bestellung Popup (GROSS) ────────────────────────────
+// ── Neues Bestellung Popup ────────────────────────────────────
 function NewOrderPopup({ order, onAccept, onReject, onLater }: {
   order: any; onAccept: () => void; onReject: () => void; onLater: () => void
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ animation: 'popIn 0.35s ease-out' }}>
-
         <div className="bg-red-500 text-white px-8 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="text-5xl" style={{ animation: 'bellShake 0.5s infinite' }}>🔔</span>
@@ -249,7 +238,6 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
             <div className="text-red-200 text-sm">{new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</div>
           </div>
         </div>
-
         <div className="p-8">
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
@@ -266,10 +254,9 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
               )}
               <div className="flex items-start gap-2">
                 <MapPin size={18} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-700">{order.delivery_address}</span>
+                <span className="text-gray-700">{formatAddress(order.delivery_address)}</span>
               </div>
             </div>
-
             <div className="bg-gray-50 rounded-2xl p-5">
               <h3 className="font-bold text-xs text-gray-400 uppercase tracking-widest mb-3">Bestellung</h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -291,8 +278,6 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
               )}
             </div>
           </div>
-
-          {/* Buttons */}
           <div className="grid grid-cols-2 gap-4 mb-3">
             <button onClick={onReject}
               className="py-5 rounded-2xl bg-red-50 text-red-600 font-black text-xl hover:bg-red-100 transition flex items-center justify-center gap-3"
@@ -305,7 +290,6 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
               <Check size={28} /> Annehmen ✓
             </button>
           </div>
-
           <div className="flex items-center justify-between">
             <button onClick={() => printOrder(order)}
               className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-xl text-sm font-semibold hover:bg-gray-900 transition">
@@ -317,7 +301,6 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
           </div>
         </div>
       </div>
-
       <style jsx>{`
         @keyframes popIn {
           0%   { transform: scale(0.5) translateY(40px); opacity: 0; }
@@ -336,14 +319,13 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
 
 // ── Order Card ────────────────────────────────────────────────
 function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onAccept, onReject, drivers }: any) {
-  const status     = COLUMNS[colIdx].id
+  const status      = COLUMNS[colIdx].id
   const isDelivered = status === 'GELIEFERT'
-  const isOffen    = status === 'OFFEN'
+  const isOffen     = status === 'OFFEN'
 
   return (
     <div className={`bg-white rounded-xl p-3 shadow-sm border-2 hover:shadow-md transition mb-2 text-xs
       ${isOffen ? 'border-red-300' : isDelivered ? 'border-green-200 opacity-75' : 'border-gray-200'}`}>
-
       <div className="flex items-center justify-between mb-2">
         <button onClick={onMoveLeft} disabled={colIdx === 0 || isDelivered}
           className={`p-1.5 rounded-lg transition ${colIdx > 0 && !isDelivered ? 'hover:bg-gray-100 text-gray-700' : 'text-gray-200 cursor-not-allowed'}`}>
@@ -358,7 +340,6 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
           <ChevronRight size={16} />
         </button>
       </div>
-
       <div className="space-y-1 px-1 mb-2">
         <div className="flex items-center gap-1.5 truncate">
           <User size={11} className="text-gray-400 flex-shrink-0" />
@@ -366,7 +347,8 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
         </div>
         <div className="flex items-center gap-1.5 truncate">
           <MapPin size={11} className="text-gray-400 flex-shrink-0" />
-          <span className="truncate text-gray-500">{typeof order.delivery_address === 'object' ? order.delivery_address?.street : order.delivery_address?.split(',')[0]}</span>
+          {/* FIX: formatAddress verhindert [object Object] */}
+          <span className="truncate text-gray-500">{formatAddress(order.delivery_address).split(',')[0]}</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -380,7 +362,6 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
           <span className="text-gray-500">{(order.items || []).reduce((s: number, i: any) => s + i.quantity, 0)} Artikel</span>
         </div>
       </div>
-
       {isOffen && (
         <div className="space-y-1.5 mb-1.5">
           <button onClick={onAccept}
@@ -393,12 +374,10 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
           </button>
         </div>
       )}
-
       <button onClick={() => printOrder(order)}
         className="w-full py-1.5 bg-gray-800 text-white rounded-lg text-xs font-bold hover:bg-gray-900 transition mb-1.5">
         🖨️ Drucken
       </button>
-
       {status === 'AN_FAHRER' && (
         <div className="mt-1 space-y-1.5">
           {order.driver_id ? (
@@ -418,7 +397,6 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
           </button>
         </div>
       )}
-
       {isDelivered && order.delivered_at && (
         <div className="text-center text-green-600 text-xs font-semibold mt-1">
           ✅ {new Date(order.delivered_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
@@ -430,12 +408,12 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
 
 // ── Hauptseite ────────────────────────────────────────────────
 export default function KanbanPage() {
-  const [orders, setOrders] = useState<Record<string, any[]>>({ OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] })
-  const [loading, setLoading] = useState(true)
-  const [drivers, setDrivers] = useState<any[]>([])
+  const [orders, setOrders]           = useState<Record<string, any[]>>({ OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] })
+  const [loading, setLoading]         = useState(true)
+  const [drivers, setDrivers]         = useState<any[]>([])
   const [showAllDays, setShowAllDays] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [popupOrder, setPopupOrder] = useState<any>(null)
+  const [popupOrder, setPopupOrder]   = useState<any>(null)
   const [rejectTarget, setRejectTarget] = useState<any>(null)
   const [newOrderBanner, setNewOrderBanner] = useState(false)
 
@@ -443,20 +421,28 @@ export default function KanbanPage() {
   const isFirstLoad = useRef(true)
   const popupQueue  = useRef<any[]>([])
 
+  // FIX: soundEnabled und showAllDays als Refs um Reload-Loop zu vermeiden
+  const soundRef     = useRef(soundEnabled)
+  const showAllRef   = useRef(showAllDays)
+  const popupRef     = useRef(popupOrder)
+  useEffect(() => { soundRef.current = soundEnabled },   [soundEnabled])
+  useEffect(() => { showAllRef.current = showAllDays },  [showAllDays])
+  useEffect(() => { popupRef.current  = popupOrder },    [popupOrder])
+
   const loadOrders = useCallback(async () => {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     let query = supabase.from('orders').select('*').order('created_at', { ascending: false })
-    if (!showAllDays) query = query.gte('created_at', todayStart.toISOString())
+    if (!showAllRef.current) query = query.gte('created_at', todayStart.toISOString())
     const { data, error } = await query
     if (error || !data) return
 
     if (!isFirstLoad.current) {
       const newOnes = data.filter(o => !knownIds.current.has(o.id) && o.status === 'OFFEN')
       if (newOnes.length > 0) {
-        if (soundEnabled) playSound()
+        if (soundRef.current) playSound()
         setNewOrderBanner(true)
         setTimeout(() => setNewOrderBanner(false), 5000)
-        if (!popupOrder) {
+        if (!popupRef.current) {
           setPopupOrder(newOnes[0])
           if (newOnes.length > 1) popupQueue.current = [...popupQueue.current, ...newOnes.slice(1)]
         } else {
@@ -472,13 +458,17 @@ export default function KanbanPage() {
     data.forEach(o => { const s = o.status || 'OFFEN'; if (grouped[s]) grouped[s].push(o) })
     setOrders(grouped)
     setLoading(false)
-  }, [showAllDays, soundEnabled, popupOrder])
+  }, []) // FIX: leeres dependency array – Refs werden stattdessen genutzt
 
   useEffect(() => {
-    loadOrders(); loadDrivers()
+    loadOrders()
+    loadDrivers()
     const iv = setInterval(loadOrders, 15000)
     return () => clearInterval(iv)
   }, [loadOrders])
+
+  // Neu laden wenn Filter wechselt
+  useEffect(() => { loadOrders() }, [showAllDays, loadOrders])
 
   const loadDrivers = async () => {
     const { data } = await supabase.from('drivers').select('*').eq('is_active', true).order('name')
@@ -549,7 +539,7 @@ export default function KanbanPage() {
   }
 
   const allOrders      = Object.values(orders).flat()
-  const todayTotal     = allOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+  const todayTotal     = allOrders.filter(o => o.status === 'GELIEFERT').reduce((sum, o) => sum + (o.total || 0), 0)
   const deliveredCount = orders['GELIEFERT']?.length || 0
   const openCount      = orders['OFFEN']?.length || 0
 
@@ -586,8 +576,13 @@ export default function KanbanPage() {
             )}
             <div className="text-right">
               <div className="text-xl font-bold text-green-600">{todayTotal.toFixed(2)}€</div>
-              <div className="text-xs text-gray-400">{deliveredCount} geliefert</div>
+              <div className="text-xs text-gray-400">{deliveredCount} geliefert heute</div>
             </div>
+            <button
+              onClick={() => window.location.href = '/admin/reports'}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border-2 border-gray-200 hover:border-black transition">
+              <TrendingUp size={15} /> Reports
+            </button>
             <button onClick={() => setSoundEnabled(!soundEnabled)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition border-2 ${soundEnabled ? 'border-yellow-300 text-yellow-700 bg-yellow-50' : 'border-gray-200 text-gray-400'}`}>
               {soundEnabled ? <Bell size={15} /> : <BellOff size={15} />}
