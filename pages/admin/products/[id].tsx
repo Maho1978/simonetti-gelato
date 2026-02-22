@@ -1,131 +1,197 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/router'
-import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react'
+import AdminLayout from '@/components/AdminLayout'
+import { ArrowLeft, Plus, Trash2, Save, Upload, X, Loader } from 'lucide-react'
 
-interface Product {
-  id: string; name: string; description: string; price: number; icon: string
-  category_id: string; available: boolean; scoop_count: number
-  allergens: string[]; ingredients: string
-  is_vegan: boolean; is_vegetarian: boolean; is_glutenfree: boolean; is_lactosefree: boolean
-}
-interface Category { id: string; name: string }
-interface Variant { id: string; name: string; price: number; available: boolean; sort_order: number }
-interface Extra { id: string; name: string; price: number; available: boolean; sort_order: number }
+interface Category { id: string; name: string; icon: string; visible: boolean }
+interface Variant   { id: string; name: string; price: number; sort_order: number }
+interface Extra     { id: string; name: string; price: number; sort_order: number }
 
 const ALLERGEN_LIST = [
-  { key: 'gluten', label: '🌾 Gluten' },
-  { key: 'milch', label: '🥛 Milch / Laktose' },
-  { key: 'eier', label: '🥚 Eier' },
-  { key: 'nüsse', label: '🥜 Nüsse' },
-  { key: 'erdnüsse', label: '🥜 Erdnüsse' },
-  { key: 'soja', label: '🫘 Soja' },
-  { key: 'sesam', label: '🌿 Sesam' },
-  { key: 'fisch', label: '🐟 Fisch' },
-  { key: 'sellerie', label: '🥬 Sellerie' },
-  { key: 'senf', label: '🌭 Senf' },
-  { key: 'sulfite', label: '🍷 Sulfite' },
+  { key: 'gluten',   label: '🌾 Gluten'         },
+  { key: 'milch',    label: '🥛 Milch / Laktose' },
+  { key: 'eier',     label: '🥚 Eier'            },
+  { key: 'nüsse',    label: '🥜 Nüsse'           },
+  { key: 'erdnüsse', label: '🥜 Erdnüsse'        },
+  { key: 'soja',     label: '🫘 Soja'            },
+  { key: 'sesam',    label: '🌿 Sesam'           },
+  { key: 'fisch',    label: '🐟 Fisch'           },
+  { key: 'sellerie', label: '🥬 Sellerie'        },
+  { key: 'senf',     label: '🌭 Senf'            },
+  { key: 'sulfite',  label: '🍷 Sulfite'         },
 ]
 
-export default function ProductDetail({ session }: { session: Session | null }) {
-  const router = useRouter()
-  const { id } = router.query
+export default function ProductDetail() {
+  const router  = useRouter()
+  const { id }  = router.query
+  const isNew   = id === 'new'
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const [categories, setCategories] = useState<Category[]>([])
-  const [variants, setVariants] = useState<Variant[]>([])
-  const [extras, setExtras] = useState<Extra[]>([])
-  const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('')
+  const [variants, setVariants]     = useState<Variant[]>([])
+  const [extras, setExtras]         = useState<Extra[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [saving, setSaving]         = useState(false)
+  const [uploading, setUploading]   = useState(false)
+  const [toast, setToast]           = useState('')
 
-  // Edit form
-  const [editName, setEditName] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [editPrice, setEditPrice] = useState('')
-  const [editIcon, setEditIcon] = useState('🍦')
-  const [editCategoryId, setEditCategoryId] = useState('')
-  const [editAvailable, setEditAvailable] = useState(true)
-  const [editScoopCount, setEditScoopCount] = useState(0)
-  const [editIngredients, setEditIngredients] = useState('')
-  const [editAllergens, setEditAllergens] = useState<string[]>([])
-  const [editIsVegan, setEditIsVegan] = useState(false)
-  const [editIsVegetarian, setEditIsVegetarian] = useState(true)
-  const [editIsGlutenfree, setEditIsGlutenfree] = useState(false)
-  const [editIsLactosefree, setEditIsLactosefree] = useState(false)
+  // ── Formfelder ─────────────────────────────────────────────
+  const [name, setName]                   = useState('')
+  const [description, setDescription]     = useState('')
+  const [price, setPrice]                 = useState('')
+  const [icon, setIcon]                   = useState('🍦')
+  const [category, setCategory]           = useState('')
+  const [active, setActive]               = useState(true)
+  const [featured, setFeatured]           = useState(false)
+  const [scoopCount, setScoopCount]       = useState(0)
+  const [ingredients, setIngredients]     = useState('')
+  const [allergens, setAllergens]         = useState<string[]>([])
+  const [isVegan, setIsVegan]             = useState(false)
+  const [isVegetarian, setIsVegetarian]   = useState(true)
+  const [isGlutenfree, setIsGlutenfree]   = useState(false)
+  const [isLactosefree, setIsLactosefree] = useState(false)
+  const [imageUrl, setImageUrl]           = useState('')
 
-  // Variant Form
-  const [variantName, setVariantName] = useState('')
+  // Varianten/Extras Formulare
+  const [variantName, setVariantName]   = useState('')
   const [variantPrice, setVariantPrice] = useState('')
-
-  // Extra Form
-  const [extraName, setExtraName] = useState('')
-  const [extraPrice, setExtraPrice] = useState('')
+  const [extraName, setExtraName]       = useState('')
+  const [extraPrice, setExtraPrice]     = useState('')
 
   useEffect(() => {
     if (!id) return
-    if (id === 'new') { router.replace('/admin/products/new'); return }
-    fetchData()
+    loadCategories()
+    if (!isNew) loadProduct()
+    else setLoading(false)
   }, [id])
 
-  const fetchData = async () => {
-    const { data: cats } = await supabase.from('categories').select('*').order('name')
-    setCategories(cats || [])
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), 3000)
+  }
 
-    const { data: prod, error } = await supabase.from('products').select('*').eq('id', id).single()
-    if (error || !prod) { showMessage('❌ Produkt nicht gefunden'); setLoading(false); return }
+  const loadCategories = async () => {
+    const { data } = await supabase.from('categories').select('*').order('sort_order')
+    setCategories(data || [])
+  }
 
-    setEditName(prod.name || '')
-    setEditDescription(prod.description || '')
-    setEditPrice(prod.price?.toString() || '')
-    setEditIcon(prod.icon || '🍦')
-    setEditCategoryId(prod.category_id || '')
-    setEditAvailable(prod.available ?? true)
-    setEditScoopCount(prod.scoop_count || 0)
-    setEditIngredients(prod.ingredients || '')
-    setEditAllergens(prod.allergens || [])
-    setEditIsVegan(prod.is_vegan || false)
-    setEditIsVegetarian(prod.is_vegetarian ?? true)
-    setEditIsGlutenfree(prod.is_glutenfree || false)
-    setEditIsLactosefree(prod.is_lactosefree || false)
+  const loadProduct = async () => {
+    const { data: prod, error } = await supabase
+      .from('products').select('*').eq('id', id).single()
+    if (error || !prod) { showToast('❌ Produkt nicht gefunden'); setLoading(false); return }
 
-    const { data: vars } = await supabase.from('product_variants').select('*').eq('product_id', id).order('sort_order')
-    setVariants(vars || [])
+    setName(prod.name || '')
+    setDescription(prod.description || '')
+    setPrice(prod.price?.toString() || '')
+    setIcon(prod.icon || '🍦')
+    setCategory(prod.category || '')
+    setActive(prod.active ?? true)
+    setFeatured(prod.featured || false)
+    setScoopCount(prod.scoop_count || 0)
+    setIngredients(prod.ingredients || '')
+    setAllergens(prod.allergens || [])
+    setIsVegan(prod.is_vegan || false)
+    setIsVegetarian(prod.is_vegetarian ?? true)
+    setIsGlutenfree(prod.is_glutenfree || false)
+    setIsLactosefree(prod.is_lactosefree || false)
+    setImageUrl(prod.image_url || '')
 
-    const { data: exs } = await supabase.from('product_extras').select('*').eq('product_id', id).order('sort_order')
-    setExtras(exs || [])
-
+    const [varsRes, exsRes] = await Promise.all([
+      supabase.from('product_variants').select('*').eq('product_id', id).order('sort_order'),
+      supabase.from('product_extras').select('*').eq('product_id', id).order('sort_order'),
+    ])
+    setVariants(varsRes.data || [])
+    setExtras(exsRes.data || [])
     setLoading(false)
   }
 
-  const toggleAllergen = (key: string) => {
-    setEditAllergens(prev =>
-      prev.includes(key) ? prev.filter(a => a !== key) : [...prev, key]
-    )
+  // ── Bild hochladen ─────────────────────────────────────────
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      showToast('❌ Nur Bilder erlaubt (JPG, PNG, WebP)')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('❌ Bild zu groß! Maximal 5 MB')
+      return
+    }
+
+    setUploading(true)
+    const ext      = file.name.split('.').pop()
+    const fileName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(fileName, file, { cacheControl: '3600', upsert: false })
+
+    if (uploadError) {
+      showToast('❌ Upload fehlgeschlagen: ' + uploadError.message)
+      setUploading(false)
+      return
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(fileName)
+
+    setImageUrl(urlData.publicUrl)
+    setUploading(false)
+    showToast('✅ Bild hochgeladen!')
   }
 
+  const handleRemoveImage = async () => {
+    if (!imageUrl) return
+    // Pfad aus URL extrahieren und löschen
+    try {
+      const parts   = imageUrl.split('/product-images/')
+      const filePath = parts[1]
+      if (filePath) {
+        await supabase.storage.from('product-images').remove([filePath])
+      }
+    } catch (_) {}
+    setImageUrl('')
+    showToast('🗑️ Bild entfernt')
+  }
+
+  // ── Produkt speichern ──────────────────────────────────────
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { error } = await supabase.from('products').update({
-      name: editName,
-      description: editDescription,
-      price: parseFloat(editPrice.replace(',', '.')),
-      icon: editIcon,
-      category_id: editCategoryId || null,
-      available: editAvailable,
-      scoop_count: editScoopCount,
-      ingredients: editIngredients,
-      allergens: editAllergens,
-      is_vegan: editIsVegan,
-      is_vegetarian: editIsVegetarian,
-      is_glutenfree: editIsGlutenfree,
-      is_lactosefree: editIsLactosefree,
-    }).eq('id', id)
+    setSaving(true)
 
-    if (error) { showMessage('❌ Fehler: ' + error.message); return }
-    showMessage('✅ Produkt gespeichert!')
+    const payload = {
+      name, description,
+      price:          parseFloat(price.replace(',', '.')),
+      icon, category, active, featured,
+      scoop_count:    scoopCount,
+      ingredients,    allergens,
+      is_vegan:       isVegan,
+      is_vegetarian:  isVegetarian,
+      is_glutenfree:  isGlutenfree,
+      is_lactosefree: isLactosefree,
+      image_url:      imageUrl,
+    }
+
+    if (isNew) {
+      const { error } = await supabase.from('products').insert(payload)
+      if (error) { showToast('❌ ' + error.message); setSaving(false); return }
+      showToast('✅ Produkt erstellt!')
+      setTimeout(() => router.push('/admin/products'), 1000)
+    } else {
+      const { error } = await supabase.from('products').update(payload).eq('id', id)
+      if (error) { showToast('❌ ' + error.message); setSaving(false); return }
+      showToast('✅ Gespeichert!')
+    }
+    setSaving(false)
   }
 
+  const toggleAllergen = (key: string) =>
+    setAllergens(prev => prev.includes(key) ? prev.filter(a => a !== key) : [...prev, key])
+
+  // ── Varianten ──────────────────────────────────────────────
   const addVariant = async (e: React.FormEvent) => {
     e.preventDefault()
     const { data, error } = await supabase.from('product_variants').insert({
@@ -133,18 +199,18 @@ export default function ProductDetail({ session }: { session: Session | null }) 
       price: parseFloat(variantPrice.replace(',', '.')),
       sort_order: variants.length, available: true
     }).select().single()
-    if (error) { showMessage('❌ Fehler: ' + error.message); return }
-    if (data) { setVariants([...variants, data]); setVariantName(''); setVariantPrice(''); showMessage('✅ Variante hinzugefügt!') }
+    if (error) { showToast('❌ ' + error.message); return }
+    if (data) { setVariants([...variants, data]); setVariantName(''); setVariantPrice(''); showToast('✅ Variante hinzugefügt!') }
   }
 
-  const deleteVariant = async (variantId: string) => {
+  const deleteVariant = async (vid: string) => {
     if (!confirm('Variante löschen?')) return
-    const { error } = await supabase.from('product_variants').delete().eq('id', variantId)
-    if (error) { showMessage('❌ Fehler beim Löschen'); return }
-    setVariants(variants.filter(v => v.id !== variantId))
-    showMessage('✅ Variante gelöscht!')
+    await supabase.from('product_variants').delete().eq('id', vid)
+    setVariants(variants.filter(v => v.id !== vid))
+    showToast('✅ Variante gelöscht!')
   }
 
+  // ── Extras ─────────────────────────────────────────────────
   const addExtra = async (e: React.FormEvent) => {
     e.preventDefault()
     const { data, error } = await supabase.from('product_extras').insert({
@@ -152,202 +218,296 @@ export default function ProductDetail({ session }: { session: Session | null }) 
       price: parseFloat(extraPrice.replace(',', '.')),
       sort_order: extras.length, available: true
     }).select().single()
-    if (error) { showMessage('❌ Fehler: ' + error.message); return }
-    if (data) { setExtras([...extras, data]); setExtraName(''); setExtraPrice(''); showMessage('✅ Extra hinzugefügt!') }
+    if (error) { showToast('❌ ' + error.message); return }
+    if (data) { setExtras([...extras, data]); setExtraName(''); setExtraPrice(''); showToast('✅ Extra hinzugefügt!') }
   }
 
-  const deleteExtra = async (extraId: string) => {
+  const deleteExtra = async (eid: string) => {
     if (!confirm('Extra löschen?')) return
-    const { error } = await supabase.from('product_extras').delete().eq('id', extraId)
-    if (error) { showMessage('❌ Fehler beim Löschen'); return }
-    setExtras(extras.filter(e => e.id !== extraId))
-    showMessage('✅ Extra gelöscht!')
-  }
-
-  const showMessage = (msg: string) => {
-    setMessage(msg)
-    setTimeout(() => setMessage(''), 3000)
+    await supabase.from('product_extras').delete().eq('id', eid)
+    setExtras(extras.filter(e => e.id !== eid))
+    showToast('✅ Extra gelöscht!')
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-6xl animate-pulse">🍦</div>
-    </div>
+    <AdminLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-5xl animate-pulse">🍦</div>
+      </div>
+    </AdminLayout>
   )
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#fdfcfb' }}>
-      <Navbar session={session} cartCount={0} onCartClick={() => {}} />
+    <AdminLayout>
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl font-semibold text-sm">
+          {toast}
+        </div>
+      )}
 
-      <div className="max-w-5xl mx-auto px-6 py-10">
-        <button onClick={() => router.back()} className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900">
-          <ArrowLeft size={20} /> Zurück
+      <div className="p-6 max-w-3xl">
+
+        {/* Header */}
+        <button onClick={() => router.push('/admin/products')}
+          className="flex items-center gap-2 mb-6 text-gray-400 hover:text-gray-900 transition text-sm font-semibold">
+          <ArrowLeft size={18} /> Zurück zur Liste
         </button>
 
-        <h1 className="text-4xl font-bold italic mb-8" style={{ color: '#4a5d54' }}>
-          {editIcon} Produkt bearbeiten
+        <h1 className="text-2xl font-bold mb-6">
+          {icon} {isNew ? 'Neues Produkt' : name}
         </h1>
 
-        {message && (
-          <div className="mb-6 p-4 rounded-xl text-center font-bold"
-            style={{ backgroundColor: message.includes('✅') ? '#e8f8f0' : '#fde8e8', color: message.includes('✅') ? '#27ae60' : '#e74c3c' }}>
-            {message}
-          </div>
-        )}
+        {/* ── BASIS-INFO FORM ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+          <h2 className="font-bold text-lg mb-4">Basis-Informationen</h2>
+          <form onSubmit={saveProduct} className="space-y-5">
 
-        {/* BASIS INFO */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-          <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>Basis-Informationen</h2>
-          <form onSubmit={saveProduct} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-1">Name *</label>
-                <input type="text" value={editName} onChange={e => setEditName(e.target.value)} required
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-green-400 outline-none" />
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">Name *</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} required
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-1">Icon / Emoji</label>
-                <input type="text" value={editIcon} onChange={e => setEditIcon(e.target.value)}
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-green-400 outline-none" />
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">Icon / Emoji</label>
+                <input type="text" value={icon} onChange={e => setIcon(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-1">Preis (€) *</label>
-                <input type="text" value={editPrice} onChange={e => setEditPrice(e.target.value)} required
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">Preis (€) *</label>
+                <input type="text" value={price} onChange={e => setPrice(e.target.value)} required
                   placeholder="z.B. 3,50"
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-green-400 outline-none" />
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-1">Kategorie</label>
-                <select value={editCategoryId} onChange={e => setEditCategoryId(e.target.value)}
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-green-400 outline-none">
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">Kategorie</label>
+                <select value={category} onChange={e => setCategory(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none bg-white">
                   <option value="">-- Keine Kategorie --</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {categories.map(c => (
+                    <option key={c.id} value={c.name}>
+                      {c.icon} {c.name}{!c.visible ? ' (nicht sichtbar)' : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-600 mb-1">Beschreibung</label>
-                <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={2}
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-green-400 outline-none" />
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">Beschreibung</label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-600 mb-1">Anzahl Kugeln (0 = kein Eis)</label>
-                <input type="number" min="0" max="10" value={editScoopCount} onChange={e => setEditScoopCount(parseInt(e.target.value))}
-                  className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-green-400 outline-none" />
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">Anzahl Kugeln (0 = kein Eis)</label>
+                <input type="number" min="0" max="10" value={scoopCount}
+                  onChange={e => setScoopCount(parseInt(e.target.value))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none" />
               </div>
-              <div className="flex items-center gap-3 pt-6">
-                <input type="checkbox" id="available" checked={editAvailable} onChange={e => setEditAvailable(e.target.checked)} className="w-5 h-5" />
-                <label htmlFor="available" className="font-semibold text-gray-700">Produkt aktiv / sichtbar</label>
+              <div className="flex flex-col gap-3 pt-2">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} className="w-5 h-5 rounded" />
+                  <span className="font-semibold text-gray-700">Produkt aktiv / sichtbar</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={featured} onChange={e => setFeatured(e.target.checked)} className="w-5 h-5 rounded" />
+                  <span className="font-semibold text-gray-700">⭐ Empfohlen / Featured</span>
+                </label>
               </div>
             </div>
 
-            {/* ZUTATEN */}
+            {/* ── BILD UPLOAD ── */}
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1">Zutaten</label>
-              <textarea value={editIngredients} onChange={e => setEditIngredients(e.target.value)} rows={2}
-                placeholder="z.B. Milch, Sahne, Zucker, Vanille..."
-                className="w-full p-3 rounded-xl border-2 border-gray-200 focus:border-green-400 outline-none" />
+              <label className="block text-sm font-semibold text-gray-600 mb-2">
+                Produktbild
+              </label>
+
+              {imageUrl ? (
+                /* Bild vorhanden → Vorschau + Buttons */
+                <div className="flex items-start gap-4">
+                  <img src={imageUrl} alt="Produktbild"
+                    className="h-36 w-36 rounded-xl object-cover border-2 border-gray-200 flex-shrink-0" />
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs text-gray-400">Bild hochgeladen ✅</p>
+                    <button type="button"
+                      onClick={() => fileRef.current?.click()}
+                      className="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold hover:border-black transition">
+                      <Upload size={15} /> Ersetzen
+                    </button>
+                    <button type="button" onClick={handleRemoveImage}
+                      className="flex items-center gap-2 px-4 py-2 border-2 border-red-200 text-red-500 rounded-xl text-sm font-semibold hover:bg-red-50 transition">
+                      <X size={15} /> Entfernen
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Kein Bild → Upload-Bereich */
+                <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-black hover:bg-gray-50 transition group">
+                  {uploading ? (
+                    <>
+                      <Loader size={28} className="text-gray-400 animate-spin mb-2" />
+                      <span className="text-sm text-gray-400">Wird hochgeladen...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={28} className="text-gray-300 group-hover:text-gray-600 mb-2 transition" />
+                      <span className="text-sm font-semibold text-gray-400 group-hover:text-gray-700 transition">
+                        Bild auswählen oder hierher ziehen
+                      </span>
+                      <span className="text-xs text-gray-300 mt-1">JPG, PNG, WebP · max. 5 MB</span>
+                    </>
+                  )}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                </label>
+              )}
+
+              {/* Versteckter Input für "Ersetzen"-Button */}
+              {imageUrl && (
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+              )}
             </div>
 
-            {/* ALLERGENE */}
+            {/* ── ZUTATEN ── */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">Zutaten</label>
+              <textarea value={ingredients} onChange={e => setIngredients(e.target.value)} rows={2}
+                placeholder="z.B. Milch, Sahne, Zucker, Vanille..."
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none" />
+            </div>
+
+            {/* ── ALLERGENE ── */}
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-2">Allergene</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {ALLERGEN_LIST.map(a => (
-                  <label key={a.key} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer border-2 transition-all ${editAllergens.includes(a.key) ? 'border-orange-400 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input type="checkbox" checked={editAllergens.includes(a.key)} onChange={() => toggleAllergen(a.key)} className="w-4 h-4" />
+                  <label key={a.key}
+                    className={`flex items-center gap-2 p-2.5 rounded-xl cursor-pointer border-2 transition ${allergens.includes(a.key) ? 'border-orange-400 bg-orange-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <input type="checkbox" checked={allergens.includes(a.key)}
+                      onChange={() => toggleAllergen(a.key)} className="w-4 h-4" />
                     <span className="text-sm">{a.label}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            {/* DIÄT-LABELS */}
+            {/* ── DIÄT-LABELS ── */}
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-2">Diät-Labels</label>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2">
                 {[
-                  { state: editIsVegan, setter: setEditIsVegan, label: '🌱 Vegan' },
-                  { state: editIsVegetarian, setter: setEditIsVegetarian, label: '🥗 Vegetarisch' },
-                  { state: editIsGlutenfree, setter: setEditIsGlutenfree, label: '🌾 Glutenfrei' },
-                  { state: editIsLactosefree, setter: setEditIsLactosefree, label: '🥛 Laktosefrei' },
+                  { state: isVegan,       setter: setIsVegan,       label: '🌱 Vegan'       },
+                  { state: isVegetarian,  setter: setIsVegetarian,  label: '🥗 Vegetarisch' },
+                  { state: isGlutenfree,  setter: setIsGlutenfree,  label: '🌾 Glutenfrei'  },
+                  { state: isLactosefree, setter: setIsLactosefree, label: '🥛 Laktosefrei' },
                 ].map(item => (
-                  <label key={item.label} className={`flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer border-2 transition-all ${item.state ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                    <input type="checkbox" checked={item.state} onChange={e => item.setter(e.target.checked)} className="w-4 h-4" />
+                  <label key={item.label}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer border-2 transition ${item.state ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <input type="checkbox" checked={item.state}
+                      onChange={e => item.setter(e.target.checked)} className="w-4 h-4" />
                     <span className="text-sm font-medium">{item.label}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <button type="submit" className="flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white hover:opacity-90 transition-all"
-              style={{ backgroundColor: '#4a5d54' }}>
-              <Save size={18} /> Änderungen speichern
+            <button type="submit" disabled={saving || uploading}
+              className="flex items-center gap-2 px-8 py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-900 transition disabled:opacity-50">
+              <Save size={18} />
+              {saving ? 'Speichert...' : isNew ? 'Produkt erstellen' : 'Änderungen speichern'}
             </button>
           </form>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* VARIANTEN */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>Varianten</h2>
-            <p className="text-sm text-gray-500 mb-4">z.B. "2 Kugeln", "3 Kugeln"</p>
-            <form onSubmit={addVariant} className="space-y-3 mb-6">
-              <input type="text" value={variantName} onChange={e => setVariantName(e.target.value)}
-                placeholder="Name (z.B. 2 Kugeln)" required className="w-full p-3 rounded-xl border-2 border-gray-200" />
-              <input type="text" value={variantPrice} onChange={e => setVariantPrice(e.target.value)}
-                placeholder="Preis (€) z.B. 3,50" required className="w-full p-3 rounded-xl border-2 border-gray-200" />
-              <button type="submit" className="w-full py-3 rounded-xl font-bold text-white hover:opacity-90"
-                style={{ backgroundColor: '#4a5d54' }}>
-                <Plus size={16} className="inline mr-1" /> Variante hinzufügen
-              </button>
-            </form>
-            <div className="space-y-2">
-              {variants.map(v => (
-                <div key={v.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#f9f8f4' }}>
-                  <div>
-                    <div className="font-semibold">{v.name}</div>
-                    <div className="text-sm text-gray-500">{v.price.toFixed(2)} €</div>
-                  </div>
-                  <button onClick={() => deleteVariant(v.id)} className="text-red-500 hover:bg-red-50 p-2 rounded transition-all">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              {variants.length === 0 && <div className="text-center py-8 text-gray-400">Keine Varianten</div>}
-            </div>
-          </div>
+        {/* ── VARIANTEN & EXTRAS (nur bei bestehenden Produkten) ── */}
+        {!isNew && (
+          <div className="grid md:grid-cols-2 gap-6">
 
-          {/* EXTRAS */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>Extras</h2>
-            <p className="text-sm text-gray-500 mb-4">z.B. "Sahne +1,50€"</p>
-            <form onSubmit={addExtra} className="space-y-3 mb-6">
-              <input type="text" value={extraName} onChange={e => setExtraName(e.target.value)}
-                placeholder="Name (z.B. Sahne)" required className="w-full p-3 rounded-xl border-2 border-gray-200" />
-              <input type="text" value={extraPrice} onChange={e => setExtraPrice(e.target.value)}
-                placeholder="Aufpreis (€) z.B. 1,50" required className="w-full p-3 rounded-xl border-2 border-gray-200" />
-              <button type="submit" className="w-full py-3 rounded-xl font-bold text-white hover:opacity-90"
-                style={{ backgroundColor: '#4a5d54' }}>
-                <Plus size={16} className="inline mr-1" /> Extra hinzufügen
-              </button>
-            </form>
-            <div className="space-y-2">
-              {extras.map(e => (
-                <div key={e.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#f9f8f4' }}>
-                  <div>
-                    <div className="font-semibold">{e.name}</div>
-                    <div className="text-sm text-gray-500">+{e.price.toFixed(2)} €</div>
+            {/* Varianten */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <h2 className="font-bold text-lg mb-1">Varianten</h2>
+              <p className="text-xs text-gray-400 mb-4">z.B. „2 Kugeln", „3 Kugeln"</p>
+              <form onSubmit={addVariant} className="space-y-2 mb-4">
+                <input type="text" value={variantName} onChange={e => setVariantName(e.target.value)}
+                  placeholder="Name (z.B. 2 Kugeln)" required
+                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-black focus:outline-none" />
+                <input type="text" value={variantPrice} onChange={e => setVariantPrice(e.target.value)}
+                  placeholder="Preis z.B. 3,50" required
+                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-black focus:outline-none" />
+                <button type="submit"
+                  className="w-full py-2.5 bg-black text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition">
+                  <Plus size={14} className="inline mr-1" /> Hinzufügen
+                </button>
+              </form>
+              <div className="space-y-2">
+                {variants.length === 0 && (
+                  <div className="text-center py-6 text-gray-300 text-sm">Keine Varianten</div>
+                )}
+                {variants.map(v => (
+                  <div key={v.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div>
+                      <div className="font-semibold text-sm">{v.name}</div>
+                      <div className="text-xs text-gray-400">{v.price.toFixed(2)} €</div>
+                    </div>
+                    <button onClick={() => deleteVariant(v.id)}
+                      className="text-red-400 hover:bg-red-50 p-1.5 rounded-lg transition">
+                      <Trash2 size={15} />
+                    </button>
                   </div>
-                  <button onClick={() => deleteExtra(e.id)} className="text-red-500 hover:bg-red-50 p-2 rounded transition-all">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              {extras.length === 0 && <div className="text-center py-8 text-gray-400">Keine Extras</div>}
+                ))}
+              </div>
             </div>
+
+            {/* Extras */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <h2 className="font-bold text-lg mb-1">Extras</h2>
+              <p className="text-xs text-gray-400 mb-4">z.B. „Sahne +1,50€"</p>
+              <form onSubmit={addExtra} className="space-y-2 mb-4">
+                <input type="text" value={extraName} onChange={e => setExtraName(e.target.value)}
+                  placeholder="Name (z.B. Sahne)" required
+                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-black focus:outline-none" />
+                <input type="text" value={extraPrice} onChange={e => setExtraPrice(e.target.value)}
+                  placeholder="Aufpreis z.B. 1,50" required
+                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-black focus:outline-none" />
+                <button type="submit"
+                  className="w-full py-2.5 bg-black text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition">
+                  <Plus size={14} className="inline mr-1" /> Hinzufügen
+                </button>
+              </form>
+              <div className="space-y-2">
+                {extras.length === 0 && (
+                  <div className="text-center py-6 text-gray-300 text-sm">Keine Extras</div>
+                )}
+                {extras.map(e => (
+                  <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div>
+                      <div className="font-semibold text-sm">{e.name}</div>
+                      <div className="text-xs text-gray-400">+{e.price.toFixed(2)} €</div>
+                    </div>
+                    <button onClick={() => deleteExtra(e.id)}
+                      className="text-red-400 hover:bg-red-50 p-1.5 rounded-lg transition">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
-        </div>
+        )}
       </div>
-    </div>
+    </AdminLayout>
   )
 }
