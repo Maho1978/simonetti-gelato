@@ -271,8 +271,9 @@ export default function Checkout({ session }: { session: Session | null }) {
         if (data) {
           const v = data.find(f => f.id === 'vouchers')
           const t = data.find(f => f.id === 'tip_option')
-          if (v) setShowVoucher(v.enabled)
-          if (t) setShowTip(t.enabled)
+          // Fallback: wenn kein Eintrag in DB → true (sichtbar)
+          setShowVoucher(v ? v.enabled : true)
+          setShowTip(t ? t.enabled : true)
         }
       })
 
