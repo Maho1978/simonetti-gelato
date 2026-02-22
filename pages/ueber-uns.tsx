@@ -151,12 +151,12 @@ export default function AboutPage() {
                   <h3 className="font-bold text-lg mb-3">Öffnungszeiten</h3>
                   <div className="space-y-2 text-gray-700">
                     <div className="flex justify-between">
-                      <span>Montag - Freitag:</span>
-                      <span className="font-semibold">14:00 - 22:00</span>
+                      <span>Montag - Samstag:</span>
+                      <span className="font-semibold">09:00 - 19:00</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Samstag - Sonntag:</span>
-                      <span className="font-semibold">12:00 - 22:00</span>
+                      <span>Sonntag - Feiertage</span>
+                      <span className="font-semibold">13:00 - 19:00</span>
                     </div>
                   </div>
                 </div>
