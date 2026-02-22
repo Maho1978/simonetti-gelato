@@ -36,7 +36,6 @@ async function sendEmail(type: string, order: any) {
   } catch (e) {}
 }
 
-// ── Adresse normalisieren (FIX: verhindert [object Object]) ──
 function formatAddress(addr: any): string {
   if (!addr) return '–'
   if (typeof addr === 'string') return addr
@@ -90,8 +89,8 @@ function OrderTimer({ createdAt }: { createdAt: string }) {
 // ── Thermodrucker Bon 80mm ────────────────────────────────────
 function printOrder(order: any) {
   const items = (order.items || []).map((item: any) => {
-    const flavors  = item.flavors || item.selectedFlavors || []
-    const extras   = (item.extras || item.selectedExtras || []).map((e: any) => e.name || e)
+    const flavors   = item.flavors || item.selectedFlavors || []
+    const extras    = (item.extras || item.selectedExtras || []).map((e: any) => e.name || e)
     const lineTotal = ((item.totalPrice || (item.price * item.quantity)) || 0).toFixed(2)
     return { ...item, flavors, extras, lineTotal }
   })
@@ -114,15 +113,15 @@ function printOrder(order: any) {
     itemsHtml += '</div>'
   }
 
-  const discount    = order.discount ?? 0
-  const notesHtml   = order.notes
+  const discount     = order.discount ?? 0
+  const notesHtml    = order.notes
     ? `<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div><div class="customer"><div class="section-title">ANMERKUNG</div><div>${order.notes}</div></div>`
     : ''
   const discountHtml = discount > 0
     ? `<div class="total-row" style="color:#16a34a"><span>Gutschein${order.voucher_code ? ` (${order.voucher_code})` : ''}</span><span>-${discount.toFixed(2)} €</span></div>`
     : ''
-  const tipHtml     = tip > 0 ? `<div class="total-row"><span>Trinkgeld</span><span>${tip.toFixed(2)} €</span></div>` : ''
-  const phoneHtml   = order.customer_phone ? `<div>${order.customer_phone}</div>` : ''
+  const tipHtml      = tip > 0 ? `<div class="total-row"><span>Trinkgeld</span><span>${tip.toFixed(2)} €</span></div>` : ''
+  const phoneHtml    = order.customer_phone ? `<div>${order.customer_phone}</div>` : ''
 
   const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
 <style>
@@ -350,7 +349,6 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
         </div>
         <div className="flex items-center gap-1.5 truncate">
           <MapPin size={11} className="text-gray-400 flex-shrink-0" />
-          {/* FIX: formatAddress verhindert [object Object] */}
           <span className="truncate text-gray-500">{formatAddress(order.delivery_address).split(',')[0]}</span>
         </div>
         <div className="flex items-center justify-between">
@@ -411,13 +409,13 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
 
 // ── Hauptseite ────────────────────────────────────────────────
 export default function KanbanPage() {
-  const [orders, setOrders]           = useState<Record<string, any[]>>({ OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] })
-  const [loading, setLoading]         = useState(true)
-  const [drivers, setDrivers]         = useState<any[]>([])
-  const [showAllDays, setShowAllDays] = useState(false)
+  const [orders, setOrders]             = useState<Record<string, any[]>>({ OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] })
+  const [loading, setLoading]           = useState(true)
+  const [drivers, setDrivers]           = useState<any[]>([])
+  const [showAllDays, setShowAllDays]   = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [soundVolume,  setSoundVolume]  = useState(1.0)
-  const [popupOrder, setPopupOrder]   = useState<any>(null)
+  const [soundVolume, setSoundVolume]   = useState(1.0)
+  const [popupOrder, setPopupOrder]     = useState<any>(null)
   const [rejectTarget, setRejectTarget] = useState<any>(null)
   const [newOrderBanner, setNewOrderBanner] = useState(false)
 
@@ -425,15 +423,14 @@ export default function KanbanPage() {
   const isFirstLoad = useRef(true)
   const popupQueue  = useRef<any[]>([])
 
-  // FIX: soundEnabled und showAllDays als Refs um Reload-Loop zu vermeiden
-  const soundRef     = useRef(soundEnabled)
-  const volumeRef    = useRef(soundVolume)
-  const showAllRef   = useRef(showAllDays)
-  const popupRef     = useRef(popupOrder)
-  useEffect(() => { soundRef.current = soundEnabled },   [soundEnabled])
-  useEffect(() => { volumeRef.current = soundVolume },  [soundVolume])
-  useEffect(() => { showAllRef.current = showAllDays },  [showAllDays])
-  useEffect(() => { popupRef.current  = popupOrder },    [popupOrder])
+  const soundRef   = useRef(soundEnabled)
+  const volumeRef  = useRef(soundVolume)
+  const showAllRef = useRef(showAllDays)
+  const popupRef   = useRef(popupOrder)
+  useEffect(() => { soundRef.current   = soundEnabled  }, [soundEnabled])
+  useEffect(() => { volumeRef.current  = soundVolume   }, [soundVolume])
+  useEffect(() => { showAllRef.current = showAllDays   }, [showAllDays])
+  useEffect(() => { popupRef.current   = popupOrder    }, [popupOrder])
 
   const loadOrders = useCallback(async () => {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
@@ -464,7 +461,7 @@ export default function KanbanPage() {
     data.forEach(o => { const s = o.status || 'OFFEN'; if (grouped[s]) grouped[s].push(o) })
     setOrders(grouped)
     setLoading(false)
-  }, []) // FIX: leeres dependency array – Refs werden stattdessen genutzt
+  }, [])
 
   useEffect(() => {
     loadOrders()
@@ -473,7 +470,6 @@ export default function KanbanPage() {
     return () => clearInterval(iv)
   }, [loadOrders])
 
-  // Neu laden wenn Filter wechselt
   useEffect(() => { loadOrders() }, [showAllDays, loadOrders])
 
   const loadDrivers = async () => {
@@ -545,7 +541,8 @@ export default function KanbanPage() {
   }
 
   const allOrders      = Object.values(orders).flat()
-  const todayTotal     = allOrders.filter(o => o.status === 'GELIEFERT').reduce((sum, o) => sum + (o.total || 0), 0)
+  // FIX: Gesamtsumme ohne Trinkgeld
+  const todayTotal     = allOrders.filter(o => o.status === 'GELIEFERT').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
   const deliveredCount = orders['GELIEFERT']?.length || 0
   const openCount      = orders['OFFEN']?.length || 0
 
@@ -582,7 +579,7 @@ export default function KanbanPage() {
             )}
             <div className="text-right">
               <div className="text-xl font-bold text-green-600">{todayTotal.toFixed(2)}€</div>
-              <div className="text-xs text-gray-400">{deliveredCount} geliefert heute</div>
+              <div className="text-xs text-gray-400">{deliveredCount} geliefert heute (ohne Trinkgeld)</div>
             </div>
             <button
               onClick={() => window.location.href = '/admin/reports'}

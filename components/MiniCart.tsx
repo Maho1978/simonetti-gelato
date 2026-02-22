@@ -51,7 +51,7 @@ export default function MiniCart({
         onClick={onClose}
       />
 
-      {/* Sidebar - SCHWEBEND */}
+      {/* Sidebar */}
       <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out"
            style={{ transform: isOpen ? 'translateX(0)' : 'translateX(100%)' }}>
         
@@ -120,7 +120,7 @@ export default function MiniCart({
                     </div>
                   )}
 
-                  {/* Anmerkungen Input */}
+                  {/* Anmerkungen Input – FIX: stopPropagation verhindert dass der Overlay-Click das Tippen blockiert */}
                   <div className="mb-3">
                     <label className="block text-xs font-semibold text-gray-600 mb-1">
                       💬 Anmerkungen (optional)
@@ -128,7 +128,13 @@ export default function MiniCart({
                     <input
                       type="text"
                       value={item.notes || ''}
-                      onChange={(e) => onUpdateNotes(item.cartId, e.target.value)}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        onUpdateNotes(item.cartId, e.target.value)
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
                       placeholder="z.B. weniger süß, extra kalt..."
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition"
                     />
