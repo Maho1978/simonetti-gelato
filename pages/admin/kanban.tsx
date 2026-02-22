@@ -537,7 +537,27 @@ export default function KanbanPage() {
     if (!driverId) return
     const order = orders['AN_FAHRER']?.find(o => o.id === orderId) || orders['IN_BEARBEITUNG']?.find(o => o.id === orderId)
     const ok = await apiUpdateOrder(orderId, { driver_id: driverId, status: 'AN_FAHRER', assigned_at: new Date().toISOString() })
-    if (ok) { if (order) await sendEmail('order_out_for_delivery', order); loadOrders() }
+    if (ok) {
+      if (order) await sendEmail('order_out_for_delivery', order)
+      // Push Notification senden
+      try {
+        const driver = drivers.find((d: any) => d.id === driverId)
+        if (driver?.push_token) {
+          await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: driver.push_token,
+              title: '🚗 Neue Lieferung!',
+              body: `Bestellung #${order?.order_number} · ${order?.customer_name}`,
+              data: { order_id: orderId },
+              sound: 'default',
+            }),
+          })
+        }
+      } catch (e) {}
+      loadOrders()
+    }
   }
 
   const allOrders      = Object.values(orders).flat()
