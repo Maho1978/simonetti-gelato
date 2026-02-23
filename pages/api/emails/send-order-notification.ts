@@ -432,7 +432,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!recipientEmail) return res.status(400).json({ error: 'No recipient email' })
 
     const { data, error } = await resend.emails.send({
-      from:    'Eiscafé Simonetti <bestellung@eiscafe-simonetti.de>',
+      from:    'Eiscafé Simonetti <from: 'Eiscafé Simonetti <onboarding@resend.dev>',>',
       to:      [recipientEmail],
       subject,
       html,
