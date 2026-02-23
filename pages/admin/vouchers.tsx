@@ -36,31 +36,34 @@ function VouchersContent() {
 
   useEffect(() => {
     checkAuth()
-    fetchVouchers()
   }, [])
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       router.push('/auth/login?redirect=/admin/vouchers')
+    } else {
+      fetchVouchers()
     }
   }
 
   const fetchVouchers = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('vouchers')
       .select('*')
       .order('created_at', { ascending: false })
 
+    if (error) {
+      console.error('Vouchers error:', error)
+      return
+    }
     if (data) setVouchers(data)
   }
 
   const generateCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     let code = ''
-    for (let i = 0; i < 8; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
+    for (let i = 0; i < 8; i++) code += chars.charAt(Math.floor(Math.random() * chars.length))
     setFormData({ ...formData, code })
   }
 
@@ -78,10 +81,7 @@ function VouchersContent() {
     }
 
     if (editingVoucher) {
-      await supabase
-        .from('vouchers')
-        .update(data)
-        .eq('id', editingVoucher.id)
+      await supabase.from('vouchers').update(data).eq('id', editingVoucher.id)
     } else {
       await supabase.from('vouchers').insert(data)
     }
@@ -157,12 +157,7 @@ function VouchersContent() {
           const isActive = voucher.is_active && !isExpired && !isExhausted
 
           return (
-            <div
-              key={voucher.id}
-              className={`bg-white rounded-2xl p-6 shadow-sm border-2 transition-all ${
-                isActive ? 'border-green-100' : 'border-gray-200 opacity-75'
-              }`}
-            >
+            <div key={voucher.id} className={`bg-white rounded-2xl p-6 shadow-sm border-2 transition-all ${isActive ? 'border-green-100' : 'border-gray-200 opacity-75'}`}>
               <div className="flex justify-between items-start mb-4">
                 <button
                   onClick={() => copyCode(voucher.code)}
@@ -172,12 +167,8 @@ function VouchersContent() {
                   {copied === voucher.code ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
                 </button>
                 <div className="flex gap-1">
-                  <button onClick={() => handleEdit(voucher)} className="p-2 hover:bg-gray-100 rounded-lg transition text-[#4a5d54]">
-                    <Edit2 size={16} />
-                  </button>
-                  <button onClick={() => handleDelete(voucher.id)} className="p-2 hover:bg-red-50 rounded-lg transition text-red-500">
-                    <Trash2 size={16} />
-                  </button>
+                  <button onClick={() => handleEdit(voucher)} className="p-2 hover:bg-gray-100 rounded-lg transition text-[#4a5d54]"><Edit2 size={16} /></button>
+                  <button onClick={() => handleDelete(voucher.id)} className="p-2 hover:bg-red-50 rounded-lg transition text-red-500"><Trash2 size={16} /></button>
                 </div>
               </div>
 
@@ -212,13 +203,11 @@ function VouchersContent() {
                   {isExpired && <span className="text-red-500">⏰ Abgelaufen</span>}
                   {isExhausted && <span className="text-orange-500">⚠️ Limit erreicht</span>}
                   {isActive && <span className="text-green-600">✅ Aktiv</span>}
-                  {!voucher.is_active && <span className="text-gray-400">⏸️ Pausiert</span>}
+                  {!voucher.is_active && !isExpired && !isExhausted && <span className="text-gray-400">⏸️ Pausiert</span>}
                 </div>
                 <button
                   onClick={() => toggleActive(voucher.id, voucher.is_active)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
-                    voucher.is_active ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
-                  }`}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${voucher.is_active ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}
                 >
                   {voucher.is_active ? 'Deaktivieren' : 'Aktivieren'}
                 </button>
@@ -227,6 +216,14 @@ function VouchersContent() {
           )
         })}
       </div>
+
+      {vouchers.length === 0 && (
+        <div className="text-center text-gray-400 py-20">
+          <div className="text-5xl mb-4">🎟️</div>
+          <p className="font-semibold">Noch keine Gutscheine</p>
+          <p className="text-sm mt-1">Erstelle deinen ersten Gutschein!</p>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -257,18 +254,12 @@ function VouchersContent() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, discount_type: 'percentage' })}
-                  className={`p-4 rounded-xl border-2 transition font-bold ${formData.discount_type === 'percentage' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}
-                >
+                <button type="button" onClick={() => setFormData({ ...formData, discount_type: 'percentage' })}
+                  className={`p-4 rounded-xl border-2 transition font-bold ${formData.discount_type === 'percentage' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}>
                   Prozent (%)
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, discount_type: 'fixed' })}
-                  className={`p-4 rounded-xl border-2 transition font-bold ${formData.discount_type === 'fixed' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}
-                >
+                <button type="button" onClick={() => setFormData({ ...formData, discount_type: 'fixed' })}
+                  className={`p-4 rounded-xl border-2 transition font-bold ${formData.discount_type === 'fixed' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}>
                   Festbetrag (€)
                 </button>
               </div>
@@ -276,51 +267,35 @@ function VouchersContent() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Wert</label>
-                  <input
-                    type="number"
-                    required
-                    value={formData.discount_value}
+                  <input type="number" required value={formData.discount_value}
                     onChange={e => setFormData({ ...formData, discount_value: parseFloat(e.target.value) })}
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]"
-                  />
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]" />
                 </div>
                 <div>
                   <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Mindestumsatz</label>
-                  <input
-                    type="number"
-                    value={formData.min_order_value}
+                  <input type="number" value={formData.min_order_value}
                     onChange={e => setFormData({ ...formData, min_order_value: parseFloat(e.target.value) })}
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]"
-                  />
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]" />
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Limit</label>
-                  <input
-                    type="number"
-                    required
-                    value={formData.max_uses}
+                  <input type="number" required value={formData.max_uses}
                     onChange={e => setFormData({ ...formData, max_uses: parseInt(e.target.value) })}
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]"
-                  />
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]" />
                 </div>
                 <div>
                   <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Ablaufdatum</label>
-                  <input
-                    type="date"
-                    value={formData.valid_until}
+                  <input type="date" value={formData.valid_until}
                     onChange={e => setFormData({ ...formData, valid_until: e.target.value })}
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]"
-                  />
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]" />
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-4 bg-[#4a5d54] text-white rounded-xl font-bold text-lg hover:opacity-90 transition shadow-lg"
-              >
+              <button type="submit"
+                className="w-full py-4 bg-[#4a5d54] text-white rounded-xl font-bold text-lg hover:opacity-90 transition shadow-lg">
                 {editingVoucher ? 'Änderungen speichern' : 'Gutschein aktivieren'}
               </button>
             </form>
