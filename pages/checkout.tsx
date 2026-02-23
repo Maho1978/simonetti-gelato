@@ -51,9 +51,12 @@ async function validateVoucher(
   if (subtotal < data.min_order_value)
     return { voucher: null, error: `Mindestbestellwert für diesen Gutschein: ${data.min_order_value.toFixed(2)} €` }
 
-  const discountAmount = data.discount_type === 'percentage'
+  const raw = data.discount_type === 'percentage'
     ? Math.min(subtotal * (data.discount_value / 100), subtotal)
     : Math.min(data.discount_value, subtotal)
+
+  // Auf 10 Cent runden (z.B. 2.75 → 2.80)
+  const discountAmount = Math.round(raw * 10) / 10
 
   return {
     voucher: {
