@@ -200,16 +200,16 @@ function VouchersContent() {
 
               <div className="flex items-center justify-between">
                 <div className="text-[10px] font-black uppercase tracking-tighter">
-                  {isExpired && <span className="text-red-500">⏰ Abgelaufen</span>}
+                  {isExpired  && <span className="text-red-500">⏰ Abgelaufen</span>}
                   {isExhausted && <span className="text-orange-500">⚠️ Limit erreicht</span>}
-                  {isActive && <span className="text-green-600">✅ Aktiv</span>}
+                  {isActive   && <span className="text-green-600">✅ Aktiv</span>}
                   {!voucher.is_active && !isExpired && !isExhausted && <span className="text-gray-400">⏸️ Pausiert</span>}
                 </div>
                 <button
                   onClick={() => toggleActive(voucher.id, voucher.is_active)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${voucher.is_active ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}
+                  className={`relative w-12 h-6 rounded-full transition-colors focus:outline-none ${voucher.is_active ? 'bg-green-500' : 'bg-gray-300'}`}
                 >
-                  {voucher.is_active ? 'Deaktivieren' : 'Aktivieren'}
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${voucher.is_active ? 'translate-x-6' : 'translate-x-0.5'}`} />
                 </button>
               </div>
             </div>
