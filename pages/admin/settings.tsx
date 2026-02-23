@@ -55,7 +55,6 @@ const DEFAULT_PAYMENT_KEYS = {
   }
 }
 
-// ── Feature-Definitionen ──────────────────────────────────────
 const FEATURE_DEFINITIONS = [
   {
     id:          'reviews',
@@ -70,7 +69,7 @@ const FEATURE_DEFINITIONS = [
     id:          'payment_paypal',
     icon:        '🅿️',
     label:       'PayPal',
-    description: 'PayPal als Zahlungsmethode im Checkout anzeigen. Voraussetzung: PayPal muss im Stripe-Dashboard unter Settings → Payment Methods aktiviert sein.',
+    description: 'PayPal als Zahlungsmethode im Checkout anzeigen.',
     adminLink:   '/admin/settings',
     adminLabel:  'Stripe-Keys konfigurieren →',
     comingSoon:  false,
@@ -79,7 +78,7 @@ const FEATURE_DEFINITIONS = [
     id:          'payment_klarna',
     icon:        '🛒',
     label:       'Klarna (Ratenkauf)',
-    description: 'Klarna als Zahlungsmethode im Checkout anzeigen. Voraussetzung: Klarna muss im Stripe-Dashboard aktiviert sein.',
+    description: 'Klarna als Zahlungsmethode im Checkout anzeigen.',
     adminLink:   null,
     adminLabel:  null,
     comingSoon:  false,
@@ -88,7 +87,7 @@ const FEATURE_DEFINITIONS = [
     id:          'loyalty',
     icon:        '🎁',
     label:       'Treueprogramm',
-    description: 'Jede 10. Bestellung gratis. Kunden sehen ihren Fortschritt im Kundenkonto.',
+    description: 'Jede 10. Bestellung gratis.',
     adminLink:   null,
     adminLabel:  null,
     comingSoon:  true,
@@ -97,7 +96,7 @@ const FEATURE_DEFINITIONS = [
     id:          'favorites',
     icon:        '❤️',
     label:       'Favoriten',
-    description: 'Kunden können Produkte als Favoriten speichern und schneller nachbestellen.',
+    description: 'Kunden können Produkte als Favoriten speichern.',
     adminLink:   null,
     adminLabel:  null,
     comingSoon:  true,
@@ -186,6 +185,7 @@ export default function SettingsPage() {
   const [emailSettings, setEmailSettings]           = useState<any>(DEFAULT_EMAIL_SETTINGS)
   const [emailSaving, setEmailSaving]               = useState(false)
   const [emailTestSending, setEmailTestSending]     = useState<string | null>(null)
+  const [testEmailAddress, setTestEmailAddress]     = useState('mahmutduran@hotmail.de')
   const [socialLinks, setSocialLinks]               = useState<any>(DEFAULT_SOCIAL)
   const [socialSaving, setSocialSaving]             = useState(false)
   const [paymentKeys, setPaymentKeys]               = useState<any>(DEFAULT_PAYMENT_KEYS)
@@ -197,8 +197,7 @@ export default function SettingsPage() {
     date: '', is_closed: true, custom_open: '14:00', custom_close: '22:00', label: '', notes: ''
   })
 
-  // ── Features State ──────────────────────────────────────────
-  const [features, setFeatures]       = useState<Record<string, boolean>>({})
+  const [features, setFeatures]           = useState<Record<string, boolean>>({})
   const [featuresSaving, setFeaturesSaving] = useState(false)
 
   useEffect(() => { loadSettings(); loadSpecialHours(); loadFeatures() }, [])
@@ -274,7 +273,6 @@ export default function SettingsPage() {
 
   const handleSaveFeatures = async () => {
     setFeaturesSaving(true)
-    // Jedes Feature einzeln upserten
     for (const def of FEATURE_DEFINITIONS) {
       if (!def.comingSoon) {
         await supabase.from('feature_toggles').upsert({
@@ -309,21 +307,25 @@ export default function SettingsPage() {
   }
 
   const sendTestEmail = async (typeKey: string) => {
+    if (!testEmailAddress.trim()) {
+      showToast('❌ Bitte Test-Email-Adresse eingeben')
+      return
+    }
     setEmailTestSending(typeKey)
     try {
       const testOrder = {
         id: 'test-123456', order_number: 'TEST', customer_name: 'Test Kunde',
-        customer_email: 'info@eiscafe-simonetti.de',
+        customer_email: testEmailAddress,
         delivery_address: 'Musterstraße 1, 40764 Langenfeld', total: 18.50,
         items: [{ quantity: 2, name: 'Gemischtes Eis', price: 6.50, selectedFlavors: ['Schokolade', 'Vanille'] }],
         payment_method: 'stripe'
       }
       const response = await fetch('/api/emails/send-order-notification', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: typeKey, order: testOrder, recipientEmail: 'info@eiscafe-simonetti.de' })
+        body: JSON.stringify({ type: typeKey, order: testOrder, recipientEmail: testEmailAddress })
       })
       const result = await response.json()
-      if (result.success) showToast('✅ Test-Email gesendet!')
+      if (result.success) showToast('✅ Test-Email gesendet an ' + testEmailAddress)
       else if (result.skipped) showToast('⚠️ Email ist deaktiviert')
       else showToast('❌ Fehler: ' + result.error)
     } catch (e) { showToast('❌ Fehler beim Senden') }
@@ -584,23 +586,19 @@ export default function SettingsPage() {
                     <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 mb-4 text-xs text-yellow-700">
                       ⚠️ <strong>Test-Modus:</strong> Keine echten Zahlungen. Testkarte: <code className="bg-yellow-100 px-1 rounded">4242 4242 4242 4242</code>
                     </div>
-                    <KeyField label="Test Publishable Key" value={stripe.test_public} onChange={v => updatePayment('stripe', 'test_public', v)} placeholder="pk_test_..." isSecret={false} help="Beginnt mit pk_test_ → Stripe Dashboard → Entwickler → API-Schlüssel" />
+                    <KeyField label="Test Publishable Key" value={stripe.test_public} onChange={v => updatePayment('stripe', 'test_public', v)} placeholder="pk_test_..." isSecret={false} help="Beginnt mit pk_test_" />
                     <KeyField label="Test Secret Key"      value={stripe.test_secret} onChange={v => updatePayment('stripe', 'test_secret', v)} placeholder="sk_test_..." isSecret={true}  help="Beginnt mit sk_test_ → niemals öffentlich teilen!" />
                   </>
                 ) : (
                   <>
                     <div className="bg-green-50 border border-green-100 rounded-xl p-3 mb-4 text-xs text-green-700">
-                      ✅ <strong>Live-Modus:</strong> Echte Zahlungen aktiv. Nur aktivieren wenn der Shop bereit ist!
+                      ✅ <strong>Live-Modus:</strong> Echte Zahlungen aktiv.
                     </div>
-                    <KeyField label="Live Publishable Key" value={stripe.live_public} onChange={v => updatePayment('stripe', 'live_public', v)} placeholder="pk_live_..." isSecret={false} help="Beginnt mit pk_live_ → Stripe Dashboard → Entwickler → API-Schlüssel" />
+                    <KeyField label="Live Publishable Key" value={stripe.live_public} onChange={v => updatePayment('stripe', 'live_public', v)} placeholder="pk_live_..." isSecret={false} help="Beginnt mit pk_live_" />
                     <KeyField label="Live Secret Key"      value={stripe.live_secret} onChange={v => updatePayment('stripe', 'live_secret', v)} placeholder="sk_live_..." isSecret={true}  help="Beginnt mit sk_live_ → niemals öffentlich teilen!" />
                   </>
                 )}
                 <KeyField label="Webhook Secret" value={stripe.webhook_secret} onChange={v => updatePayment('stripe', 'webhook_secret', v)} placeholder="whsec_..." isSecret={true} help="Stripe Dashboard → Entwickler → Webhooks → Signatur-Geheimnis" />
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 mt-2">
-                  📖 <strong>Wo finde ich die Keys?</strong><br />
-                  <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="underline font-semibold">dashboard.stripe.com</a> → Entwickler → API-Schlüssel
-                </div>
               </ProviderCard>
               <ProviderCard icon="🅿️" title="PayPal" badge="Code bereit" badgeColor="bg-blue-100 text-blue-700"
                 subtitle="PayPal Zahlungen – einfach Keys eintragen und aktivieren"
@@ -615,27 +613,19 @@ export default function SettingsPage() {
                 </div>
                 {paypal.mode === 'sandbox' ? (
                   <>
-                    <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 mb-4 text-xs text-yellow-700">⚠️ <strong>Sandbox:</strong> Nur Testmodus – keine echten Zahlungen.</div>
-                    <KeyField label="Sandbox Client ID"     value={paypal.sandbox_client_id}     onChange={v => updatePayment('paypal', 'sandbox_client_id', v)}     placeholder="AXxx..." isSecret={false} help="PayPal Developer Dashboard → Apps → Sandbox → Client ID" />
-                    <KeyField label="Sandbox Client Secret" value={paypal.sandbox_client_secret} onChange={v => updatePayment('paypal', 'sandbox_client_secret', v)} placeholder="EXxx..." isSecret={true}  help="PayPal Developer Dashboard → Apps → Sandbox → Secret" />
+                    <KeyField label="Sandbox Client ID"     value={paypal.sandbox_client_id}     onChange={v => updatePayment('paypal', 'sandbox_client_id', v)}     placeholder="AXxx..." isSecret={false} />
+                    <KeyField label="Sandbox Client Secret" value={paypal.sandbox_client_secret} onChange={v => updatePayment('paypal', 'sandbox_client_secret', v)} placeholder="EXxx..." isSecret={true} />
                   </>
                 ) : (
                   <>
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4 text-xs text-blue-700">✅ <strong>Live-Modus:</strong> Echte PayPal-Zahlungen aktiv.</div>
-                    <KeyField label="Live Client ID"     value={paypal.live_client_id}     onChange={v => updatePayment('paypal', 'live_client_id', v)}     placeholder="AXxx..." isSecret={false} help="PayPal Developer Dashboard → Apps → Live → Client ID" />
-                    <KeyField label="Live Client Secret" value={paypal.live_client_secret} onChange={v => updatePayment('paypal', 'live_client_secret', v)} placeholder="EXxx..." isSecret={true}  help="PayPal Developer Dashboard → Apps → Live → Secret" />
+                    <KeyField label="Live Client ID"     value={paypal.live_client_id}     onChange={v => updatePayment('paypal', 'live_client_id', v)}     placeholder="AXxx..." isSecret={false} />
+                    <KeyField label="Live Client Secret" value={paypal.live_client_secret} onChange={v => updatePayment('paypal', 'live_client_secret', v)} placeholder="EXxx..." isSecret={true} />
                   </>
                 )}
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 mt-2">
-                  📖 <a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noopener noreferrer" className="underline font-semibold">developer.paypal.com</a> → My Apps → App auswählen → Credentials
-                </div>
               </ProviderCard>
-              <ProviderCard icon="🇩🇪" title="Wero" isComingSoon subtitle="Deutsche P2P-Zahlungsmethode (Deutsche Bank, Commerzbank, Sparkasse etc.)">
+              <ProviderCard icon="🇩🇪" title="Wero" isComingSoon subtitle="Deutsche P2P-Zahlungsmethode">
                 <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500">{wero.note}</div>
               </ProviderCard>
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-700">
-                <strong>⚠️ Wichtig:</strong> Nach dem Speichern hier müssen die Keys auch in der <code className="bg-amber-100 px-1 rounded">.env.local</code> Datei auf dem Server aktualisiert werden.
-              </div>
               <button onClick={handleSavePayment} disabled={paymentSaving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{paymentSaving ? 'Speichert...' : 'Zahlungs-Keys speichern'}
@@ -652,6 +642,20 @@ export default function SettingsPage() {
                   Variablen: <code className="bg-gray-100 px-1 rounded text-xs">#{'{orderNumber}'}</code> <code className="bg-gray-100 px-1 rounded text-xs">#{'{customerName}'}</code> <code className="bg-gray-100 px-1 rounded text-xs">#{'{total}'}</code>
                 </p>
               </div>
+
+              {/* Test-Email Adresse */}
+              <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                <label className="block text-sm font-bold text-blue-800 mb-2">📧 Test-Email senden an:</label>
+                <input
+                  type="email"
+                  value={testEmailAddress}
+                  onChange={e => setTestEmailAddress(e.target.value)}
+                  className="w-full px-4 py-2.5 border-2 border-blue-200 rounded-xl text-sm focus:border-blue-500 focus:outline-none bg-white"
+                  placeholder="deine@email.de"
+                />
+                <p className="text-xs text-blue-600 mt-1.5">Diese Adresse wird für alle Test-Emails verwendet.</p>
+              </div>
+
               {EMAIL_TYPES.map((emailType) => {
                 const typeSetting = emailSettings[emailType.key] || {}
                 const isEnabled = emailType.alwaysOn || typeSetting.enabled !== false
@@ -686,7 +690,7 @@ export default function SettingsPage() {
                     </div>
                     <button onClick={() => sendTestEmail(emailType.key)} disabled={emailTestSending === emailType.key}
                       className="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold hover:border-black transition disabled:opacity-50">
-                      <Mail size={15} />{emailTestSending === emailType.key ? 'Sendet...' : 'Test-Email senden'}
+                      <Mail size={15} />{emailTestSending === emailType.key ? 'Sendet...' : `Test senden → ${testEmailAddress}`}
                     </button>
                   </div>
                 )
@@ -748,7 +752,6 @@ export default function SettingsPage() {
                 <h2 className="text-2xl font-bold flex items-center gap-2"><Zap size={24} /> Features</h2>
                 <p className="text-gray-500 text-sm mt-1">Optionale Funktionen aktivieren oder deaktivieren.</p>
               </div>
-
               <div className="space-y-3">
                 {FEATURE_DEFINITIONS.map(feature => {
                   const isEnabled = features[feature.id] ?? false
@@ -761,26 +764,19 @@ export default function SettingsPage() {
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-bold text-gray-900">{feature.label}</span>
-                              {feature.comingSoon && (
-                                <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-semibold">Bald verfügbar</span>
-                              )}
-                              {!feature.comingSoon && isEnabled && (
-                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✅ Aktiv</span>
-                              )}
+                              {feature.comingSoon && <span className="text-xs bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-semibold">Bald verfügbar</span>}
+                              {!feature.comingSoon && isEnabled && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✅ Aktiv</span>}
                             </div>
                             <p className="text-sm text-gray-400">{feature.description}</p>
                             {feature.adminLink && isEnabled && (
-                              <a href={feature.adminLink}
-                                className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-800 font-semibold">
+                              <a href={feature.adminLink} className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-800 font-semibold">
                                 <ExternalLink size={12} /> {feature.adminLabel}
                               </a>
                             )}
                           </div>
                         </div>
-
                         {!feature.comingSoon && (
-                          <button
-                            onClick={() => setFeatures(prev => ({ ...prev, [feature.id]: !isEnabled }))}
+                          <button onClick={() => setFeatures(prev => ({ ...prev, [feature.id]: !isEnabled }))}
                             className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors ${isEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
                             <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
                           </button>
@@ -790,7 +786,6 @@ export default function SettingsPage() {
                   )
                 })}
               </div>
-
               <button onClick={handleSaveFeatures} disabled={featuresSaving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{featuresSaving ? 'Speichert...' : 'Features speichern'}
