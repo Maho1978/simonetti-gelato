@@ -379,6 +379,10 @@ export default function Checkout({ session }: { session: Session | null }) {
             <h2 className="text-2xl font-bold text-red-800 mb-2">Shop momentan geschlossen</h2>
             <p className="text-red-600">{shopMessage || 'Wir nehmen gerade keine Bestellungen an.'}</p>
             <p className="text-sm text-red-400 mt-2">Bitte schau zu unseren Öffnungszeiten wieder vorbei!</p>
+            <button onClick={() => router.push('/')}
+              className="mt-6 px-6 py-3 bg-white border-2 border-red-200 text-red-700 font-semibold rounded-xl hover:bg-red-100 transition">
+              ← Zurück zum Shop
+            </button>
           </div>
         )}
 
