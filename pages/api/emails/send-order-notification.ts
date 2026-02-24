@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-const SibApiV3Sdk = require('@brevo/node')
+const SibApiV3Sdk = require('@getbrevo/brevo')
 
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi()
 apiInstance.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY)
