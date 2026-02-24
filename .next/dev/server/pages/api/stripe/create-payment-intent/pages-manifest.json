@@ -1,3 +1,0 @@
-{
-  "/api/stripe/create-payment-intent": "pages/api/stripe/create-payment-intent.js"
-}
