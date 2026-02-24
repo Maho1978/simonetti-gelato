@@ -4,6 +4,7 @@ import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import Navbar from '@/components/Navbar'
 import { AlertCircle, Tag, X, Check, Loader2, MapPin, CreditCard, User } from 'lucide-react'
 import { searchStreets, type Street } from '@/lib/langenfeld-streets'
@@ -55,7 +56,6 @@ async function validateVoucher(
     ? Math.min(subtotal * (data.discount_value / 100), subtotal)
     : Math.min(data.discount_value, subtotal)
 
-  // Auf 10 Cent runden (z.B. 2.75 → 2.80)
   const discountAmount = Math.round(raw * 10) / 10
 
   return {
@@ -70,15 +70,8 @@ async function validateVoucher(
   }
 }
 
-// ── Schönes Input-Feld ────────────────────────────────────────
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string
-  required?: boolean
-  children: React.ReactNode
+function Field({ label, required, children }: {
+  label: string; required?: boolean; children: React.ReactNode
 }) {
   return (
     <div className="space-y-1.5">
@@ -91,11 +84,9 @@ function Field({
   )
 }
 
-// Gemeinsame Input-Klasse
 const inputClass =
   'w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 transition-all duration-200 outline-none focus:border-gray-900 focus:ring-4 focus:ring-gray-900/8'
 
-// ── Gutschein-Widget ──────────────────────────────────────────
 function VoucherInput({ subtotal, onApply }: {
   subtotal: number
   onApply: (v: AppliedVoucher | null) => void
@@ -172,13 +163,12 @@ function VoucherInput({ subtotal, onApply }: {
   )
 }
 
-// ── Trinkgeld-Widget ──────────────────────────────────────────
 function TipSelector({ subtotal, onTipChange }: {
   subtotal: number
   onTipChange: (amount: number) => void
 }) {
-  const [selected, setSelected]   = useState<number>(0)
-  const [custom, setCustom]       = useState('')
+  const [selected, setSelected]     = useState<number>(0)
+  const [custom, setCustom]         = useState('')
   const [showCustom, setShowCustom] = useState(false)
 
   const handleSelect = (pct: number) => {
@@ -196,42 +186,29 @@ function TipSelector({ subtotal, onTipChange }: {
       <h3 className="font-semibold text-base mb-3">Trinkgeld 🙏</h3>
       <div className="grid grid-cols-5 gap-2 mb-2">
         {TIP_OPTIONS.map(pct => (
-          <button
-            key={pct}
-            type="button"
-            onClick={() => handleSelect(pct)}
+          <button key={pct} type="button" onClick={() => handleSelect(pct)}
             className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
               selected === pct && !showCustom
                 ? 'border-gray-900 bg-gray-900 text-white shadow-sm'
                 : 'border-gray-200 text-gray-600 hover:border-gray-400 bg-white'
-            }`}
-          >
+            }`}>
             {pct === 0 ? 'Kein' : `${pct}%`}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => { setShowCustom(true); setSelected(-1) }}
+        <button type="button" onClick={() => { setShowCustom(true); setSelected(-1) }}
           className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
             showCustom
               ? 'border-gray-900 bg-gray-900 text-white shadow-sm'
               : 'border-gray-200 text-gray-600 hover:border-gray-400 bg-white'
-          }`}
-        >
+          }`}>
           ✏️
         </button>
       </div>
       {showCustom && (
         <div className="flex items-center gap-2 mt-2">
-          <input
-            type="number"
-            min="0"
-            step="0.50"
-            value={custom}
+          <input type="number" min="0" step="0.50" value={custom}
             onChange={e => handleCustom(e.target.value)}
-            placeholder="Betrag in €"
-            className={inputClass}
-          />
+            placeholder="Betrag in €" className={inputClass} />
           <span className="text-sm text-gray-500 font-semibold">€</span>
         </div>
       )}
@@ -250,14 +227,25 @@ export default function Checkout({ session }: { session: Session | null }) {
   const { guest } = router.query
   const isGuest = guest === 'true'
 
-  const [cart, setCart]                     = useState<CartItem[]>([])
-  const [clientSecret, setClientSecret]     = useState('')
-  const [shopOpen, setShopOpen]             = useState<boolean | null>(null)
-  const [shopMessage, setShopMessage]       = useState('')
-  const [voucher, setVoucher]               = useState<AppliedVoucher | null>(null)
-  const [tip, setTip]                       = useState(0)
-  const [showVoucher, setShowVoucher]       = useState(true)
-  const [showTip, setShowTip]               = useState(true)
+  const [cart, setCart]                 = useState<CartItem[]>([])
+  const [clientSecret, setClientSecret] = useState('')
+  const [shopOpen, setShopOpen]         = useState<boolean | null>(null)
+  const [shopMessage, setShopMessage]   = useState('')
+  const [voucher, setVoucher]           = useState<AppliedVoucher | null>(null)
+  const [tip, setTip]                   = useState(0)
+  const [showVoucher, setShowVoucher]   = useState(true)
+  const [showTip, setShowTip]           = useState(true)
+  const [showPayPal, setShowPayPal]     = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
+
+  // Lieferdaten State (geteilt zwischen Stripe und PayPal)
+  const [name,   setName]   = useState('')
+  const [email,  setEmail]  = useState(session?.user?.email || '')
+  const [phone,  setPhone]  = useState('')
+  const [street, setStreet] = useState('')
+  const [zip,    setZip]    = useState('40764')
+  const [city,   setCity]   = useState('Langenfeld')
+  const [notes,  setNotes]  = useState('')
 
   useEffect(() => {
     fetch('/api/shop-status')
@@ -265,18 +253,18 @@ export default function Checkout({ session }: { session: Session | null }) {
       .then(data => { setShopOpen(data.isOpen); setShopMessage(data.message || '') })
       .catch(() => setShopOpen(true))
 
-    // Feature-Toggles laden
     supabase
       .from('feature_toggles')
       .select('id, enabled')
-      .in('id', ['vouchers', 'tip_option'])
+      .in('id', ['vouchers', 'tip_option', 'payment_paypal'])
       .then(({ data }) => {
         if (data) {
           const v = data.find(f => f.id === 'vouchers')
           const t = data.find(f => f.id === 'tip_option')
-          // Fallback: wenn kein Eintrag in DB → true (sichtbar)
+          const p = data.find(f => f.id === 'payment_paypal')
           setShowVoucher(v ? v.enabled : true)
           setShowTip(t ? t.enabled : true)
+          setShowPayPal(p ? p.enabled : false)
         }
       })
 
@@ -309,7 +297,6 @@ export default function Checkout({ session }: { session: Session | null }) {
         body: JSON.stringify({
           amount:   total,
           metadata: {
-            items:        JSON.stringify(cartItems),
             voucher_code: appliedVoucher?.code || null,
             voucher_id:   appliedVoucher?.id   || null,
             discount:     disc,
@@ -334,25 +321,58 @@ export default function Checkout({ session }: { session: Session | null }) {
     createPaymentIntent(cart, voucher, amount)
   }
 
+  // Bestellung in DB speichern (für PayPal)
+  const saveOrder = async (paymentId: string, method: string) => {
+    const orderData = {
+      user_id:          session?.user?.id || null,
+      guest_email:      isGuest ? email : null,
+      customer_name:    name,
+      customer_email:   isGuest ? email : session?.user?.email,
+      customer_phone:   phone || null,
+      items:            cart,
+      subtotal,
+      discount:         voucher?.discountAmount || 0,
+      voucher_code:     voucher?.code || null,
+      voucher_id:       voucher?.id   || null,
+      delivery_fee:     3.00,
+      tip,
+      total:            grandTotal,
+      delivery_address: { name, street, zip, city },
+      notes:            notes || null,
+      payment_intent_id: paymentId,
+      payment_method:   method,
+      status:           'OFFEN',
+    }
+    await fetch('/api/orders', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(orderData),
+    })
+    if (voucher?.id) {
+      await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
+    }
+    localStorage.removeItem('simonetti-cart')
+    localStorage.removeItem('cart')
+    router.push('/order-success')
+  }
+
+  const isFormValid = name.trim() && phone.trim() && street.trim() && (!isGuest || email.trim())
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar session={session} cartCount={0} onCartClick={() => {}} />
 
       <div className="max-w-6xl mx-auto px-4 py-10">
 
-        {/* Header */}
         <div className="mb-8">
-          <button
-            onClick={() => router.push('/')}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition mb-4 font-medium"
-          >
+          <button onClick={() => router.push('/')}
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition mb-4 font-medium">
             ← Zurück zum Shop
           </button>
           <h1 className="text-4xl font-bold text-gray-900">Deine Bestellung</h1>
           <p className="text-gray-400 mt-1 text-sm">Nur noch wenige Schritte bis zu deinem Eis 🍦</p>
         </div>
 
-        {/* Shop geschlossen */}
         {shopOpen === false && (
           <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-10 text-center mb-8">
             <div className="text-6xl mb-4">🔒</div>
@@ -365,20 +385,17 @@ export default function Checkout({ session }: { session: Session | null }) {
         {shopOpen !== false && (
           <div className="grid lg:grid-cols-11 gap-6">
 
-            {/* ── Links (3/5): Übersicht + Gutschein + Trinkgeld ── */}
+            {/* ── Links: Übersicht + Gutschein + Trinkgeld ── */}
             <div className="lg:col-span-6 space-y-5">
 
               {/* Bestellübersicht */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-5">
-                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    🍦 Bestellübersicht
-                  </h2>
+                  <h2 className="text-lg font-bold text-gray-900">🍦 Bestellübersicht</h2>
                   <span className="text-xs text-gray-400 font-medium bg-gray-100 px-2.5 py-1 rounded-full">
                     {cart.length} Artikel
                   </span>
                 </div>
-
                 <div className="divide-y divide-gray-100">
                   {cart.map((item, i) => (
                     <div key={i} className="py-3.5 flex justify-between items-start">
@@ -390,14 +407,10 @@ export default function Checkout({ session }: { session: Session | null }) {
                           <span className="font-semibold text-gray-800 text-sm">{item.name}</span>
                         </div>
                         {item.selectedFlavors && item.selectedFlavors.length > 0 && (
-                          <p className="text-xs text-gray-400 mt-1 ml-8">
-                            🍦 {item.selectedFlavors.join(', ')}
-                          </p>
+                          <p className="text-xs text-gray-400 mt-1 ml-8">🍦 {item.selectedFlavors.join(', ')}</p>
                         )}
                         {item.selectedExtras && item.selectedExtras.length > 0 && (
-                          <p className="text-xs text-gray-400 ml-8">
-                            ➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}
-                          </p>
+                          <p className="text-xs text-gray-400 ml-8">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</p>
                         )}
                       </div>
                       <span className="font-bold text-gray-900 ml-4 text-sm">
@@ -406,12 +419,9 @@ export default function Checkout({ session }: { session: Session | null }) {
                     </div>
                   ))}
                 </div>
-
-                {/* Preiszeilen */}
                 <div className="mt-5 pt-4 border-t border-gray-100 space-y-2.5">
                   <div className="flex justify-between text-sm text-gray-500">
-                    <span>Zwischensumme</span>
-                    <span>{subtotal.toFixed(2)} €</span>
+                    <span>Zwischensumme</span><span>{subtotal.toFixed(2)} €</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-sm font-semibold text-green-600">
@@ -420,13 +430,11 @@ export default function Checkout({ session }: { session: Session | null }) {
                     </div>
                   )}
                   <div className="flex justify-between text-sm text-gray-500">
-                    <span>🚗 Liefergebühr</span>
-                    <span>{DELIVERY_FEE.toFixed(2)} €</span>
+                    <span>🚗 Liefergebühr</span><span>{DELIVERY_FEE.toFixed(2)} €</span>
                   </div>
                   {tip > 0 && (
                     <div className="flex justify-between text-sm text-gray-500">
-                      <span>💝 Trinkgeld</span>
-                      <span>{tip.toFixed(2)} €</span>
+                      <span>💝 Trinkgeld</span><span>{tip.toFixed(2)} €</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-xl pt-3 border-t border-gray-200">
@@ -436,14 +444,11 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
               </div>
 
-              {/* Gutschein + Trinkgeld – nur wenn Feature aktiv */}
               {(showVoucher || showTip) && (
                 <div className={`grid grid-cols-1 ${showVoucher && showTip ? 'sm:grid-cols-2' : ''} gap-4`}>
                   {showVoucher && (
                     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                      <h3 className="font-bold text-sm mb-3 text-gray-700 flex items-center gap-2">
-                        🎟️ Gutscheincode
-                      </h3>
+                      <h3 className="font-bold text-sm mb-3 text-gray-700">🎟️ Gutscheincode</h3>
                       <VoucherInput subtotal={subtotal} onApply={handleVoucherApply} />
                     </div>
                   )}
@@ -456,38 +461,168 @@ export default function Checkout({ session }: { session: Session | null }) {
               )}
             </div>
 
-            {/* ── Rechts (2/5): Checkout-Formular ── */}
+            {/* ── Rechts: Checkout-Formular ── */}
             <div className="lg:col-span-5">
-              <div className="sticky top-6">
-                {clientSecret ? (
-                  <Elements
-                    stripe={stripePromise}
-                    options={{
-                      clientSecret,
-                      appearance: {
-                        theme: 'stripe',
-                        variables: { colorPrimary: '#111827', borderRadius: '12px' },
-                      },
-                    }}
-                  >
-                    <CheckoutForm
-                      session={session}
-                      isGuest={isGuest}
-                      cart={cart}
-                      total={grandTotal}
-                      subtotal={subtotal}
-                      shopOpen={shopOpen}
-                      minimumOrder={MINIMUM_ORDER}
-                      voucher={voucher}
-                      tip={tip}
-                    />
-                  </Elements>
-                ) : (
-                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm text-center py-16">
-                    <div className="text-5xl mb-3 animate-pulse">🍦</div>
-                    <p className="text-sm text-gray-400">Zahlung wird vorbereitet...</p>
+              <div className="sticky top-6 space-y-4">
+
+                {/* Lieferdaten (immer sichtbar) */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 space-y-4">
+                  <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
+                    <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white">
+                      <User size={18} />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-gray-900">Lieferadresse</h2>
+                      <p className="text-xs text-gray-400">Bitte alle Felder ausfüllen</p>
+                    </div>
+                  </div>
+
+                  <Field label="Vollständiger Name" required>
+                    <input type="text" value={name} onChange={e => setName(e.target.value)}
+                      required placeholder="Max Mustermann" className={inputClass} />
+                  </Field>
+
+                  {isGuest && (
+                    <Field label="E-Mail" required>
+                      <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                        required placeholder="max@email.de" className={inputClass} />
+                    </Field>
+                  )}
+
+                  <Field label="Telefonnummer" required>
+                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                      required placeholder="+49 170 1234567" className={inputClass} />
+                  </Field>
+
+                  <Field label="Straße & Hausnummer" required>
+                    <StreetInput street={street} setStreet={setStreet} inputClass={inputClass} />
+                  </Field>
+
+                  <div className="grid grid-cols-5 gap-3">
+                    <div className="col-span-2">
+                      <Field label="PLZ" required>
+                        <input type="text" value={zip} readOnly
+                          className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`} />
+                      </Field>
+                    </div>
+                    <div className="col-span-3">
+                      <Field label="Stadt" required>
+                        <input type="text" value={city} readOnly
+                          className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`} />
+                      </Field>
+                    </div>
+                  </div>
+
+                  <Field label="Anmerkungen">
+                    <textarea value={notes} onChange={e => setNotes(e.target.value)}
+                      rows={2} placeholder="z.B. Klingel defekt, 2. Stock links..."
+                      className={`${inputClass} resize-none`} />
+                  </Field>
+                </div>
+
+                {/* Mindestbestellwert */}
+                {subtotal < MINIMUM_ORDER && (
+                  <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-3 text-sm text-amber-700 flex items-center gap-2">
+                    <AlertCircle size={15} />
+                    <span>Mindestbestellwert <b>{MINIMUM_ORDER.toFixed(2)} €</b> – noch <b>{(MINIMUM_ORDER - subtotal).toFixed(2)} €</b> fehlen</span>
                   </div>
                 )}
+
+                {/* Zahlungsmethode wählen */}
+                {subtotal >= MINIMUM_ORDER && (
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
+                      <CreditCard size={13} /> Zahlungsmethode
+                    </div>
+
+                    {/* Tab-Auswahl */}
+                    <div className={`grid gap-2 ${showPayPal ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      <button type="button" onClick={() => setPaymentMethod('stripe')}
+                        className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
+                          paymentMethod === 'stripe'
+                            ? 'border-gray-900 bg-gray-900 text-white'
+                            : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                        }`}>
+                        💳 Karte / SEPA
+                      </button>
+                      {showPayPal && (
+                        <button type="button" onClick={() => setPaymentMethod('paypal')}
+                          className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
+                            paymentMethod === 'paypal'
+                              ? 'border-blue-600 bg-blue-600 text-white'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                          }`}>
+                          🅿️ PayPal
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Stripe */}
+                    {paymentMethod === 'stripe' && clientSecret && (
+                      <Elements stripe={stripePromise} options={{
+                        clientSecret,
+                        appearance: { theme: 'stripe', variables: { colorPrimary: '#111827', borderRadius: '12px' } },
+                      }}>
+                        <StripeForm
+                          session={session} isGuest={isGuest} cart={cart}
+                          total={grandTotal} subtotal={subtotal} shopOpen={shopOpen}
+                          minimumOrder={MINIMUM_ORDER} voucher={voucher} tip={tip}
+                          name={name} email={email} phone={phone}
+                          street={street} zip={zip} city={city} notes={notes}
+                        />
+                      </Elements>
+                    )}
+
+                    {paymentMethod === 'stripe' && !clientSecret && (
+                      <div className="text-center py-8">
+                        <div className="text-4xl mb-2 animate-pulse">🍦</div>
+                        <p className="text-sm text-gray-400">Zahlung wird vorbereitet...</p>
+                      </div>
+                    )}
+
+                    {/* PayPal */}
+                    {paymentMethod === 'paypal' && showPayPal && (
+                      <PayPalScriptProvider options={{
+                        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
+                        currency: 'EUR',
+                      }}>
+                        <div className="space-y-3">
+                          {!isFormValid && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                              ⚠️ Bitte zuerst alle Pflichtfelder ausfüllen (Name, Telefon, Straße)
+                            </div>
+                          )}
+                          <div className={!isFormValid ? 'opacity-40 pointer-events-none' : ''}>
+                            <PayPalButtons
+                              style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' }}
+                              disabled={!isFormValid}
+                              createOrder={(_data, actions) => {
+                                return actions.order.create({
+                                  intent: 'CAPTURE',
+                                  purchase_units: [{
+                                    amount: {
+                                      currency_code: 'EUR',
+                                      value: grandTotal.toFixed(2),
+                                    },
+                                    description: `Eiscafe Simonetti Bestellung`,
+                                  }],
+                                })
+                              }}
+                              onApprove={async (_data, actions) => {
+                                const order = await actions.order!.capture()
+                                await saveOrder(order.id || 'paypal-' + Date.now(), 'paypal')
+                              }}
+                              onError={(err) => {
+                                console.error('PayPal error:', err)
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </PayPalScriptProvider>
+                    )}
+                  </div>
+                )}
+
               </div>
             </div>
 
@@ -498,35 +633,56 @@ export default function Checkout({ session }: { session: Session | null }) {
   )
 }
 
-// ── Checkout Formular ─────────────────────────────────────────
-function CheckoutForm({
-  session, isGuest, cart, total, subtotal, shopOpen, minimumOrder, voucher, tip
+// ── Straßen-Input ausgelagert ─────────────────────────────────
+function StreetInput({ street, setStreet, inputClass }: {
+  street: string
+  setStreet: (v: string) => void
+  inputClass: string
+}) {
+  const [suggestions, setSuggestions] = useState<Street[]>([])
+  const [show, setShow]               = useState(false)
+
+  return (
+    <div className="relative">
+      <input type="text" value={street}
+        onChange={e => { setStreet(e.target.value); setSuggestions(searchStreets(e.target.value)); setShow(true) }}
+        onBlur={() => setTimeout(() => setShow(false), 150)}
+        onFocus={() => street.length >= 2 && setShow(true)}
+        required placeholder="z.B. Hauptstraße 5"
+        className={inputClass} autoComplete="off" />
+      {show && suggestions.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-xl shadow-lg overflow-hidden">
+          {suggestions.map((s, i) => (
+            <button key={i} type="button" onMouseDown={() => { setStreet(s.name + ' '); setShow(false) }}
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition flex items-center gap-2">
+              <MapPin size={13} className="text-gray-400 flex-shrink-0" />
+              <span className="font-medium text-gray-800">{s.name}</span>
+              {s.district && <span className="text-xs text-gray-400 ml-auto">{s.district}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Stripe Formular ───────────────────────────────────────────
+function StripeForm({
+  session, isGuest, cart, total, subtotal, shopOpen, minimumOrder, voucher, tip,
+  name, email, phone, street, zip, city, notes
 }: {
-  session: Session | null
-  isGuest: boolean
-  cart: CartItem[]
-  total: number
-  subtotal: number
-  shopOpen: boolean | null
-  minimumOrder: number
-  voucher: AppliedVoucher | null
-  tip: number
+  session: Session | null; isGuest: boolean; cart: CartItem[]
+  total: number; subtotal: number; shopOpen: boolean | null
+  minimumOrder: number; voucher: AppliedVoucher | null; tip: number
+  name: string; email: string; phone: string
+  street: string; zip: string; city: string; notes: string
 }) {
   const stripe   = useStripe()
   const elements = useElements()
   const router   = useRouter()
 
-  const [name,    setName]    = useState('')
-  const [email,   setEmail]   = useState(session?.user?.email || '')
-  const [phone,   setPhone]   = useState('')
-  const [street,  setStreet]       = useState('')
-  const [zip,     setZip]          = useState('40764')
-  const [city,    setCity]         = useState('Langenfeld')
-  const [streetSuggestions, setStreetSuggestions] = useState<Street[]>([])
-  const [showSuggestions,   setShowSuggestions]   = useState(false)
-  const [notes,   setNotes]   = useState('')
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
+  const [error, setError]     = useState('')
 
   const isBlocked = shopOpen === false || subtotal < minimumOrder
 
@@ -543,8 +699,7 @@ function CheckoutForm({
 
     try {
       const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        redirect: 'if_required',
+        elements, redirect: 'if_required',
       })
       if (stripeError) throw new Error(stripeError.message)
 
@@ -553,29 +708,29 @@ function CheckoutForm({
       }
 
       const orderData = {
-        user_id:           session?.user?.id || null,
-        guest_email:       isGuest ? email : null,
-        customer_name:     name,
-        customer_email:    isGuest ? email : session?.user?.email,
-        customer_phone:    phone || null,
-        items:             cart,
+        user_id:          session?.user?.id || null,
+        guest_email:      isGuest ? email : null,
+        customer_name:    name,
+        customer_email:   isGuest ? email : session?.user?.email,
+        customer_phone:   phone || null,
+        items:            cart,
         subtotal,
-        discount:          voucher?.discountAmount || 0,
-        voucher_code:      voucher?.code || null,
-        voucher_id:        voucher?.id   || null,
-        delivery_fee:      3.00,
+        discount:         voucher?.discountAmount || 0,
+        voucher_code:     voucher?.code || null,
+        voucher_id:       voucher?.id   || null,
+        delivery_fee:     3.00,
         tip,
         total,
-        delivery_address:  { name, street, zip, city },
-        notes:             notes || null,
+        delivery_address: { name, street, zip, city },
+        notes:            notes || null,
         payment_intent_id: paymentIntent?.id,
-        status:            'OFFEN',
+        payment_method:   'stripe',
+        status:           'OFFEN',
       }
 
       await fetch('/api/orders', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(orderData),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
       })
 
       localStorage.removeItem('simonetti-cart')
@@ -590,188 +745,26 @@ function CheckoutForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 space-y-6">
-
-      {/* Form Header */}
-      <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-        <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white">
-          <User size={18} />
-        </div>
-        <div>
-          <h2 className="font-bold text-gray-900">{isGuest ? 'Gast-Checkout' : 'Zahlung & Lieferung'}</h2>
-          <p className="text-xs text-gray-400">Sicher verschlüsselt via Stripe 🔒</p>
-        </div>
-      </div>
-
-      {/* Fehler */}
+    <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm">
           <AlertCircle size={16} /> {error}
         </div>
       )}
-
-      {/* Lieferadresse */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
-          <MapPin size={13} /> Lieferadresse
-        </div>
-
-        <Field label="Vollständiger Name" required>
-          <input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            required
-            placeholder="Max Mustermann"
-            className={inputClass}
-          />
-        </Field>
-
-        {isGuest && (
-          <Field label="E-Mail" required>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              placeholder="max@email.de"
-              className={inputClass}
-            />
-          </Field>
-        )}
-
-        <Field label="Telefonnummer" required>
-          <input
-            type="tel"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            required
-            placeholder="+49 170 1234567"
-            className={inputClass}
-          />
-        </Field>
-
-        <Field label="Straße & Hausnummer" required>
-          <div className="relative">
-            <input
-              type="text"
-              value={street}
-              onChange={e => {
-                setStreet(e.target.value)
-                setStreetSuggestions(searchStreets(e.target.value))
-                setShowSuggestions(true)
-              }}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-              onFocus={() => street.length >= 2 && setShowSuggestions(true)}
-              required
-              placeholder="z.B. Hauptstraße 5"
-              className={inputClass}
-              autoComplete="off"
-            />
-            {showSuggestions && streetSuggestions.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                {streetSuggestions.map((s, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onMouseDown={() => {
-                      setStreet(s.name + ' ')
-                      setShowSuggestions(false)
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition flex items-center gap-2"
-                  >
-                    <MapPin size={13} className="text-gray-400 flex-shrink-0" />
-                    <span className="font-medium text-gray-800">{s.name}</span>
-                    {s.district && (
-                      <span className="text-xs text-gray-400 ml-auto">{s.district}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </Field>
-
-        <div className="grid grid-cols-5 gap-3">
-          <div className="col-span-2">
-            <Field label="PLZ" required>
-              <input
-                type="text"
-                value={zip}
-                onChange={e => setZip(e.target.value)}
-                required
-                readOnly
-                className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`}
-              />
-            </Field>
-          </div>
-          <div className="col-span-3">
-            <Field label="Stadt" required>
-              <input
-                type="text"
-                value={city}
-                onChange={e => setCity(e.target.value)}
-                required
-                readOnly
-                className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`}
-              />
-            </Field>
-          </div>
-        </div>
-
-        <Field label="Anmerkungen">
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            rows={2}
-            placeholder="z.B. Klingel defekt, 2. Stock links..."
-            className={`${inputClass} resize-none`}
-          />
-        </Field>
+      <div className="border-2 border-gray-100 rounded-2xl p-4">
+        <PaymentElement />
       </div>
-
-      {/* Zahlung */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
-          <CreditCard size={13} /> Zahlungsmethode
-        </div>
-        <div className="border-2 border-gray-100 rounded-2xl p-4">
-          <PaymentElement />
-        </div>
-      </div>
-
-      {/* Mindestbestellwert */}
-      {subtotal < minimumOrder && (
-        <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-3 text-sm text-amber-700 flex items-center gap-2">
-          <AlertCircle size={15} />
-          <span>
-            Mindestbestellwert <b>{minimumOrder.toFixed(2)} €</b> – noch{' '}
-            <b>{(minimumOrder - subtotal).toFixed(2)} €</b> fehlen
-          </span>
-        </div>
-      )}
-
-      {/* Bezahl-Button */}
-      <button
-        type="submit"
-        disabled={!stripe || loading || isBlocked}
+      <button type="submit" disabled={!stripe || loading || isBlocked}
         className={`w-full py-4 text-base font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${
           isBlocked
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : 'bg-gray-900 text-white hover:bg-gray-700 active:scale-[0.98] shadow-sm'
-        }`}
-      >
+        }`}>
         {loading ? (
-          <>
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Zahlung wird verarbeitet...
-          </>
-        ) : shopOpen === false
-          ? '🔒 Shop geschlossen'
-          : subtotal < minimumOrder
-          ? 'Mindestbestellwert nicht erreicht'
-          : `✅ Jetzt bezahlen · ${total.toFixed(2)} €`
-        }
+          <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Zahlung wird verarbeitet...</>
+        ) : shopOpen === false ? '🔒 Shop geschlossen'
+          : subtotal < minimumOrder ? 'Mindestbestellwert nicht erreicht'
+          : `✅ Jetzt bezahlen · ${total.toFixed(2)} €`}
       </button>
     </form>
   )
