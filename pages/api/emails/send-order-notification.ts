@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-const SibApiV3Sdk = require('@getbrevo/brevo')
+const SibApiV3Sdk = require('@brevo/node')
 
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi()
 apiInstance.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY)
@@ -305,7 +305,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail()
     sendSmtpEmail.subject = subject
     sendSmtpEmail.htmlContent = html
-    sendSmtpEmail.sender = { name: 'Eiscafé Simonetti', email: 'mahmutduran@hotmail.de' }
+    sendSmtpEmail.sender = { name: 'Eiscafé Simonetti', email: 'bestellung@eiscafe-simonetti.de' }
     sendSmtpEmail.to = [{ email: recipientEmail }]
     sendSmtpEmail.replyTo = { email: 'bestellung@eiscafe-simonetti.de' }
 
