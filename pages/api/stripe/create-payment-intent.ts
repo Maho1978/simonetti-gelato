@@ -27,7 +27,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       payment_method_types: [
         'card',        // Kreditkarte (Visa, Mastercard) + Apple Pay + Google Pay
         'sepa_debit',  // SEPA Lastschrift
-        'paypal',      // PayPal
       ],
       metadata: safeMetadata,
     })
