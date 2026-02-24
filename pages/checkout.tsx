@@ -382,7 +382,14 @@ export default function Checkout({ session }: { session: Session | null }) {
           </div>
         )}
 
-        {shopOpen !== true && (
+        {shopOpen === null && (
+          <div className="text-center py-16">
+            <div className="text-5xl mb-3 animate-pulse">🍦</div>
+            <p className="text-sm text-gray-400">Wird geladen...</p>
+          </div>
+        )}
+
+        {shopOpen === true && (
           <div className="grid lg:grid-cols-11 gap-6">
 
             {/* ── Links: Übersicht + Gutschein + Trinkgeld ── */}
