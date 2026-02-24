@@ -13,30 +13,10 @@ function timeToMinutes(t: string): number {
   return h * 60 + m
 }
 
-function getBerlinTime() {
-  const now = new Date()
-  // Konvertiert in Berliner Zeit (Europe/Berlin)
-  const berlinStr = now.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hour12: false })
-  const [h, m] = berlinStr.split(':').map(Number)
-  return { hours: h, minutes: m, totalMinutes: h * 60 + m }
-}
-
-function getBerlinDateString() {
-  const now = new Date()
-  return now.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' })
-    .split('.').reverse().join('-') // DD.MM.YYYY → YYYY-MM-DD
-}
-
-function getBerlinDayOfWeek() {
-  const now = new Date()
-  // toLocaleDateString gibt uns den Wochentag in Berlin
-  const dayName = now.toLocaleDateString('en-US', { timeZone: 'Europe/Berlin', weekday: 'long' }).toLowerCase()
-  return dayName
-}
-
 function isNowBetween(from: string, until: string): boolean {
-  const { totalMinutes } = getBerlinTime()
-  return totalMinutes >= timeToMinutes(from) && totalMinutes < timeToMinutes(until)
+  const now = new Date()
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+  return nowMins >= timeToMinutes(from) && nowMins < timeToMinutes(until)
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -48,6 +28,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!settings) return res.status(200).json({ isOpen: false, message: 'Shop nicht verfügbar' })
 
+    // ✅ TEST-MODUS: Öffnungszeiten komplett ignorieren
+    if (settings.test_mode) {
+      return res.status(200).json({
+        isOpen: true,
+        message: '🧪 Testmodus aktiv',
+        openFrom: '00:00',
+        openUntil: '23:59',
+        testMode: true
+      })
+    }
+
     // 1. Manuell geschlossen
     if (settings.manual_close) {
       return res.status(200).json({
@@ -56,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const todayStr = getBerlinDateString()
+    const todayStr = new Date().toISOString().split('T')[0]
 
     // 2. Sondertag
     const { data: specialDay } = await supabase
@@ -69,36 +60,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           message: specialDay.label ? `Heute geschlossen: ${specialDay.label}` : 'Heute leider geschlossen.'
         })
       }
-      const from  = specialDay.custom_open  || '14:00'
-      const until = specialDay.custom_close || '22:00'
+      const isOpen = isNowBetween(specialDay.open_from, specialDay.open_until)
       return res.status(200).json({
-        isOpen: isNowBetween(from, until),
-        openFrom: from,
-        openUntil: until,
-        message: `Heute geöffnet von ${from} bis ${until} Uhr`
+        isOpen,
+        message: isOpen ? 'Geöffnet' : `Geöffnet von ${specialDay.open_from} bis ${specialDay.open_until} Uhr`,
+        openFrom: specialDay.open_from,
+        openUntil: specialDay.open_until
       })
     }
 
     // 3. Reguläre Öffnungszeiten
-    const dayKey = getBerlinDayOfWeek()
-    const hours  = settings.opening_hours?.[dayKey]
+    const dayKey = DAY_KEYS[new Date().getDay()]
+    const hours = settings.opening_hours?.[dayKey]
 
-    if (!hours || hours.closed) {
-      return res.status(200).json({ isOpen: false, message: 'Heute haben wir leider geschlossen.' })
+    if (!hours || !hours.open) {
+      return res.status(200).json({ isOpen: false, message: 'Heute leider geschlossen.' })
     }
 
-    const from  = hours.open  || '14:00'
-    const until = hours.close || '22:00'
-
+    const isOpen = isNowBetween(hours.from, hours.until)
     return res.status(200).json({
-      isOpen: isNowBetween(from, until),
-      openFrom: from,
-      openUntil: until,
-      message: `Geöffnet von ${from} bis ${until} Uhr`
+      isOpen,
+      message: isOpen ? 'Geöffnet' : `Geöffnet von ${hours.from} bis ${hours.until} Uhr`,
+      openFrom: hours.from,
+      openUntil: hours.until
     })
 
-  } catch (e: any) {
-    console.error('shop-status error:', e)
-    return res.status(500).json({ isOpen: false, message: 'Fehler beim Prüfen der Öffnungszeiten' })
+  } catch (err) {
+    console.error('shop-status error:', err)
+    return res.status(200).json({ isOpen: true, message: '' })
   }
 }

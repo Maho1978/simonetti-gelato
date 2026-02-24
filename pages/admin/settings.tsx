@@ -4,7 +4,7 @@ import AdminLayout from '@/components/AdminLayout'
 import {
   Clock, DollarSign, Save, PowerOff, Power, Calendar as CalendarIcon,
   Plus, Trash2, Edit2, X, Mail, ToggleLeft, ToggleRight, Share2,
-  CreditCard, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Zap
+  CreditCard, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Zap, FlaskConical
 } from 'lucide-react'
 
 const DAYS = {
@@ -179,7 +179,8 @@ export default function SettingsPage() {
     delivery_fee: 3.0, min_order_value: 15.0,
     delivery_duration_min: 30, delivery_duration_max: 45,
     currently_open: true, manual_close: false,
-    close_message: '', opening_hours: {} as any
+    close_message: '', opening_hours: {} as any,
+    test_mode: false,
   })
 
   const [emailSettings, setEmailSettings]           = useState<any>(DEFAULT_EMAIL_SETTINGS)
@@ -197,7 +198,7 @@ export default function SettingsPage() {
     date: '', is_closed: true, custom_open: '14:00', custom_close: '22:00', label: '', notes: ''
   })
 
-  const [features, setFeatures]           = useState<Record<string, boolean>>({})
+  const [features, setFeatures]             = useState<Record<string, boolean>>({})
   const [featuresSaving, setFeaturesSaving] = useState(false)
 
   useEffect(() => { loadSettings(); loadSpecialHours(); loadFeatures() }, [])
@@ -216,7 +217,8 @@ export default function SettingsPage() {
         currently_open: data.currently_open ?? true,
         manual_close: data.manual_close || false,
         close_message: data.close_message || '',
-        opening_hours: data.opening_hours || {}
+        opening_hours: data.opening_hours || {},
+        test_mode: data.test_mode || false,
       })
       if (data.email_notifications) setEmailSettings({ ...DEFAULT_EMAIL_SETTINGS, ...data.email_notifications })
       if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
@@ -288,6 +290,15 @@ export default function SettingsPage() {
     const newValue = !settings.manual_close
     const { error } = await supabase.from('shop_settings').update({ manual_close: newValue }).eq('id', 'main')
     if (!error) setSettings({ ...settings, manual_close: newValue })
+  }
+
+  const toggleTestMode = async () => {
+    const newValue = !settings.test_mode
+    const { error } = await supabase.from('shop_settings').update({ test_mode: newValue }).eq('id', 'main')
+    if (!error) {
+      setSettings({ ...settings, test_mode: newValue })
+      showToast(newValue ? '🧪 Testmodus aktiviert – Öffnungszeiten werden ignoriert!' : '✅ Testmodus deaktiviert')
+    }
   }
 
   const updateDayHours = (day: string, field: string, value: any) => {
@@ -414,6 +425,8 @@ export default function SettingsPage() {
           {/* ── TAB: ALLGEMEIN ── */}
           {activeTab === 'general' && (
             <div className="space-y-6">
+
+              {/* Shop-Status */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -434,6 +447,34 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
+
+              {/* 🧪 TESTMODUS */}
+              <div className={`rounded-xl border-2 p-6 transition ${settings.test_mode ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FlaskConical size={24} className={settings.test_mode ? 'text-amber-600' : 'text-gray-400'} />
+                    <div>
+                      <h2 className="font-bold text-xl mb-0.5">Testmodus</h2>
+                      <p className="text-sm text-gray-500">
+                        {settings.test_mode
+                          ? '🧪 Aktiv – Öffnungszeiten werden ignoriert, Checkout immer möglich'
+                          : 'Öffnungszeiten werden normal geprüft'}
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={toggleTestMode}
+                    className={`relative w-14 h-7 rounded-full transition-colors ${settings.test_mode ? 'bg-amber-500' : 'bg-gray-300'}`}>
+                    <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.test_mode ? 'translate-x-8' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                {settings.test_mode && (
+                  <div className="mt-4 bg-amber-100 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
+                    ⚠️ <strong>Hinweis:</strong> Testmodus ist aktiv! Kunden können jederzeit bestellen – auch außerhalb der Öffnungszeiten. Bitte vor dem Live-Betrieb deaktivieren.
+                  </div>
+                )}
+              </div>
+
+              {/* Preise */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><DollarSign size={22} /> Preise & Gebühren</h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -451,6 +492,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Lieferdauer */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><Clock size={22} /> Lieferdauer</h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -469,6 +512,7 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-sm text-gray-400 mt-3">Kunden sehen: „Lieferung in ca. {settings.delivery_duration_min}–{settings.delivery_duration_max} Minuten"</p>
               </div>
+
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{saving ? 'Speichert...' : 'Einstellungen speichern'}
@@ -642,20 +686,13 @@ export default function SettingsPage() {
                   Variablen: <code className="bg-gray-100 px-1 rounded text-xs">#{'{orderNumber}'}</code> <code className="bg-gray-100 px-1 rounded text-xs">#{'{customerName}'}</code> <code className="bg-gray-100 px-1 rounded text-xs">#{'{total}'}</code>
                 </p>
               </div>
-
-              {/* Test-Email Adresse */}
               <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
                 <label className="block text-sm font-bold text-blue-800 mb-2">📧 Test-Email senden an:</label>
-                <input
-                  type="email"
-                  value={testEmailAddress}
-                  onChange={e => setTestEmailAddress(e.target.value)}
+                <input type="email" value={testEmailAddress} onChange={e => setTestEmailAddress(e.target.value)}
                   className="w-full px-4 py-2.5 border-2 border-blue-200 rounded-xl text-sm focus:border-blue-500 focus:outline-none bg-white"
-                  placeholder="deine@email.de"
-                />
+                  placeholder="deine@email.de" />
                 <p className="text-xs text-blue-600 mt-1.5">Diese Adresse wird für alle Test-Emails verwendet.</p>
               </div>
-
               {EMAIL_TYPES.map((emailType) => {
                 const typeSetting = emailSettings[emailType.key] || {}
                 const isEnabled = emailType.alwaysOn || typeSetting.enabled !== false
