@@ -382,7 +382,7 @@ export default function Checkout({ session }: { session: Session | null }) {
           </div>
         )}
 
-        {shopOpen !== false && (
+        {shopOpen !== true && (
           <div className="grid lg:grid-cols-11 gap-6">
 
             {/* ── Links: Übersicht + Gutschein + Trinkgeld ── */}
