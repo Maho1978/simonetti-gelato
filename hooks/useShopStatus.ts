@@ -36,9 +36,7 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
     // 1. Manuell geschlossen?
     if (settings.manual_close) {
       return {
-        isOpen: false,
-        openFrom: '',
-        openUntil: '',
+        isOpen: false, openFrom: '', openUntil: '',
         message: settings.close_message || 'Der Shop ist momentan geschlossen.',
         loading: false,
       }
@@ -48,17 +46,12 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
 
     // 2. Sondertag?
     const { data: specialDay } = await supabase
-      .from('special_hours')
-      .select('*')
-      .eq('date', todayStr)
-      .maybeSingle()
+      .from('special_hours').select('*').eq('date', todayStr).maybeSingle()
 
     if (specialDay) {
       if (specialDay.is_closed) {
         return {
-          isOpen: false,
-          openFrom: '',
-          openUntil: '',
+          isOpen: false, openFrom: '', openUntil: '',
           message: specialDay.label ? `Heute geschlossen: ${specialDay.label}` : 'Heute leider geschlossen.',
           loading: false,
         }
@@ -67,12 +60,8 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
       const until = specialDay.custom_close || '22:00'
       const open = isNowBetween(from, until)
       return {
-        isOpen: open,
-        openFrom: from,
-        openUntil: until,
-        message: open
-          ? `Geöffnet bis ${until} Uhr`
-          : `Heute geöffnet von ${from} bis ${until} Uhr`,
+        isOpen: open, openFrom: from, openUntil: until,
+        message: open ? `Geöffnet bis ${until} Uhr` : `Heute geöffnet von ${from} bis ${until} Uhr`,
         loading: false,
       }
     }
@@ -82,13 +71,7 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
     const hours = settings.opening_hours?.[dayKey]
 
     if (!hours || hours.closed) {
-      return {
-        isOpen: false,
-        openFrom: '',
-        openUntil: '',
-        message: 'Heute haben wir leider geschlossen.',
-        loading: false,
-      }
+      return { isOpen: false, openFrom: '', openUntil: '', message: 'Heute haben wir leider geschlossen.', loading: false }
     }
 
     const from = hours.open || '14:00'
@@ -96,9 +79,7 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
     const open = isNowBetween(from, until)
 
     return {
-      isOpen: open,
-      openFrom: from,
-      openUntil: until,
+      isOpen: open, openFrom: from, openUntil: until,
       message: open
         ? `Geöffnet bis ${until} Uhr · Lieferung in ca. ${settings.delivery_duration_min || 30}–${settings.delivery_duration_max || 45} Min.`
         : `Heute geöffnet von ${from} bis ${until} Uhr`,
@@ -106,7 +87,6 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
     }
   } catch (e) {
     console.error('ShopStatus error:', e)
-    // Im Fehlerfall offen lassen damit Bestellungen nicht blockiert werden
     return { isOpen: true, openFrom: '', openUntil: '', message: '', loading: false }
   }
 }

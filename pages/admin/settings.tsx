@@ -4,7 +4,7 @@ import AdminLayout from '@/components/AdminLayout'
 import {
   Clock, DollarSign, Save, PowerOff, Power, Calendar as CalendarIcon,
   Plus, Trash2, Edit2, X, Mail, ToggleLeft, ToggleRight, Share2,
-  CreditCard, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Zap, FlaskConical
+  CreditCard, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Zap
 } from 'lucide-react'
 
 const DAYS = {
@@ -179,8 +179,7 @@ export default function SettingsPage() {
     delivery_fee: 3.0, min_order_value: 15.0,
     delivery_duration_min: 30, delivery_duration_max: 45,
     currently_open: true, manual_close: false,
-    close_message: '', opening_hours: {} as any,
-    test_mode: false,
+    close_message: '', opening_hours: {} as any
   })
 
   const [emailSettings, setEmailSettings]           = useState<any>(DEFAULT_EMAIL_SETTINGS)
@@ -218,7 +217,6 @@ export default function SettingsPage() {
         manual_close: data.manual_close || false,
         close_message: data.close_message || '',
         opening_hours: data.opening_hours || {},
-        test_mode: data.test_mode || false,
       })
       if (data.email_notifications) setEmailSettings({ ...DEFAULT_EMAIL_SETTINGS, ...data.email_notifications })
       if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
@@ -290,15 +288,6 @@ export default function SettingsPage() {
     const newValue = !settings.manual_close
     const { error } = await supabase.from('shop_settings').update({ manual_close: newValue }).eq('id', 'main')
     if (!error) setSettings({ ...settings, manual_close: newValue })
-  }
-
-  const toggleTestMode = async () => {
-    const newValue = !settings.test_mode
-    const { error } = await supabase.from('shop_settings').update({ test_mode: newValue }).eq('id', 'main')
-    if (!error) {
-      setSettings({ ...settings, test_mode: newValue })
-      showToast(newValue ? '🧪 Testmodus aktiviert – Öffnungszeiten werden ignoriert!' : '✅ Testmodus deaktiviert')
-    }
   }
 
   const updateDayHours = (day: string, field: string, value: any) => {
@@ -444,32 +433,6 @@ export default function SettingsPage() {
                     <input type="text" value={settings.close_message} onChange={e => setSettings({ ...settings, close_message: e.target.value })}
                       className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none"
                       placeholder="z.B. Betriebsferien bis 15.03." />
-                  </div>
-                )}
-              </div>
-
-              {/* 🧪 TESTMODUS */}
-              <div className={`rounded-xl border-2 p-6 transition ${settings.test_mode ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200'}`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FlaskConical size={24} className={settings.test_mode ? 'text-amber-600' : 'text-gray-400'} />
-                    <div>
-                      <h2 className="font-bold text-xl mb-0.5">Testmodus</h2>
-                      <p className="text-sm text-gray-500">
-                        {settings.test_mode
-                          ? '🧪 Aktiv – Öffnungszeiten werden ignoriert, Checkout immer möglich'
-                          : 'Öffnungszeiten werden normal geprüft'}
-                      </p>
-                    </div>
-                  </div>
-                  <button onClick={toggleTestMode}
-                    className={`relative w-14 h-7 rounded-full transition-colors ${settings.test_mode ? 'bg-amber-500' : 'bg-gray-300'}`}>
-                    <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.test_mode ? 'translate-x-8' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-                {settings.test_mode && (
-                  <div className="mt-4 bg-amber-100 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
-                    ⚠️ <strong>Hinweis:</strong> Testmodus ist aktiv! Kunden können jederzeit bestellen – auch außerhalb der Öffnungszeiten. Bitte vor dem Live-Betrieb deaktivieren.
                   </div>
                 )}
               </div>

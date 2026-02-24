@@ -28,17 +28,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!settings) return res.status(200).json({ isOpen: false, message: 'Shop nicht verfügbar' })
 
-    // ✅ TEST-MODUS: Öffnungszeiten komplett ignorieren
-    if (settings.test_mode) {
-      return res.status(200).json({
-        isOpen: true,
-        message: '🧪 Testmodus aktiv',
-        openFrom: '00:00',
-        openUntil: '23:59',
-        testMode: true
-      })
-    }
-
     // 1. Manuell geschlossen
     if (settings.manual_close) {
       return res.status(200).json({
