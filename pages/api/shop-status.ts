@@ -62,16 +62,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const dayKey = DAY_KEYS[new Date().getDay()]
     const hours = settings.opening_hours?.[dayKey]
 
-    if (!hours || !hours.open) {
+    if (!hours || hours.closed) {
       return res.status(200).json({ isOpen: false, message: 'Heute leider geschlossen.' })
     }
 
-    const isOpen = isNowBetween(hours.from, hours.until)
+    const isOpen = isNowBetween(hours.open, hours.close)
     return res.status(200).json({
       isOpen,
-      message: isOpen ? 'Geöffnet' : `Geöffnet von ${hours.from} bis ${hours.until} Uhr`,
-      openFrom: hours.from,
-      openUntil: hours.until
+      message: isOpen ? 'Geöffnet' : `Geöffnet von ${hours.open} bis ${hours.close} Uhr`,
+      openFrom: hours.open,
+      openUntil: hours.close
     })
 
   } catch (err) {
