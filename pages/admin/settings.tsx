@@ -66,8 +66,6 @@ const DEFAULT_MARKETING = {
   preorder_enabled:        false,
   preorder_start_hour:     10,
   preorder_hint:           'Du kannst jetzt vorbestellen – Lieferung startet ab 14:00 Uhr.',
-  pickup_enabled:          false,
-  pickup_hint:             'Abholung direkt bei uns: Solinger Str. 12, 40764 Langenfeld',
 }
 
 function KeyField({ label, value, onChange, placeholder, help, isSecret = false }: {
@@ -163,7 +161,8 @@ export default function SettingsPage() {
     delivery_fee: 3.0, min_order_value: 15.0,
     delivery_duration_min: 30, delivery_duration_max: 45,
     currently_open: true, manual_close: false,
-    close_message: '', opening_hours: {} as any
+    close_message: '', opening_hours: {} as any,
+    pickup_enabled: false
   })
 
   const [marketing, setMarketing]             = useState<any>(DEFAULT_MARKETING)
@@ -202,6 +201,7 @@ export default function SettingsPage() {
         manual_close: data.manual_close || false,
         close_message: data.close_message || '',
         opening_hours: data.opening_hours || {},
+        pickup_enabled: data.pickup_enabled ?? false,
       })
       if (data.email_notifications) setEmailSettings({ ...DEFAULT_EMAIL_SETTINGS, ...data.email_notifications })
       if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
@@ -214,8 +214,6 @@ export default function SettingsPage() {
         preorder_enabled:        data.preorder_enabled        ?? false,
         preorder_start_hour:     data.preorder_start_hour     || 10,
         preorder_hint:           data.preorder_hint           || DEFAULT_MARKETING.preorder_hint,
-        pickup_enabled:          data.pickup_enabled          ?? false,
-        pickup_hint:             data.pickup_hint             || DEFAULT_MARKETING.pickup_hint,
       })
     }
     setLoading(false)
@@ -253,8 +251,6 @@ export default function SettingsPage() {
       preorder_enabled:        marketing.preorder_enabled,
       preorder_start_hour:     marketing.preorder_start_hour,
       preorder_hint:           marketing.preorder_hint,
-      pickup_enabled:          marketing.pickup_enabled,
-      pickup_hint:             marketing.pickup_hint,
     }).eq('id', 'main')
     if (!error) showToast('✅ Marketing gespeichert!')
     else showToast('❌ Fehler: ' + error.message)
@@ -479,6 +475,22 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-sm text-gray-400 mt-3">Kunden sehen: „Lieferung in ca. {settings.delivery_duration_min}–{settings.delivery_duration_max} Minuten"</p>
               </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><Store size={22} /> Abholung</h2>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-800">Abholung anbieten</p>
+                    <p className="text-sm text-gray-400 mt-0.5">Kunden können zwischen Lieferung und Selbstabholung wählen</p>
+                    <p className="text-xs text-gray-500 mt-1.5">📍 Solinger Str. 54 / Konrad-Adenauer-Platz 2, 40764 Langenfeld</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, pickup_enabled: !settings.pickup_enabled })}
+                    className={`relative flex-shrink-0 w-14 h-7 rounded-full transition-colors ml-4 ${settings.pickup_enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.pickup_enabled ? 'translate-x-8' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              </div>
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{saving ? 'Speichert...' : 'Einstellungen speichern'}
@@ -682,33 +694,6 @@ export default function SettingsPage() {
                       <span className="text-base">ℹ️</span>
                       <p className="text-xs text-blue-700">Dieser blaue Hinweis erscheint im Checkout wenn der Kunde vor der Öffnungszeit bestellt.</p>
                     </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ABHOLUNG */}
-              <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-100">
-                  <SectionToggle
-                    enabled={marketing.pickup_enabled}
-                    onToggle={() => setM('pickup_enabled', !marketing.pickup_enabled)}
-                    icon={<Store size={22} />}
-                    label="Abholung"
-                    description="Kunden können zwischen Lieferung und Selbstabholung wählen"
-                    color="purple"
-                  />
-                </div>
-                {marketing.pickup_enabled && (
-                  <div className="px-6 py-5">
-                    <label className="block text-sm font-semibold mb-2">Abholhinweis für Kunden</label>
-                    <input
-                      type="text"
-                      value={marketing.pickup_hint}
-                      onChange={e => setM('pickup_hint', e.target.value)}
-                      className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm"
-                      placeholder="Abholung direkt bei uns: Solinger Str. 12, 40764 Langenfeld"
-                    />
-                    <p className="text-xs text-gray-400 mt-1.5">Wird im Checkout unter der Abholoption angezeigt.</p>
                   </div>
                 )}
               </div>
