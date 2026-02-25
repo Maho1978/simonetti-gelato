@@ -6,7 +6,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import Navbar from '@/components/Navbar'
-import { AlertCircle, Tag, X, Check, Loader2, MapPin, CreditCard, User, Clock } from 'lucide-react'
+import { AlertCircle, Tag, X, Check, Loader2, MapPin, CreditCard, User, Clock, Plus, Minus, Trash2, Banknote } from 'lucide-react'
 import { searchStreets, type Street } from '@/lib/langenfeld-streets'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -19,6 +19,7 @@ interface CartItem {
   selectedFlavors?: string[]
   selectedExtras?: any[]
   totalPrice?: number
+  cartId?: string
 }
 
 interface AppliedVoucher {
@@ -53,7 +54,6 @@ async function validateVoucher(
   const raw = data.discount_type === 'percentage'
     ? Math.min(subtotal * (data.discount_value / 100), subtotal)
     : Math.min(data.discount_value, subtotal)
-
   const discountAmount = Math.round(raw * 10) / 10
 
   return {
@@ -74,8 +74,7 @@ function Field({ label, required, children }: {
   return (
     <div className="space-y-1.5">
       <label className="block text-sm font-semibold text-gray-700">
-        {label}
-        {required && <span className="text-red-400 ml-1">*</span>}
+        {label}{required && <span className="text-red-400 ml-1">*</span>}
       </label>
       {children}
     </div>
@@ -86,8 +85,7 @@ const inputClass =
   'w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 transition-all duration-200 outline-none focus:border-gray-900 focus:ring-4 focus:ring-gray-900/8'
 
 function VoucherInput({ subtotal, onApply }: {
-  subtotal: number
-  onApply: (v: AppliedVoucher | null) => void
+  subtotal: number; onApply: (v: AppliedVoucher | null) => void
 }) {
   const [code, setCode]       = useState('')
   const [loading, setLoading] = useState(false)
@@ -101,15 +99,12 @@ function VoucherInput({ subtotal, onApply }: {
     if (err || !voucher) {
       setError(err || 'Fehler beim Prüfen des Gutscheins.')
     } else {
-      setApplied(voucher)
-      onApply(voucher)
+      setApplied(voucher); onApply(voucher)
     }
     setLoading(false)
   }
 
-  const handleRemove = () => {
-    setApplied(null); setCode(''); setError(''); onApply(null)
-  }
+  const handleRemove = () => { setApplied(null); setCode(''); setError(''); onApply(null) }
 
   if (applied) {
     return (
@@ -118,14 +113,10 @@ function VoucherInput({ subtotal, onApply }: {
           <Check size={16} />
           <span className="font-bold">{applied.code}</span>
           <span className="text-sm">
-            − {applied.discount_type === 'percentage'
-              ? `${applied.discount_value}%`
-              : `${applied.discount_value.toFixed(2)} €`} Rabatt
+            − {applied.discount_type === 'percentage' ? `${applied.discount_value}%` : `${applied.discount_value.toFixed(2)} €`} Rabatt
           </span>
         </div>
-        <button onClick={handleRemove} className="text-green-600 hover:text-red-500 transition">
-          <X size={16} />
-        </button>
+        <button onClick={handleRemove} className="text-green-600 hover:text-red-500 transition"><X size={16} /></button>
       </div>
     )
   }
@@ -135,35 +126,24 @@ function VoucherInput({ subtotal, onApply }: {
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Tag size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            value={code}
+          <input value={code}
             onChange={e => { setCode(e.target.value.toUpperCase()); setError('') }}
             onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleApply())}
             placeholder="GUTSCHEINCODE"
-            className={`${inputClass} pl-10 uppercase tracking-widest font-bold`}
-          />
+            className={`${inputClass} pl-10 uppercase tracking-widest font-bold`} />
         </div>
-        <button
-          type="button"
-          onClick={handleApply}
-          disabled={loading || !code.trim()}
-          className="px-5 py-3 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 disabled:opacity-40 transition flex items-center gap-1.5"
-        >
+        <button type="button" onClick={handleApply} disabled={loading || !code.trim()}
+          className="px-5 py-3 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 disabled:opacity-40 transition flex items-center gap-1.5">
           {loading ? <Loader2 size={14} className="animate-spin" /> : 'Einlösen'}
         </button>
       </div>
-      {error && (
-        <div className="mt-2 text-xs text-red-600 flex items-center gap-1">
-          <AlertCircle size={12} /> {error}
-        </div>
-      )}
+      {error && <div className="mt-2 text-xs text-red-600 flex items-center gap-1"><AlertCircle size={12} /> {error}</div>}
     </div>
   )
 }
 
 function TipSelector({ subtotal, onTipChange }: {
-  subtotal: number
-  onTipChange: (amount: number) => void
+  subtotal: number; onTipChange: (amount: number) => void
 }) {
   const [selected, setSelected]     = useState<number>(0)
   const [custom, setCustom]         = useState('')
@@ -195,12 +175,8 @@ function TipSelector({ subtotal, onTipChange }: {
         ))}
         <button type="button" onClick={() => { setShowCustom(true); setSelected(-1) }}
           className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
-            showCustom
-              ? 'border-gray-900 bg-gray-900 text-white shadow-sm'
-              : 'border-gray-200 text-gray-600 hover:border-gray-400 bg-white'
-          }`}>
-          ✏️
-        </button>
+            showCustom ? 'border-gray-900 bg-gray-900 text-white shadow-sm' : 'border-gray-200 text-gray-600 hover:border-gray-400 bg-white'
+          }`}>✏️</button>
       </div>
       {showCustom && (
         <div className="flex items-center gap-2 mt-2">
@@ -211,9 +187,7 @@ function TipSelector({ subtotal, onTipChange }: {
         </div>
       )}
       {selected > 0 && !showCustom && (
-        <p className="text-xs text-gray-400 mt-1.5">
-          = {(subtotal * selected / 100).toFixed(2)} € Trinkgeld – danke! 🤍
-        </p>
+        <p className="text-xs text-gray-400 mt-1.5">= {(subtotal * selected / 100).toFixed(2)} € Trinkgeld – danke! 🤍</p>
       )}
     </div>
   )
@@ -229,19 +203,15 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [clientSecret, setClientSecret] = useState('')
   const [shopOpen, setShopOpen]         = useState<boolean | null>(null)
   const [shopMessage, setShopMessage]   = useState('')
-
-  // ── FIX: Vorbestellung ──
   const [isPreorder, setIsPreorder]     = useState(false)
   const [preorderHint, setPreorderHint] = useState('')
-
   const [voucher, setVoucher]           = useState<AppliedVoucher | null>(null)
   const [tip, setTip]                   = useState(0)
   const [showVoucher, setShowVoucher]   = useState(true)
   const [showTip, setShowTip]           = useState(true)
   const [showPayPal, setShowPayPal]     = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
-
-  // ── FIX: Dynamisch aus Supabase ──
+  const [showCash, setShowCash]         = useState(false)   // ← NEU: Barzahlung
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'cash'>('stripe')
   const [deliveryFee, setDeliveryFee]   = useState(3.00)
   const [minimumOrder, setMinimumOrder] = useState(15.00)
   const [paypalClientId, setPaypalClientId] = useState('')
@@ -255,7 +225,6 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [notes,  setNotes]  = useState('')
 
   useEffect(() => {
-    // Shop-Status inkl. Vorbestellung
     fetch('/api/shop-status')
       .then(r => r.json())
       .then(data => {
@@ -266,45 +235,41 @@ export default function Checkout({ session }: { session: Session | null }) {
       })
       .catch(() => setShopOpen(true))
 
-    // ── FIX: Liefergebühr + Mindestbestellwert + PayPal-Key aus Supabase ──
     supabase
       .from('shop_settings')
-      .select('delivery_fee, min_order_value, payment_keys')
+      .select('delivery_fee, min_order_value, payment_keys, cash_payment_enabled')
       .eq('id', 'main')
       .single()
       .then(({ data }) => {
         if (!data) return
-        if (data.delivery_fee  != null) setDeliveryFee(data.delivery_fee)
+        if (data.delivery_fee    != null) setDeliveryFee(data.delivery_fee)
         if (data.min_order_value != null) setMinimumOrder(data.min_order_value)
 
-        // PayPal Client ID aus payment_keys laden (nicht aus env!)
+        // Barzahlung: nur für eingeloggte Kunden
+        if (data.cash_payment_enabled && session && !isGuest) {
+          setShowCash(true)
+        }
+
         const keys = data.payment_keys
         if (keys?.paypal) {
           const mode     = keys.paypal.mode || 'sandbox'
-          const clientId = mode === 'live'
-            ? keys.paypal.live_client_id
-            : keys.paypal.sandbox_client_id
+          const clientId = mode === 'live' ? keys.paypal.live_client_id : keys.paypal.sandbox_client_id
           if (clientId) setPaypalClientId(clientId)
         }
       })
 
-    // Feature Toggles
     supabase
       .from('feature_toggles')
       .select('id, enabled')
       .in('id', ['vouchers', 'tip_option', 'payment_paypal'])
       .then(({ data }) => {
         if (data) {
-          const v = data.find(f => f.id === 'vouchers')
-          const t = data.find(f => f.id === 'tip_option')
-          const p = data.find(f => f.id === 'payment_paypal')
-          setShowVoucher(v ? v.enabled : true)
-          setShowTip(t ? t.enabled : true)
-          setShowPayPal(p ? p.enabled : false)
+          setShowVoucher(data.find(f => f.id === 'vouchers')?.enabled ?? true)
+          setShowTip(data.find(f => f.id === 'tip_option')?.enabled ?? true)
+          setShowPayPal(data.find(f => f.id === 'payment_paypal')?.enabled ?? false)
         }
       })
 
-    // Cart laden
     const savedCart = localStorage.getItem('simonetti-cart') || localStorage.getItem('cart')
     if (savedCart) {
       const parsedCart = JSON.parse(savedCart)
@@ -314,6 +279,42 @@ export default function Checkout({ session }: { session: Session | null }) {
       router.push('/')
     }
   }, [])
+
+  // ── Warenkorb bearbeiten ──────────────────────────────────
+  const updateCart = (newCart: CartItem[]) => {
+    setCart(newCart)
+    localStorage.setItem('simonetti-cart', JSON.stringify(newCart))
+    setClientSecret('')
+    createPaymentIntent(newCart, voucher, tip)
+  }
+
+  const changeQty = (cartId: string, delta: number) => {
+    const item = cart.find(i => (i.cartId || i.id) === cartId)
+    if (!item) return
+    const newQty = item.quantity + delta
+    if (newQty <= 0) {
+      removeItem(cartId)
+    } else {
+      const basePrice = item.totalPrice
+        ? item.totalPrice / item.quantity
+        : item.price + (item.selectedExtras || []).reduce((s: number, e: any) => s + (e.price || 0), 0)
+      updateCart(cart.map(i =>
+        (i.cartId || i.id) === cartId
+          ? { ...i, quantity: newQty, totalPrice: parseFloat((basePrice * newQty).toFixed(2)) }
+          : i
+      ))
+    }
+  }
+
+  const removeItem = (cartId: string) => {
+    const newCart = cart.filter(i => (i.cartId || i.id) !== cartId)
+    if (newCart.length === 0) {
+      localStorage.removeItem('simonetti-cart')
+      router.push('/')
+    } else {
+      updateCart(newCart)
+    }
+  }
 
   const subtotal   = cart.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity), 0)
   const discount   = voucher?.discountAmount || 0
@@ -325,21 +326,19 @@ export default function Checkout({ session }: { session: Session | null }) {
     tipAmount: number,
     fee?: number,
   ) => {
-    const sub   = cartItems.reduce((sum, i) => sum + (i.totalPrice || i.price * i.quantity), 0)
-    const disc  = appliedVoucher?.discountAmount || 0
+    const sub    = cartItems.reduce((sum, i) => sum + (i.totalPrice || i.price * i.quantity), 0)
+    const disc   = appliedVoucher?.discountAmount || 0
     const useFee = fee ?? deliveryFee
-    const total = parseFloat(Math.max(0, sub - disc + useFee + tipAmount).toFixed(2))
+    const total  = parseFloat(Math.max(0, sub - disc + useFee + tipAmount).toFixed(2))
     try {
       const res  = await fetch('/api/stripe/create-payment-intent', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount:   total,
+          amount: total,
           metadata: {
             voucher_code: appliedVoucher?.code || null,
             voucher_id:   appliedVoucher?.id   || null,
-            discount:     disc,
-            tip:          tipAmount,
+            discount: disc, tip: tipAmount,
           },
         }),
       })
@@ -382,19 +381,34 @@ export default function Checkout({ session }: { session: Session | null }) {
       status:            'OFFEN',
     }
     await fetch('/api/orders', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(orderData),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
     })
-    if (voucher?.id) {
-      await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
-    }
+    if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
     localStorage.removeItem('simonetti-cart')
     localStorage.removeItem('cart')
     router.push('/order-success')
   }
 
-  const isFormValid = name.trim() && phone.trim() && street.trim() && (!isGuest || email.trim())
+  // ── Barzahlung: direkt Bestellung speichern ohne Payment ──
+  const handleCashOrder = async () => {
+    if (!isFormValid) return
+    try {
+      const statusRes  = await fetch('/api/shop-status')
+      const statusData = await statusRes.json()
+      if (!statusData.isOpen) { alert('Der Shop ist momentan geschlossen.'); return }
+    } catch {}
+    await saveOrder('cash-' + Date.now(), 'cash')
+  }
+
+  const isFormValid = !!(name.trim() && phone.trim() && street.trim() && (!isGuest || email.trim()))
+
+  // Anzahl verfügbarer Zahlungsmethoden für Grid
+  const paymentOptions = [
+    { id: 'stripe', label: '💳 Karte / SEPA', always: true },
+    { id: 'paypal', label: '🅿️ PayPal',       show: showPayPal && !!paypalClientId },
+    { id: 'cash',   label: '💵 Barzahlung',    show: showCash },
+  ].filter(o => o.always || o.show)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -411,7 +425,6 @@ export default function Checkout({ session }: { session: Session | null }) {
           <p className="text-gray-400 mt-1 text-sm">Nur noch wenige Schritte bis zu deinem Eis 🍦</p>
         </div>
 
-        {/* ── FIX: Vorbestellungs-Banner ── */}
         {isPreorder && (
           <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
             <Clock size={20} className="text-blue-500 mt-0.5 flex-shrink-0" />
@@ -448,36 +461,66 @@ export default function Checkout({ session }: { session: Session | null }) {
             {/* ── Links ── */}
             <div className="lg:col-span-6 space-y-5">
 
+              {/* ── Bestellübersicht mit editierbarem Warenkorb ── */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-gray-900">🍦 Bestellübersicht</h2>
                   <span className="text-xs text-gray-400 font-medium bg-gray-100 px-2.5 py-1 rounded-full">
-                    {cart.length} Artikel
+                    {cart.reduce((s, i) => s + i.quantity, 0)} Artikel
                   </span>
                 </div>
+
                 <div className="divide-y divide-gray-100">
-                  {cart.map((item, i) => (
-                    <div key={i} className="py-3.5 flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="bg-gray-900 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                            {item.quantity}×
-                          </span>
-                          <span className="font-semibold text-gray-800 text-sm">{item.name}</span>
+                  {cart.map((item) => {
+                    const uid = item.cartId || item.id
+                    const itemTotal = item.totalPrice || item.price * item.quantity
+                    const unitPrice = itemTotal / item.quantity
+                    return (
+                      <div key={uid} className="py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-800 text-sm">{item.name}</p>
+                            {item.selectedFlavors && item.selectedFlavors.length > 0 && (
+                              <p className="text-xs text-gray-400 mt-0.5">🍦 {item.selectedFlavors.join(', ')}</p>
+                            )}
+                            {item.selectedExtras && item.selectedExtras.length > 0 && (
+                              <p className="text-xs text-gray-400">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-0.5">{unitPrice.toFixed(2)} € / Stück</p>
+                          </div>
+                          {/* Menge + Preis + Löschen */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+                              <button
+                                type="button"
+                                onClick={() => changeQty(uid, -1)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm transition text-gray-600">
+                                {item.quantity === 1 ? <Trash2 size={13} className="text-red-400" /> : <Minus size={13} />}
+                              </button>
+                              <span className="w-6 text-center text-sm font-bold text-gray-900">{item.quantity}</span>
+                              <button
+                                type="button"
+                                onClick={() => changeQty(uid, +1)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm transition text-gray-600">
+                                <Plus size={13} />
+                              </button>
+                            </div>
+                            <div className="text-right min-w-[52px]">
+                              <span className="font-bold text-gray-900 text-sm">{itemTotal.toFixed(2)} €</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(uid)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 transition text-gray-300 hover:text-red-400">
+                              <X size={14} />
+                            </button>
+                          </div>
                         </div>
-                        {item.selectedFlavors && item.selectedFlavors.length > 0 && (
-                          <p className="text-xs text-gray-400 mt-1 ml-8">🍦 {item.selectedFlavors.join(', ')}</p>
-                        )}
-                        {item.selectedExtras && item.selectedExtras.length > 0 && (
-                          <p className="text-xs text-gray-400 ml-8">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</p>
-                        )}
                       </div>
-                      <span className="font-bold text-gray-900 ml-4 text-sm">
-                        {(item.totalPrice || item.price * item.quantity).toFixed(2)} €
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
+
                 <div className="mt-5 pt-4 border-t border-gray-100 space-y-2.5">
                   <div className="flex justify-between text-sm text-gray-500">
                     <span>Zwischensumme</span><span>{subtotal.toFixed(2)} €</span>
@@ -488,7 +531,6 @@ export default function Checkout({ session }: { session: Session | null }) {
                       <span>− {discount.toFixed(2)} €</span>
                     </div>
                   )}
-                  {/* ── FIX: Dynamische Liefergebühr ── */}
                   <div className="flex justify-between text-sm text-gray-500">
                     <span>🚗 Liefergebühr</span><span>{deliveryFee.toFixed(2)} €</span>
                   </div>
@@ -525,6 +567,7 @@ export default function Checkout({ session }: { session: Session | null }) {
             <div className="lg:col-span-5">
               <div className="sticky top-6 space-y-4">
 
+                {/* Lieferdaten */}
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 space-y-4">
                   <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
                     <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white">
@@ -538,19 +581,19 @@ export default function Checkout({ session }: { session: Session | null }) {
 
                   <Field label="Vollständiger Name" required>
                     <input type="text" value={name} onChange={e => setName(e.target.value)}
-                      required placeholder="Max Mustermann" className={inputClass} />
+                      placeholder="Max Mustermann" className={inputClass} />
                   </Field>
 
                   {isGuest && (
                     <Field label="E-Mail" required>
                       <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                        required placeholder="max@email.de" className={inputClass} />
+                        placeholder="max@email.de" className={inputClass} />
                     </Field>
                   )}
 
                   <Field label="Telefonnummer" required>
                     <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                      required placeholder="+49 170 1234567" className={inputClass} />
+                      placeholder="+49 170 1234567" className={inputClass} />
                   </Field>
 
                   <Field label="Straße & Hausnummer" required>
@@ -579,7 +622,6 @@ export default function Checkout({ session }: { session: Session | null }) {
                   </Field>
                 </div>
 
-                {/* ── FIX: Dynamischer Mindestbestellwert ── */}
                 {subtotal < minimumOrder && (
                   <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-3 text-sm text-amber-700 flex items-center gap-2">
                     <AlertCircle size={15} />
@@ -593,26 +635,24 @@ export default function Checkout({ session }: { session: Session | null }) {
                       <CreditCard size={13} /> Zahlungsmethode
                     </div>
 
-                    {/* ── FIX: PayPal nur zeigen wenn clientId geladen ── */}
-                    <div className={`grid gap-2 ${showPayPal && paypalClientId ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                      <button type="button" onClick={() => setPaymentMethod('stripe')}
-                        className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
-                          paymentMethod === 'stripe'
-                            ? 'border-gray-900 bg-gray-900 text-white'
-                            : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                        }`}>
-                        💳 Karte / SEPA
-                      </button>
-                      {showPayPal && paypalClientId && (
-                        <button type="button" onClick={() => setPaymentMethod('paypal')}
+                    {/* Zahlungsauswahl */}
+                    <div className={`grid gap-2 grid-cols-${Math.min(paymentOptions.length, 3)}`}
+                      style={{ gridTemplateColumns: `repeat(${paymentOptions.length}, 1fr)` }}>
+                      {paymentOptions.map(opt => (
+                        <button key={opt.id} type="button"
+                          onClick={() => setPaymentMethod(opt.id as any)}
                           className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
-                            paymentMethod === 'paypal'
-                              ? 'border-blue-600 bg-blue-600 text-white'
+                            paymentMethod === opt.id
+                              ? opt.id === 'paypal'
+                                ? 'border-blue-600 bg-blue-600 text-white'
+                                : opt.id === 'cash'
+                                ? 'border-green-600 bg-green-600 text-white'
+                                : 'border-gray-900 bg-gray-900 text-white'
                               : 'border-gray-200 text-gray-600 hover:border-gray-400'
                           }`}>
-                          🅿️ PayPal
+                          {opt.label}
                         </button>
-                      )}
+                      ))}
                     </div>
 
                     {/* Stripe */}
@@ -631,7 +671,6 @@ export default function Checkout({ session }: { session: Session | null }) {
                         />
                       </Elements>
                     )}
-
                     {paymentMethod === 'stripe' && !clientSecret && (
                       <div className="text-center py-8">
                         <div className="text-4xl mb-2 animate-pulse">🍦</div>
@@ -639,7 +678,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                       </div>
                     )}
 
-                    {/* ── FIX: PayPal mit dynamischer clientId ── */}
+                    {/* PayPal */}
                     {paymentMethod === 'paypal' && showPayPal && paypalClientId && (
                       <PayPalScriptProvider options={{ clientId: paypalClientId, currency: 'EUR' }}>
                         <div className="space-y-3">
@@ -652,15 +691,13 @@ export default function Checkout({ session }: { session: Session | null }) {
                             <PayPalButtons
                               style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' }}
                               disabled={!isFormValid}
-                              createOrder={(_data, actions) => {
-                                return actions.order.create({
-                                  intent: 'CAPTURE',
-                                  purchase_units: [{
-                                    amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) },
-                                    description: 'Eiscafe Simonetti Bestellung',
-                                  }],
-                                })
-                              }}
+                              createOrder={(_data, actions) => actions.order.create({
+                                intent: 'CAPTURE',
+                                purchase_units: [{
+                                  amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) },
+                                  description: 'Eiscafe Simonetti Bestellung',
+                                }],
+                              })}
                               onApprove={async (_data, actions) => {
                                 const order = await actions.order!.capture()
                                 await saveOrder(order.id || 'paypal-' + Date.now(), 'paypal')
@@ -670,6 +707,35 @@ export default function Checkout({ session }: { session: Session | null }) {
                           </div>
                         </div>
                       </PayPalScriptProvider>
+                    )}
+
+                    {/* ── NEU: Barzahlung ── */}
+                    {paymentMethod === 'cash' && showCash && (
+                      <div className="space-y-3">
+                        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 flex items-start gap-3">
+                          <Banknote size={18} className="text-green-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-green-800">
+                            <p className="font-bold mb-1">Barzahlung bei Lieferung</p>
+                            <p className="text-green-700">Bitte halte den Betrag von <b>{grandTotal.toFixed(2)} €</b> passend bereit. Der Fahrer kann kein Wechselgeld garantieren.</p>
+                          </div>
+                        </div>
+                        {!isFormValid && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                            ⚠️ Bitte zuerst alle Pflichtfelder ausfüllen (Name, Telefon, Straße)
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleCashOrder}
+                          disabled={!isFormValid}
+                          className={`w-full py-4 text-base font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${
+                            !isFormValid
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-sm'
+                          }`}>
+                          <Banknote size={20} /> Jetzt bestellen · {grandTotal.toFixed(2)} € bar
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -730,7 +796,6 @@ function StripeForm({
   const stripe   = useStripe()
   const elements = useElements()
   const router   = useRouter()
-
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
 
@@ -739,8 +804,7 @@ function StripeForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const statusRes  = await fetch('/api/shop-status')
-      const statusData = await statusRes.json()
+      const statusData = await fetch('/api/shop-status').then(r => r.json())
       if (!statusData.isOpen) { setError('Der Shop ist momentan geschlossen.'); return }
     } catch {}
 
@@ -753,9 +817,7 @@ function StripeForm({
       })
       if (stripeError) throw new Error(stripeError.message)
 
-      if (voucher?.id) {
-        await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
-      }
+      if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
 
       const orderData = {
         user_id:           session?.user?.id || null,
@@ -814,8 +876,7 @@ function StripeForm({
           ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Zahlung wird verarbeitet...</>
           : shopOpen === false ? '🔒 Shop geschlossen'
           : subtotal < minimumOrder ? 'Mindestbestellwert nicht erreicht'
-          : `✅ Jetzt bezahlen · ${total.toFixed(2)} €`
-        }
+          : `✅ Jetzt bezahlen · ${total.toFixed(2)} €`}
       </button>
     </form>
   )
