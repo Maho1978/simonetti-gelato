@@ -63,9 +63,6 @@ const DEFAULT_MARKETING = {
   welcome_banner_code:     'WILLKOMMEN10',
   welcome_banner_discount: 10,
   welcome_banner_text:     'Als Dankeschön für deinen ersten Besuch schenken wir dir 10% auf deine erste Bestellung!',
-  preorder_enabled:        false,
-  preorder_start_hour:     10,
-  preorder_hint:           'Du kannst jetzt vorbestellen – Lieferung startet ab 14:00 Uhr.',
 }
 
 function KeyField({ label, value, onChange, placeholder, help, isSecret = false }: {
@@ -162,7 +159,10 @@ export default function SettingsPage() {
     delivery_duration_min: 30, delivery_duration_max: 45,
     currently_open: true, manual_close: false,
     close_message: '', opening_hours: {} as any,
-    pickup_enabled: false
+    pickup_enabled: false,
+    preorder_enabled: false,
+    preorder_start_hour: 10,
+    preorder_hint: 'Du kannst jetzt vorbestellen – Lieferung startet ab {from} Uhr.'
   })
 
   const [marketing, setMarketing]             = useState<any>(DEFAULT_MARKETING)
@@ -202,6 +202,9 @@ export default function SettingsPage() {
         close_message: data.close_message || '',
         opening_hours: data.opening_hours || {},
         pickup_enabled: data.pickup_enabled ?? false,
+        preorder_enabled: data.preorder_enabled ?? false,
+        preorder_start_hour: data.preorder_start_hour || 10,
+        preorder_hint: data.preorder_hint || 'Du kannst jetzt vorbestellen – Lieferung startet ab {from} Uhr.',
       })
       if (data.email_notifications) setEmailSettings({ ...DEFAULT_EMAIL_SETTINGS, ...data.email_notifications })
       if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
@@ -211,9 +214,6 @@ export default function SettingsPage() {
         welcome_banner_code:     data.welcome_banner_code     || 'WILLKOMMEN10',
         welcome_banner_discount: data.welcome_banner_discount || 10,
         welcome_banner_text:     data.welcome_banner_text     || DEFAULT_MARKETING.welcome_banner_text,
-        preorder_enabled:        data.preorder_enabled        ?? false,
-        preorder_start_hour:     data.preorder_start_hour     || 10,
-        preorder_hint:           data.preorder_hint           || DEFAULT_MARKETING.preorder_hint,
       })
     }
     setLoading(false)
@@ -248,9 +248,6 @@ export default function SettingsPage() {
       welcome_banner_code:     marketing.welcome_banner_code,
       welcome_banner_discount: marketing.welcome_banner_discount,
       welcome_banner_text:     marketing.welcome_banner_text,
-      preorder_enabled:        marketing.preorder_enabled,
-      preorder_start_hour:     marketing.preorder_start_hour,
-      preorder_hint:           marketing.preorder_hint,
     }).eq('id', 'main')
     if (!error) showToast('✅ Marketing gespeichert!')
     else showToast('❌ Fehler: ' + error.message)
@@ -476,6 +473,52 @@ export default function SettingsPage() {
                 <p className="text-sm text-gray-400 mt-3">Kunden sehen: „Lieferung in ca. {settings.delivery_duration_min}–{settings.delivery_duration_max} Minuten"</p>
               </div>
               <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><Clock size={22} /> Vorbestellung</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="font-semibold text-gray-800">Vorbestellung erlauben</p>
+                    <p className="text-sm text-gray-400 mt-0.5">Bestellungen vor der Öffnungszeit erlauben</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, preorder_enabled: !settings.preorder_enabled })}
+                    className={`relative flex-shrink-0 w-14 h-7 rounded-full transition-colors ml-4 ${settings.preorder_enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.preorder_enabled ? 'translate-x-8' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                {settings.preorder_enabled && (
+                  <div className="space-y-4 pt-4 border-t border-gray-100">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Vorbestellungen möglich ab</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number" min={0} max={23}
+                          value={settings.preorder_start_hour}
+                          onChange={e => setSettings({ ...settings, preorder_start_hour: parseInt(e.target.value) })}
+                          className="w-24 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none font-bold text-center text-lg"
+                        />
+                        <span className="text-gray-500 font-semibold">:00 Uhr</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1.5">Kunden können ab dieser Uhrzeit bestellen, auch wenn der Shop noch geschlossen ist.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Hinweis-Text im Checkout</label>
+                      <input
+                        type="text"
+                        value={settings.preorder_hint}
+                        onChange={e => setSettings({ ...settings, preorder_hint: e.target.value })}
+                        className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm"
+                        placeholder="Du kannst jetzt vorbestellen – Lieferung startet ab 14:00 Uhr."
+                      />
+                    </div>
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                      <span className="text-base">ℹ️</span>
+                      <p className="text-xs text-blue-700">Dieser blaue Hinweis erscheint im Checkout wenn der Kunde vor der Öffnungszeit bestellt.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><Store size={22} /> Abholung</h2>
                 <div className="flex items-center justify-between">
                   <div>
@@ -648,51 +691,6 @@ export default function SettingsPage() {
                       </div>
                       <p className="text-sm text-gray-400 mb-3 max-w-xs mx-auto">{marketing.welcome_banner_text}</p>
                       <p className="font-mono font-bold text-[#c9a66b] tracking-widest text-xl">{marketing.welcome_banner_code}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* VORBESTELLUNG */}
-              <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-100">
-                  <SectionToggle
-                    enabled={marketing.preorder_enabled}
-                    onToggle={() => setM('preorder_enabled', !marketing.preorder_enabled)}
-                    icon={<Clock size={22} />}
-                    label="Vorbestellung"
-                    description="Bestellungen vor der Öffnungszeit erlauben – mit Hinweis auf Lieferstart"
-                    color="blue"
-                  />
-                </div>
-                {marketing.preorder_enabled && (
-                  <div className="px-6 py-5 space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">Vorbestellungen möglich ab</label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="number" min={0} max={23}
-                          value={marketing.preorder_start_hour}
-                          onChange={e => setM('preorder_start_hour', parseInt(e.target.value))}
-                          className="w-24 px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none font-bold text-center text-lg"
-                        />
-                        <span className="text-gray-500 font-semibold">:00 Uhr</span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1.5">Kunden können ab dieser Uhrzeit bestellen, auch wenn der Shop noch geschlossen ist.</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">Hinweis-Text im Checkout</label>
-                      <input
-                        type="text"
-                        value={marketing.preorder_hint}
-                        onChange={e => setM('preorder_hint', e.target.value)}
-                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm"
-                        placeholder="Du kannst jetzt vorbestellen – Lieferung startet ab 14:00 Uhr."
-                      />
-                    </div>
-                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                      <span className="text-base">ℹ️</span>
-                      <p className="text-xs text-blue-700">Dieser blaue Hinweis erscheint im Checkout wenn der Kunde vor der Öffnungszeit bestellt.</p>
                     </div>
                   </div>
                 )}
