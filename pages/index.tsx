@@ -5,6 +5,7 @@ import ProductCard, { ProductGrid, CategoryHeader } from '@/components/ProductCa
 import MiniCart from '@/components/MiniCart'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
+import WelcomeBanner from '@/components/WelcomeBanner'
 import ShopStatusBanner from '@/components/ShopStatusBanner'
 import { supabase } from '@/lib/supabase'
 
@@ -111,7 +112,6 @@ export default function Home() {
     ))
   }
 
-  // FIX: Anmerkungen updaten ohne den Cart neu zu mounten
   const updateCartNotes = (cartId: string, notes: string) => {
     setCart(prev => {
       const updated = prev.map(item =>
@@ -131,6 +131,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
+      <WelcomeBanner />
       <ShopStatusBanner />
       <Navbar session={session} cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
       <HeroSection />

@@ -98,7 +98,8 @@ function printOrder(order: any) {
   const subtotal    = items.reduce((s: number, i: any) => s + parseFloat(i.lineTotal), 0)
   const deliveryFee = order.delivery_fee ?? 3.00
   const tip         = order.tip ?? 0
-  const grandTotal  = order.total ?? (subtotal + deliveryFee + tip)
+  const discount    = order.discount ?? 0
+  const grandTotal  = order.total ?? (subtotal + deliveryFee + tip - discount)
   const now         = new Date(order.created_at)
   const dateStr     = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const timeStr     = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
@@ -107,85 +108,175 @@ function printOrder(order: any) {
 
   let itemsHtml = ''
   for (const item of items) {
-    itemsHtml += `<div class="item"><div class="item-main"><span class="item-name">${item.quantity}x ${item.name}</span><span class="item-price">${item.lineTotal} €</span></div>`
-    if (item.flavors.length > 0) itemsHtml += `<div class="item-detail">🍦 ${item.flavors.join(', ')}</div>`
-    if (item.extras.length > 0)  itemsHtml += `<div class="item-detail">➕ ${item.extras.join(', ')}</div>`
-    itemsHtml += '</div>'
+    itemsHtml += `
+      <tr>
+        <td class="item-qty">${item.quantity}x</td>
+        <td class="item-name">${item.name}</td>
+        <td class="item-price">${item.lineTotal} EUR</td>
+      </tr>`
+    if (item.flavors.length > 0) {
+      itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Sorten: ${item.flavors.join(', ')}</td></tr>`
+    }
+    if (item.extras.length > 0) {
+      itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Extras: ${item.extras.join(', ')}</td></tr>`
+    }
   }
 
-  const discount     = order.discount ?? 0
-  const notesHtml    = order.notes
-    ? `<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div><div class="customer"><div class="section-title">ANMERKUNG</div><div>${order.notes}</div></div>`
-    : ''
   const discountHtml = discount > 0
-    ? `<div class="total-row" style="color:#16a34a"><span>Gutschein${order.voucher_code ? ` (${order.voucher_code})` : ''}</span><span>-${discount.toFixed(2)} €</span></div>`
+    ? `<tr class="total-row"><td colspan="2">Gutschein${order.voucher_code ? ` (${order.voucher_code})` : ''}</td><td>${(-discount).toFixed(2)} EUR</td></tr>`
     : ''
-  const tipHtml      = tip > 0 ? `<div class="total-row"><span>Trinkgeld</span><span>${tip.toFixed(2)} €</span></div>` : ''
-  const phoneHtml    = order.customer_phone ? `<div>${order.customer_phone}</div>` : ''
+  const tipHtml = tip > 0
+    ? `<tr class="total-row"><td colspan="2">Trinkgeld</td><td>${tip.toFixed(2)} EUR</td></tr>`
+    : ''
+  const notesHtml = order.notes
+    ? `<tr><td colspan="3"><div class="sep-dashed"></div></td></tr>
+       <tr><td colspan="3" class="section-label">ANMERKUNG:</td></tr>
+       <tr><td colspan="3" class="notes-text">${order.notes}</td></tr>`
+    : ''
+  const phoneHtml = order.customer_phone
+    ? `<tr><td colspan="3">Tel: <b>${order.customer_phone}</b></td></tr>`
+    : ''
+  const paymentLabel = order.payment_method === 'cash' ? 'Barzahlung'
+                     : order.payment_method === 'paypal' ? 'PayPal'
+                     : 'Online'
 
-  const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
+  const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<title>Bon #${orderNr}</title>
 <style>
-  @page { margin: 3mm; size: 80mm auto; }
+  @page { margin: 2mm 3mm; size: 80mm auto; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Courier New', Courier, monospace; font-size: 14px; font-weight: bold; width: 100%; color: #000; background: #fff; line-height: 1.6; }
-  .div-solid  { font-size: 13px; margin: 6px 0; letter-spacing: 1px; }
-  .div-dashed { font-size: 13px; margin: 5px 0; }
-  .header     { text-align: center; padding: 6px 0 8px; }
-  .logo       { font-size: 24px; font-weight: 900; letter-spacing: 3px; }
-  .tagline    { font-size: 10px; letter-spacing: 5px; color: #222; margin-top: 2px; font-weight: bold; }
-  .shop-info  { font-size: 11px; margin-top: 6px; line-height: 1.9; font-weight: normal; }
-  .row        { display: flex; justify-content: space-between; margin: 3px 0; font-size: 13px; }
-  .section-title { font-weight: 900; font-size: 12px; letter-spacing: 2px; margin-bottom: 5px; margin-top: 3px; }
-  .customer   { margin: 5px 0; line-height: 1.8; font-size: 13px; }
-  .item       { margin: 6px 0; }
-  .item-main  { display: flex; justify-content: space-between; font-size: 14px; }
-  .item-name  { font-weight: 900; flex: 1; }
-  .item-price { white-space: nowrap; margin-left: 8px; font-weight: 900; }
-  .item-detail { font-size: 11px; color: #333; margin-left: 6px; margin-top: 2px; font-weight: normal; }
-  .total-row  { display: flex; justify-content: space-between; margin: 4px 0; font-size: 13px; }
-  .grand-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 900; padding: 5px 0; }
-  .footer     { text-align: center; margin-top: 10px; }
-  .thank-you  { font-size: 15px; font-weight: 900; margin-bottom: 4px; }
-  .footer-small { font-size: 11px; color: #333; line-height: 1.8; font-weight: normal; }
-</style></head><body>
-<div class="header">
-  <div class="logo">🍦 SIMONETTI</div>
-  <div class="tagline">E I S C A F É</div>
-  <div class="div-dashed" style="margin-top:6px">- - - - - - - - - - - - - - - - - - -</div>
-  <div class="shop-info">Konrad-Adenauer-Platz 2<br/>40764 Langenfeld<br/>Tel: 02173 / 16 22 780<br/>bestellung@eiscafe-simonetti.de</div>
-</div>
-<div class="div-solid">=====================================</div>
-<div class="row"><span>Bestellung:</span><span><b>#${orderNr}</b></span></div>
-<div class="row"><span>Datum:</span><span>${dateStr} ${timeStr} Uhr</span></div>
-<div class="row"><span>Zahlung:</span><span>${order.payment_method || 'Online'}</span></div>
-<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div>
-<div class="customer">
-  <div class="section-title">LIEFERUNG AN</div>
-  <div><b>${order.customer_name || '–'}</b></div>
-  ${phoneHtml}
-  <div>${addrStr}</div>
-</div>
-<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div>
-<div class="section-title">BESTELLUNG</div>
-${itemsHtml}
-${notesHtml}
-<div class="div-dashed">- - - - - - - - - - - - - - - - - - -</div>
-<div class="total-row"><span>Zwischensumme</span><span>${subtotal.toFixed(2)} €</span></div>
-<div class="total-row"><span>Liefergebühr</span><span>${deliveryFee.toFixed(2)} €</span></div>
-${discountHtml}${tipHtml}
-<div class="div-solid">=====================================</div>
-<div class="grand-total"><span>GESAMT</span><span>${grandTotal.toFixed(2)} €</span></div>
-<div class="div-solid">=====================================</div>
-<div class="footer">
-  <div class="thank-you">Vielen Dank &amp; Guten Appetit! 🍦</div>
-  <div class="footer-small">www.eiscafe-simonetti.de</div>
-  <div class="div-dashed" style="margin-top:8px">- - - - - - - - - - - - - - - - - - -</div>
-  <div class="footer-small">Beleg Nr. #${orderNr} · ${dateStr}</div>
-</div>
-<script>window.onload=function(){setTimeout(function(){window.print();},300);}</script>
-</body></html>`
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 16px;
+    font-weight: bold;
+    width: 74mm;
+    color: #000;
+    background: #fff;
+    line-height: 1.5;
+  }
 
-  const win = window.open('', '_blank')
+  /* Header */
+  .center    { text-align: center; }
+  .logo      { font-size: 26px; font-weight: 900; letter-spacing: 4px; margin-bottom: 1px; }
+  .tagline   { font-size: 12px; letter-spacing: 6px; margin-bottom: 5px; }
+  .shop-info { font-size: 13px; font-weight: normal; line-height: 1.7; }
+
+  /* Trenner */
+  .sep-solid { border-top: 3px solid #000; margin: 6px 0; }
+  .sep-dashed{ border-top: 2px dashed #000; margin: 5px 0; }
+
+  /* Tabellen */
+  table { width: 100%; border-collapse: collapse; }
+  td    { vertical-align: top; padding: 1px 0; font-size: 15px; }
+
+  /* Abschnitt-Titel */
+  .section-label { font-size: 13px; font-weight: 900; letter-spacing: 2px; padding-top: 4px; padding-bottom: 2px; }
+
+  /* Bestellpositionen */
+  .item-qty   { width: 22px; font-size: 17px; font-weight: 900; white-space: nowrap; }
+  .item-name  { font-size: 17px; font-weight: 900; padding-right: 4px; }
+  .item-price { font-size: 17px; font-weight: 900; text-align: right; white-space: nowrap; }
+  .item-detail{ font-size: 13px; font-weight: normal; padding-left: 4px; padding-bottom: 3px; color: #111; }
+
+  /* Summen */
+  .total-row td          { font-size: 15px; padding: 2px 0; }
+  .total-row td:last-child { text-align: right; white-space: nowrap; }
+
+  /* Gesamtbetrag */
+  .grand-label { font-size: 24px; font-weight: 900; }
+  .grand-value { font-size: 24px; font-weight: 900; text-align: right; white-space: nowrap; }
+
+  /* Anmerkung */
+  .notes-text { font-size: 16px; font-weight: bold; padding-bottom: 4px; }
+
+  /* Footer */
+  .footer-main  { font-size: 15px; font-weight: 900; }
+  .footer-small { font-size: 12px; font-weight: normal; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="center">
+  <div class="logo">SIMONETTI</div>
+  <div class="tagline">E I S C A F E</div>
+  <div class="shop-info">
+    Konrad-Adenauer-Platz 2, 40764 Langenfeld<br/>
+    Tel: 02173 / 16 22 780
+  </div>
+</div>
+
+<div class="sep-solid"></div>
+
+<!-- BESTELLINFO -->
+<table>
+  <tr><td>Bestellung</td><td style="text-align:right"><b>#${orderNr}</b></td></tr>
+  <tr><td>Datum</td><td style="text-align:right">${dateStr}</td></tr>
+  <tr><td>Uhrzeit</td><td style="text-align:right">${timeStr} Uhr</td></tr>
+  <tr><td>Zahlung</td><td style="text-align:right">${paymentLabel}</td></tr>
+</table>
+
+<div class="sep-dashed"></div>
+
+<!-- LIEFERADRESSE -->
+<table>
+  <tr><td colspan="3" class="section-label">LIEFERUNG AN</td></tr>
+  <tr><td colspan="3" style="font-size:18px"><b>${order.customer_name || '–'}</b></td></tr>
+  ${phoneHtml}
+  <tr><td colspan="3" style="font-weight:normal">${addrStr}</td></tr>
+</table>
+
+<div class="sep-dashed"></div>
+
+<!-- ARTIKEL -->
+<table>
+  <tr><td colspan="3" class="section-label">BESTELLUNG</td></tr>
+  ${itemsHtml}
+  ${notesHtml}
+</table>
+
+<div class="sep-dashed"></div>
+
+<!-- SUMMEN -->
+<table>
+  <tr class="total-row"><td colspan="2">Zwischensumme</td><td>${subtotal.toFixed(2)} EUR</td></tr>
+  <tr class="total-row"><td colspan="2">Liefergebuehr</td><td>${deliveryFee.toFixed(2)} EUR</td></tr>
+  ${discountHtml}
+  ${tipHtml}
+</table>
+
+<div class="sep-solid"></div>
+
+<!-- GESAMT -->
+<table>
+  <tr>
+    <td class="grand-label">GESAMT</td>
+    <td class="grand-value">${grandTotal.toFixed(2)} EUR</td>
+  </tr>
+</table>
+
+<div class="sep-solid"></div>
+
+<!-- FOOTER -->
+<div class="center" style="margin-top:8px">
+  <div class="footer-main">Vielen Dank & Guten Appetit!</div>
+  <div class="footer-small" style="margin-top:3px">www.eiscafe-simonetti.de</div>
+  <div class="sep-dashed" style="margin-top:8px"></div>
+  <div class="footer-small">Beleg #${orderNr} · ${dateStr} · ${timeStr} Uhr</div>
+</div>
+
+<script>
+  window.onload = function() {
+    setTimeout(function() { window.print(); window.close(); }, 400);
+  };
+</script>
+</body>
+</html>`
+
+  const win = window.open('', '_blank', 'width=340,height=700')
   if (!win) return
   win.document.write(html)
   win.document.close()
@@ -539,7 +630,6 @@ export default function KanbanPage() {
     const ok = await apiUpdateOrder(orderId, { driver_id: driverId, status: 'AN_FAHRER', assigned_at: new Date().toISOString() })
     if (ok) {
       if (order) await sendEmail('order_out_for_delivery', order)
-      // Push Notification senden
       try {
         const driver = drivers.find((d: any) => d.id === driverId)
         if (driver?.push_token) {
@@ -561,7 +651,6 @@ export default function KanbanPage() {
   }
 
   const allOrders      = Object.values(orders).flat()
-  // FIX: Gesamtsumme ohne Trinkgeld
   const todayTotal     = allOrders.filter(o => o.status === 'GELIEFERT').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
   const deliveredCount = orders['GELIEFERT']?.length || 0
   const openCount      = orders['OFFEN']?.length || 0
@@ -616,17 +705,13 @@ export default function KanbanPage() {
                 <div className="flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 rounded-lg px-3 py-1.5">
                   <span className="text-xs">🔈</span>
                   <input
-                    type="range"
-                    min="0.1"
-                    max="2.0"
-                    step="0.1"
-                    value={soundVolume}
+                    type="range" min="0.1" max="2.0" step="0.1" value={soundVolume}
                     onChange={e => setSoundVolume(parseFloat(e.target.value))}
                     className="w-20 accent-yellow-500"
                     title={`Lautstärke: ${Math.round(soundVolume * 100)}%`}
                   />
                   <span className="text-xs font-bold text-yellow-700 w-8">{Math.round(soundVolume * 100)}%</span>
-                  <button onClick={() => playSound(soundVolume)} className="text-xs text-yellow-600 hover:text-yellow-800 font-semibold" title="Test">▶</button>
+                  <button onClick={() => playSound(soundVolume)} className="text-xs text-yellow-600 hover:text-yellow-800 font-semibold">▶</button>
                 </div>
               )}
             </div>

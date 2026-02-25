@@ -4,7 +4,8 @@ import AdminLayout from '@/components/AdminLayout'
 import {
   Clock, DollarSign, Save, PowerOff, Power, Calendar as CalendarIcon,
   Plus, Trash2, Edit2, X, Mail, ToggleLeft, ToggleRight, Share2,
-  CreditCard, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Zap
+  CreditCard, Eye, EyeOff, ExternalLink, CheckCircle, Zap,
+  Gift, Sparkles, Banknote, Store
 } from 'lucide-react'
 
 const DAYS = {
@@ -44,68 +45,30 @@ const SOCIAL_PLATFORMS = [
 const DEFAULT_SOCIAL = Object.fromEntries(SOCIAL_PLATFORMS.map(p => [p.id, { url: '', enabled: false }]))
 
 const DEFAULT_PAYMENT_KEYS = {
-  stripe: {
-    mode: 'test', test_public: '', test_secret: '', live_public: '', live_secret: '', webhook_secret: '',
-  },
-  paypal: {
-    mode: 'sandbox', sandbox_client_id: '', sandbox_client_secret: '', live_client_id: '', live_client_secret: '',
-  },
-  wero: {
-    api_key: '', merchant_id: '', note: 'Wero-Integration kommt sobald die offizielle API verfügbar ist.'
-  }
+  stripe: { mode: 'test', test_public: '', test_secret: '', live_public: '', live_secret: '', webhook_secret: '' },
+  paypal: { mode: 'sandbox', sandbox_client_id: '', sandbox_client_secret: '', live_client_id: '', live_client_secret: '' },
+  wero:   { api_key: '', merchant_id: '', note: 'Wero-Integration kommt sobald die offizielle API verfügbar ist.' }
 }
 
 const FEATURE_DEFINITIONS = [
-  {
-    id:          'reviews',
-    icon:        '⭐',
-    label:       'Bewertungssystem',
-    description: 'Kunden können bestellte Produkte mit 1–5 Sternen bewerten. Bewertungen erscheinen erst nach Freigabe im Admin.',
-    adminLink:   '/admin/reviews',
-    adminLabel:  'Bewertungen verwalten →',
-    comingSoon:  false,
-  },
-  {
-    id:          'payment_paypal',
-    icon:        '🅿️',
-    label:       'PayPal',
-    description: 'PayPal als Zahlungsmethode im Checkout anzeigen.',
-    adminLink:   '/admin/settings',
-    adminLabel:  'Stripe-Keys konfigurieren →',
-    comingSoon:  false,
-  },
-  {
-    id:          'payment_klarna',
-    icon:        '🛒',
-    label:       'Klarna (Ratenkauf)',
-    description: 'Klarna als Zahlungsmethode im Checkout anzeigen.',
-    adminLink:   null,
-    adminLabel:  null,
-    comingSoon:  false,
-  },
-  {
-    id:          'loyalty',
-    icon:        '🎁',
-    label:       'Treueprogramm',
-    description: 'Jede 10. Bestellung gratis.',
-    adminLink:   null,
-    adminLabel:  null,
-    comingSoon:  true,
-  },
-  {
-    id:          'favorites',
-    icon:        '❤️',
-    label:       'Favoriten',
-    description: 'Kunden können Produkte als Favoriten speichern.',
-    adminLink:   null,
-    adminLabel:  null,
-    comingSoon:  true,
-  },
+  { id: 'reviews',         icon: '⭐', label: 'Bewertungssystem',    description: 'Kunden können bestellte Produkte mit 1–5 Sternen bewerten.',         adminLink: '/admin/reviews', adminLabel: 'Bewertungen verwalten →', comingSoon: false },
+  { id: 'payment_paypal',  icon: '🅿️', label: 'PayPal',              description: 'PayPal als Zahlungsmethode im Checkout anzeigen.',                   adminLink: null,             adminLabel: null,                      comingSoon: false },
+  { id: 'payment_klarna',  icon: '🛒', label: 'Klarna (Ratenkauf)',   description: 'Klarna als Zahlungsmethode im Checkout anzeigen.',                   adminLink: null,             adminLabel: null,                      comingSoon: false },
+  { id: 'loyalty',         icon: '🎁', label: 'Treueprogramm',        description: 'Jede 10. Bestellung gratis.',                                        adminLink: null,             adminLabel: null,                      comingSoon: true  },
+  { id: 'favorites',       icon: '❤️', label: 'Favoriten',            description: 'Kunden können Produkte als Favoriten speichern.',                   adminLink: null,             adminLabel: null,                      comingSoon: true  },
 ]
 
-function mask(val: string): string {
-  if (!val || val.length < 8) return val
-  return val.slice(0, 6) + '••••••••' + val.slice(-4)
+const DEFAULT_MARKETING = {
+  welcome_banner_enabled:  false,
+  welcome_banner_code:     'WILLKOMMEN10',
+  welcome_banner_discount: 10,
+  welcome_banner_text:     'Als Dankeschön für deinen ersten Besuch schenken wir dir 10% auf deine erste Bestellung!',
+  preorder_enabled:        false,
+  preorder_start_hour:     10,
+  preorder_hint:           'Du kannst jetzt vorbestellen – Lieferung startet ab 14:00 Uhr.',
+  cash_payment_enabled:    false,
+  pickup_enabled:          false,
+  pickup_hint:             'Abholung direkt bei uns: Solinger Str. 12, 40764 Langenfeld',
 }
 
 function KeyField({ label, value, onChange, placeholder, help, isSecret = false }: {
@@ -169,6 +132,28 @@ function ProviderCard({ icon, title, subtitle, badge, badgeColor, children, docs
   )
 }
 
+function SectionToggle({ enabled, onToggle, icon, label, description, color = 'green' }: {
+  enabled: boolean; onToggle: () => void; icon: React.ReactNode
+  label: string; description: string; color?: string
+}) {
+  const activeColor = color === 'gold' ? 'text-[#c9a66b]' : color === 'blue' ? 'text-blue-500' : color === 'purple' ? 'text-purple-600' : 'text-green-600'
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-3">
+        <div className={`mt-0.5 ${enabled ? activeColor : 'text-gray-400'}`}>{icon}</div>
+        <div>
+          <div className="font-bold text-gray-900">{label}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{description}</div>
+        </div>
+      </div>
+      <button onClick={onToggle}
+        className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors mt-0.5 ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+        <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${enabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+      </button>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   const [loading, setLoading]     = useState(true)
   const [saving, setSaving]       = useState(false)
@@ -182,21 +167,22 @@ export default function SettingsPage() {
     close_message: '', opening_hours: {} as any
   })
 
-  const [emailSettings, setEmailSettings]           = useState<any>(DEFAULT_EMAIL_SETTINGS)
-  const [emailSaving, setEmailSaving]               = useState(false)
-  const [emailTestSending, setEmailTestSending]     = useState<string | null>(null)
-  const [testEmailAddress, setTestEmailAddress]     = useState('mahmutduran@hotmail.de')
-  const [socialLinks, setSocialLinks]               = useState<any>(DEFAULT_SOCIAL)
-  const [socialSaving, setSocialSaving]             = useState(false)
-  const [paymentKeys, setPaymentKeys]               = useState<any>(DEFAULT_PAYMENT_KEYS)
-  const [paymentSaving, setPaymentSaving]           = useState(false)
-  const [specialHours, setSpecialHours]             = useState<any[]>([])
-  const [showModal, setShowModal]                   = useState(false)
-  const [editingId, setEditingId]                   = useState<any>(null)
+  const [marketing, setMarketing]             = useState<any>(DEFAULT_MARKETING)
+  const [marketingSaving, setMarketingSaving] = useState(false)
+  const [emailSettings, setEmailSettings]     = useState<any>(DEFAULT_EMAIL_SETTINGS)
+  const [emailSaving, setEmailSaving]         = useState(false)
+  const [emailTestSending, setEmailTestSending] = useState<string | null>(null)
+  const [testEmailAddress, setTestEmailAddress] = useState('mahmutduran@hotmail.de')
+  const [socialLinks, setSocialLinks]         = useState<any>(DEFAULT_SOCIAL)
+  const [socialSaving, setSocialSaving]       = useState(false)
+  const [paymentKeys, setPaymentKeys]         = useState<any>(DEFAULT_PAYMENT_KEYS)
+  const [paymentSaving, setPaymentSaving]     = useState(false)
+  const [specialHours, setSpecialHours]       = useState<any[]>([])
+  const [showModal, setShowModal]             = useState(false)
+  const [editingId, setEditingId]             = useState<any>(null)
   const [formData, setFormData] = useState({
     date: '', is_closed: true, custom_open: '14:00', custom_close: '22:00', label: '', notes: ''
   })
-
   const [features, setFeatures]             = useState<Record<string, boolean>>({})
   const [featuresSaving, setFeaturesSaving] = useState(false)
 
@@ -221,6 +207,18 @@ export default function SettingsPage() {
       if (data.email_notifications) setEmailSettings({ ...DEFAULT_EMAIL_SETTINGS, ...data.email_notifications })
       if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
       if (data.payment_keys)        setPaymentKeys({ ...DEFAULT_PAYMENT_KEYS, ...data.payment_keys })
+      setMarketing({
+        welcome_banner_enabled:  data.welcome_banner_enabled  ?? false,
+        welcome_banner_code:     data.welcome_banner_code     || 'WILLKOMMEN10',
+        welcome_banner_discount: data.welcome_banner_discount || 10,
+        welcome_banner_text:     data.welcome_banner_text     || DEFAULT_MARKETING.welcome_banner_text,
+        preorder_enabled:        data.preorder_enabled        ?? false,
+        preorder_start_hour:     data.preorder_start_hour     || 10,
+        preorder_hint:           data.preorder_hint           || DEFAULT_MARKETING.preorder_hint,
+        cash_payment_enabled:    data.cash_payment_enabled    ?? false,
+        pickup_enabled:          data.pickup_enabled          ?? false,
+        pickup_hint:             data.pickup_hint             || DEFAULT_MARKETING.pickup_hint,
+      })
     }
     setLoading(false)
   }
@@ -245,6 +243,25 @@ export default function SettingsPage() {
     if (!error) showToast('✅ Einstellungen gespeichert!')
     else showToast('❌ Fehler: ' + error.message)
     setSaving(false)
+  }
+
+  const handleSaveMarketing = async () => {
+    setMarketingSaving(true)
+    const { error } = await supabase.from('shop_settings').update({
+      welcome_banner_enabled:  marketing.welcome_banner_enabled,
+      welcome_banner_code:     marketing.welcome_banner_code,
+      welcome_banner_discount: marketing.welcome_banner_discount,
+      welcome_banner_text:     marketing.welcome_banner_text,
+      preorder_enabled:        marketing.preorder_enabled,
+      preorder_start_hour:     marketing.preorder_start_hour,
+      preorder_hint:           marketing.preorder_hint,
+      cash_payment_enabled:    marketing.cash_payment_enabled,
+      pickup_enabled:          marketing.pickup_enabled,
+      pickup_hint:             marketing.pickup_hint,
+    }).eq('id', 'main')
+    if (!error) showToast('✅ Marketing gespeichert!')
+    else showToast('❌ Fehler: ' + error.message)
+    setMarketingSaving(false)
   }
 
   const handleSaveEmails = async () => {
@@ -293,24 +310,19 @@ export default function SettingsPage() {
   const updateDayHours = (day: string, field: string, value: any) => {
     setSettings({ ...settings, opening_hours: { ...settings.opening_hours, [day]: { ...(settings.opening_hours as any)[day], [field]: value } } })
   }
-
   const updateEmailSetting = (typeKey: string, field: string, value: any) => {
     setEmailSettings((prev: any) => ({ ...prev, [typeKey]: { ...prev[typeKey], [field]: value } }))
   }
-
   const updateSocial = (id: string, field: string, value: any) => {
     setSocialLinks((prev: any) => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
   }
-
   const updatePayment = (provider: string, field: string, value: any) => {
     setPaymentKeys((prev: any) => ({ ...prev, [provider]: { ...prev[provider], [field]: value } }))
   }
+  const setM = (field: string, value: any) => setMarketing((prev: any) => ({ ...prev, [field]: value }))
 
   const sendTestEmail = async (typeKey: string) => {
-    if (!testEmailAddress.trim()) {
-      showToast('❌ Bitte Test-Email-Adresse eingeben')
-      return
-    }
+    if (!testEmailAddress.trim()) { showToast('❌ Bitte Test-Email-Adresse eingeben'); return }
     setEmailTestSending(typeKey)
     try {
       const testOrder = {
@@ -379,13 +391,14 @@ export default function SettingsPage() {
   const activeFeatureCount = FEATURE_DEFINITIONS.filter(f => !f.comingSoon && features[f.id]).length
 
   const TABS = [
-    { key: 'general',  label: '⚙️ Allgemein' },
-    { key: 'hours',    label: '🕐 Öffnungszeiten' },
-    { key: 'calendar', label: '📅 Kalender' },
-    { key: 'payment',  label: '💳 Zahlungsanbieter' },
-    { key: 'emails',   label: '📧 Emails' },
-    { key: 'social',   label: `📱 Social Media${activeSocialCount > 0 ? ` (${activeSocialCount})` : ''}` },
-    { key: 'features', label: `⚡ Features${activeFeatureCount > 0 ? ` (${activeFeatureCount})` : ''}` },
+    { key: 'general',   label: '⚙️ Allgemein'   },
+    { key: 'hours',     label: '🕐 Öffnungszeiten' },
+    { key: 'calendar',  label: '📅 Kalender'     },
+    { key: 'marketing', label: '🎁 Marketing'    },
+    { key: 'payment',   label: '💳 Zahlungsanbieter' },
+    { key: 'emails',    label: '📧 Emails'        },
+    { key: 'social',    label: `📱 Social Media${activeSocialCount > 0 ? ` (${activeSocialCount})` : ''}` },
+    { key: 'features',  label: `⚡ Features${activeFeatureCount > 0 ? ` (${activeFeatureCount})` : ''}` },
   ]
 
   if (loading) return <AdminLayout><div className="p-8 text-gray-400">Lädt...</div></AdminLayout>
@@ -411,11 +424,9 @@ export default function SettingsPage() {
             ))}
           </div>
 
-          {/* ── TAB: ALLGEMEIN ── */}
+          {/* ── ALLGEMEIN ── */}
           {activeTab === 'general' && (
             <div className="space-y-6">
-
-              {/* Shop-Status */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -436,8 +447,6 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-
-              {/* Preise */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><DollarSign size={22} /> Preise & Gebühren</h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -455,8 +464,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Lieferdauer */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><Clock size={22} /> Lieferdauer</h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -475,7 +482,6 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-sm text-gray-400 mt-3">Kunden sehen: „Lieferung in ca. {settings.delivery_duration_min}–{settings.delivery_duration_max} Minuten"</p>
               </div>
-
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{saving ? 'Speichert...' : 'Einstellungen speichern'}
@@ -483,7 +489,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── TAB: ÖFFNUNGSZEITEN ── */}
+          {/* ── ÖFFNUNGSZEITEN ── */}
           {activeTab === 'hours' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -517,7 +523,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── TAB: KALENDER ── */}
+          {/* ── KALENDER ── */}
           {activeTab === 'calendar' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -569,7 +575,176 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── TAB: ZAHLUNGSANBIETER ── */}
+          {/* ── MARKETING ── */}
+          {activeTab === 'marketing' && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2"><Gift size={24} /> Marketing & Shop-Optionen</h2>
+                <p className="text-gray-500 text-sm mt-1">Alle Optionen sind unabhängig ein- und ausschaltbar.</p>
+              </div>
+
+              {/* WELCOME BANNER */}
+              <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-100">
+                  <SectionToggle
+                    enabled={marketing.welcome_banner_enabled}
+                    onToggle={() => setM('welcome_banner_enabled', !marketing.welcome_banner_enabled)}
+                    icon={<Sparkles size={22} />}
+                    label="Willkommens-Banner"
+                    description="Popup mit Rabattcode beim ersten Besuch der Seite"
+                    color="gold"
+                  />
+                </div>
+                {marketing.welcome_banner_enabled && (
+                  <div className="px-6 py-5 space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Gutscheincode</label>
+                        <input
+                          type="text"
+                          value={marketing.welcome_banner_code}
+                          onChange={e => setM('welcome_banner_code', e.target.value.toUpperCase())}
+                          className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none font-mono font-bold tracking-widest uppercase"
+                          placeholder="WILLKOMMEN10"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">Rabatt in %</label>
+                        <div className="relative">
+                          <input
+                            type="number" min={1} max={100}
+                            value={marketing.welcome_banner_discount}
+                            onChange={e => setM('welcome_banner_discount', parseInt(e.target.value))}
+                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Banner-Text</label>
+                      <textarea
+                        value={marketing.welcome_banner_text}
+                        onChange={e => setM('welcome_banner_text', e.target.value)}
+                        rows={3}
+                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm resize-none"
+                        placeholder="Als Dankeschön für deinen ersten Besuch..."
+                      />
+                    </div>
+                    {/* Live Preview */}
+                    <div className="bg-[#1a1a1a] rounded-xl p-5 text-center border border-[#c9a66b]/20">
+                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Vorschau</p>
+                      <div className="inline-flex items-center gap-2 bg-[#c9a66b] text-black px-3 py-1 text-xs font-bold mb-3 rounded-sm">
+                        {marketing.welcome_banner_discount}% Rabatt
+                      </div>
+                      <p className="text-sm text-gray-400 mb-3 max-w-xs mx-auto">{marketing.welcome_banner_text}</p>
+                      <p className="font-mono font-bold text-[#c9a66b] tracking-widest text-xl">{marketing.welcome_banner_code}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* VORBESTELLUNG */}
+              <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-100">
+                  <SectionToggle
+                    enabled={marketing.preorder_enabled}
+                    onToggle={() => setM('preorder_enabled', !marketing.preorder_enabled)}
+                    icon={<Clock size={22} />}
+                    label="Vorbestellung"
+                    description="Bestellungen vor der Öffnungszeit erlauben – mit Hinweis auf Lieferstart"
+                    color="blue"
+                  />
+                </div>
+                {marketing.preorder_enabled && (
+                  <div className="px-6 py-5 space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Vorbestellungen möglich ab</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number" min={0} max={23}
+                          value={marketing.preorder_start_hour}
+                          onChange={e => setM('preorder_start_hour', parseInt(e.target.value))}
+                          className="w-24 px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none font-bold text-center text-lg"
+                        />
+                        <span className="text-gray-500 font-semibold">:00 Uhr</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1.5">Kunden können ab dieser Uhrzeit bestellen, auch wenn der Shop noch geschlossen ist.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Hinweis-Text im Checkout</label>
+                      <input
+                        type="text"
+                        value={marketing.preorder_hint}
+                        onChange={e => setM('preorder_hint', e.target.value)}
+                        className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm"
+                        placeholder="Du kannst jetzt vorbestellen – Lieferung startet ab 14:00 Uhr."
+                      />
+                    </div>
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                      <span className="text-base">ℹ️</span>
+                      <p className="text-xs text-blue-700">Dieser blaue Hinweis erscheint im Checkout wenn der Kunde vor der Öffnungszeit bestellt.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* BARZAHLUNG */}
+              <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+                <div className="px-6 py-5">
+                  <SectionToggle
+                    enabled={marketing.cash_payment_enabled}
+                    onToggle={() => setM('cash_payment_enabled', !marketing.cash_payment_enabled)}
+                    icon={<Banknote size={22} />}
+                    label="Barzahlung bei Lieferung"
+                    description="Nur für eingeloggte Stammkunden sichtbar – erscheint als Zahlungsoption im Checkout"
+                    color="green"
+                  />
+                  {marketing.cash_payment_enabled && (
+                    <div className="mt-4 ml-9">
+                      <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                        ✅ Eingeloggte Kunden sehen „Barzahlung bei Lieferung" als Option im Checkout.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ABHOLUNG */}
+              <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-100">
+                  <SectionToggle
+                    enabled={marketing.pickup_enabled}
+                    onToggle={() => setM('pickup_enabled', !marketing.pickup_enabled)}
+                    icon={<Store size={22} />}
+                    label="Abholung"
+                    description="Kunden können zwischen Lieferung und Selbstabholung wählen"
+                    color="purple"
+                  />
+                </div>
+                {marketing.pickup_enabled && (
+                  <div className="px-6 py-5">
+                    <label className="block text-sm font-semibold mb-2">Abholhinweis für Kunden</label>
+                    <input
+                      type="text"
+                      value={marketing.pickup_hint}
+                      onChange={e => setM('pickup_hint', e.target.value)}
+                      className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm"
+                      placeholder="Abholung direkt bei uns: Solinger Str. 12, 40764 Langenfeld"
+                    />
+                    <p className="text-xs text-gray-400 mt-1.5">Wird im Checkout unter der Abholoption angezeigt.</p>
+                  </div>
+                )}
+              </div>
+
+              <button onClick={handleSaveMarketing} disabled={marketingSaving}
+                className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
+                <Save size={22} />{marketingSaving ? 'Speichert...' : 'Marketing speichern'}
+              </button>
+            </div>
+          )}
+
+          {/* ── ZAHLUNGSANBIETER ── */}
           {activeTab === 'payment' && (
             <div className="space-y-5">
               <div>
@@ -578,7 +753,7 @@ export default function SettingsPage() {
               </div>
               <ProviderCard icon="💳" title="Stripe" badge={isLive ? '🟢 Live-Modus' : '🟡 Test-Modus'}
                 badgeColor={isLive ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}
-                subtitle="Kreditkarte, SEPA, Apple Pay, Google Pay, giropay, Sofort"
+                subtitle="Kreditkarte, SEPA, Apple Pay, Google Pay"
                 docsUrl="https://dashboard.stripe.com/apikeys">
                 <div className="flex gap-2 mb-5">
                   {['test', 'live'].map(m => (
@@ -593,19 +768,17 @@ export default function SettingsPage() {
                     <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-3 mb-4 text-xs text-yellow-700">
                       ⚠️ <strong>Test-Modus:</strong> Keine echten Zahlungen. Testkarte: <code className="bg-yellow-100 px-1 rounded">4242 4242 4242 4242</code>
                     </div>
-                    <KeyField label="Test Publishable Key" value={stripe.test_public} onChange={v => updatePayment('stripe', 'test_public', v)} placeholder="pk_test_..." isSecret={false} help="Beginnt mit pk_test_" />
-                    <KeyField label="Test Secret Key"      value={stripe.test_secret} onChange={v => updatePayment('stripe', 'test_secret', v)} placeholder="sk_test_..." isSecret={true}  help="Beginnt mit sk_test_ → niemals öffentlich teilen!" />
+                    <KeyField label="Test Publishable Key" value={stripe.test_public} onChange={v => updatePayment('stripe', 'test_public', v)} placeholder="pk_test_..." help="Beginnt mit pk_test_" />
+                    <KeyField label="Test Secret Key"      value={stripe.test_secret} onChange={v => updatePayment('stripe', 'test_secret', v)} placeholder="sk_test_..." isSecret help="Beginnt mit sk_test_" />
                   </>
                 ) : (
                   <>
-                    <div className="bg-green-50 border border-green-100 rounded-xl p-3 mb-4 text-xs text-green-700">
-                      ✅ <strong>Live-Modus:</strong> Echte Zahlungen aktiv.
-                    </div>
-                    <KeyField label="Live Publishable Key" value={stripe.live_public} onChange={v => updatePayment('stripe', 'live_public', v)} placeholder="pk_live_..." isSecret={false} help="Beginnt mit pk_live_" />
-                    <KeyField label="Live Secret Key"      value={stripe.live_secret} onChange={v => updatePayment('stripe', 'live_secret', v)} placeholder="sk_live_..." isSecret={true}  help="Beginnt mit sk_live_ → niemals öffentlich teilen!" />
+                    <div className="bg-green-50 border border-green-100 rounded-xl p-3 mb-4 text-xs text-green-700">✅ <strong>Live-Modus:</strong> Echte Zahlungen aktiv.</div>
+                    <KeyField label="Live Publishable Key" value={stripe.live_public} onChange={v => updatePayment('stripe', 'live_public', v)} placeholder="pk_live_..." help="Beginnt mit pk_live_" />
+                    <KeyField label="Live Secret Key"      value={stripe.live_secret} onChange={v => updatePayment('stripe', 'live_secret', v)} placeholder="sk_live_..." isSecret help="Beginnt mit sk_live_" />
                   </>
                 )}
-                <KeyField label="Webhook Secret" value={stripe.webhook_secret} onChange={v => updatePayment('stripe', 'webhook_secret', v)} placeholder="whsec_..." isSecret={true} help="Stripe Dashboard → Entwickler → Webhooks → Signatur-Geheimnis" />
+                <KeyField label="Webhook Secret" value={stripe.webhook_secret} onChange={v => updatePayment('stripe', 'webhook_secret', v)} placeholder="whsec_..." isSecret help="Stripe Dashboard → Entwickler → Webhooks → Signatur-Geheimnis" />
               </ProviderCard>
               <ProviderCard icon="🅿️" title="PayPal" badge="Code bereit" badgeColor="bg-blue-100 text-blue-700"
                 subtitle="PayPal Zahlungen – einfach Keys eintragen und aktivieren"
@@ -620,13 +793,13 @@ export default function SettingsPage() {
                 </div>
                 {paypal.mode === 'sandbox' ? (
                   <>
-                    <KeyField label="Sandbox Client ID"     value={paypal.sandbox_client_id}     onChange={v => updatePayment('paypal', 'sandbox_client_id', v)}     placeholder="AXxx..." isSecret={false} />
-                    <KeyField label="Sandbox Client Secret" value={paypal.sandbox_client_secret} onChange={v => updatePayment('paypal', 'sandbox_client_secret', v)} placeholder="EXxx..." isSecret={true} />
+                    <KeyField label="Sandbox Client ID"     value={paypal.sandbox_client_id}     onChange={v => updatePayment('paypal', 'sandbox_client_id', v)}     placeholder="AXxx..." />
+                    <KeyField label="Sandbox Client Secret" value={paypal.sandbox_client_secret} onChange={v => updatePayment('paypal', 'sandbox_client_secret', v)} placeholder="EXxx..." isSecret />
                   </>
                 ) : (
                   <>
-                    <KeyField label="Live Client ID"     value={paypal.live_client_id}     onChange={v => updatePayment('paypal', 'live_client_id', v)}     placeholder="AXxx..." isSecret={false} />
-                    <KeyField label="Live Client Secret" value={paypal.live_client_secret} onChange={v => updatePayment('paypal', 'live_client_secret', v)} placeholder="EXxx..." isSecret={true} />
+                    <KeyField label="Live Client ID"     value={paypal.live_client_id}     onChange={v => updatePayment('paypal', 'live_client_id', v)}     placeholder="AXxx..." />
+                    <KeyField label="Live Client Secret" value={paypal.live_client_secret} onChange={v => updatePayment('paypal', 'live_client_secret', v)} placeholder="EXxx..." isSecret />
                   </>
                 )}
               </ProviderCard>
@@ -640,7 +813,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── TAB: EMAILS ── */}
+          {/* ── EMAILS ── */}
           {activeTab === 'emails' && (
             <div className="space-y-6">
               <div>
@@ -652,9 +825,7 @@ export default function SettingsPage() {
               <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
                 <label className="block text-sm font-bold text-blue-800 mb-2">📧 Test-Email senden an:</label>
                 <input type="email" value={testEmailAddress} onChange={e => setTestEmailAddress(e.target.value)}
-                  className="w-full px-4 py-2.5 border-2 border-blue-200 rounded-xl text-sm focus:border-blue-500 focus:outline-none bg-white"
-                  placeholder="deine@email.de" />
-                <p className="text-xs text-blue-600 mt-1.5">Diese Adresse wird für alle Test-Emails verwendet.</p>
+                  className="w-full px-4 py-2.5 border-2 border-blue-200 rounded-xl text-sm focus:border-blue-500 focus:outline-none bg-white" placeholder="deine@email.de" />
               </div>
               {EMAIL_TYPES.map((emailType) => {
                 const typeSetting = emailSettings[emailType.key] || {}
@@ -702,7 +873,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── TAB: SOCIAL MEDIA ── */}
+          {/* ── SOCIAL MEDIA ── */}
           {activeTab === 'social' && (
             <div className="space-y-5">
               <div>
@@ -745,7 +916,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── TAB: FEATURES ── */}
+          {/* ── FEATURES ── */}
           {activeTab === 'features' && (
             <div className="space-y-5">
               <div>
