@@ -10,7 +10,7 @@ interface Feature {
   enabled: boolean
 }
 
-const PAYMENT_FEATURES = ['card', 'sepa', 'giropay', 'sofort', 'apple_pay', 'google_pay', 'paypal', 'wero']
+const PAYMENT_FEATURES = ['card', 'sepa', 'giropay', 'sofort', 'apple_pay', 'google_pay', 'paypal', 'cash', 'wero']
 
 const FEATURE_ICONS: Record<string, string> = {
   // Zahlungsmethoden
@@ -21,6 +21,7 @@ const FEATURE_ICONS: Record<string, string> = {
   apple_pay:           '🍎',
   google_pay:          '🤖',
   paypal:              '🅿️',
+  cash:                '💵',
   wero:                '🇩🇪',
   // Shop-Features
   tip_option:          '💰',
@@ -33,6 +34,7 @@ const FEATURE_ICONS: Record<string, string> = {
 
 const FEATURE_EXTRAS: Record<string, string> = {
   paypal:    '💡 Code bereit – Toggle AN und Kunden sehen PayPal sofort',
+  cash:      '💡 Nur für eingeloggte Kunden sichtbar – kein Gast-Checkout',
   wero:      '🔜 Kommt bald – deutsche P2P-Zahlungsmethode (Deutsche Bank, Commerzbank etc.)',
   apple_pay: 'Erscheint automatisch auf iOS Safari',
   google_pay:'Erscheint automatisch auf Android Chrome',
@@ -41,38 +43,56 @@ const FEATURE_EXTRAS: Record<string, string> = {
   tip_option:'Trinkgeld-Auswahl (0%, 5%, 10%, 15%, eigen) im Checkout anzeigen',
 }
 
-// Alle Shop-Features die in der DB sein sollten
-// Falls sie nicht in der DB sind, zeigen wir sie trotzdem an
 const DEFAULT_SHOP_FEATURES: Feature[] = [
-  { id: 'tip_option',          name: 'Trinkgeld-Option',       description: 'Trinkgeld-Auswahl im Checkout anzeigen',              enabled: true  },
-  { id: 'vouchers',            name: 'Gutscheine',              description: 'Gutscheinfeld im Checkout ein- oder ausblenden',       enabled: true  },
-  { id: 'guest_checkout',      name: 'Gast-Checkout',           description: 'Bestellen ohne Konto möglich',                        enabled: true  },
-  { id: 'favorites',           name: 'Favoriten',               description: 'Kunden können Produkte auf Merkliste setzen',          enabled: true  },
-  { id: 'reviews',             name: 'Bewertungen',             description: 'Kundenbewertungen auf der Shopseite anzeigen',         enabled: false },
-  { id: 'email_notifications', name: 'E-Mail Benachrichtigungen', description: 'Automatische Emails bei Statusänderungen versenden', enabled: true  },
+  { id: 'tip_option',          name: 'Trinkgeld-Option',         description: 'Trinkgeld-Auswahl im Checkout anzeigen',              enabled: true  },
+  { id: 'vouchers',            name: 'Gutscheine',                description: 'Gutscheinfeld im Checkout ein- oder ausblenden',       enabled: true  },
+  { id: 'guest_checkout',      name: 'Gast-Checkout',             description: 'Bestellen ohne Konto möglich',                        enabled: true  },
+  { id: 'favorites',           name: 'Favoriten',                 description: 'Kunden können Produkte auf Merkliste setzen',          enabled: true  },
+  { id: 'reviews',             name: 'Bewertungen',               description: 'Kundenbewertungen auf der Shopseite anzeigen',         enabled: false },
+  { id: 'email_notifications', name: 'E-Mail Benachrichtigungen', description: 'Automatische Emails bei Statusänderungen versenden',   enabled: true  },
 ]
 
 export default function FeaturesPage() {
-  const [features, setFeatures]   = useState<Feature[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [saving, setSaving]       = useState<string | null>(null)
-  const [toast, setToast]         = useState('')
+  const [features, setFeatures] = useState<Feature[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [saving, setSaving]     = useState<string | null>(null)
+  const [toast, setToast]       = useState('')
 
   useEffect(() => { loadFeatures() }, [])
 
   const loadFeatures = async () => {
     setLoading(true)
+
+    // feature_toggles aus DB
     const { data } = await supabase.from('feature_toggles').select('*').order('id')
 
-    if (data && data.length > 0) {
-      // Merge DB-Daten mit DEFAULT_SHOP_FEATURES damit alle angezeigt werden
-      const dbIds = data.map((f: Feature) => f.id)
-      const missing = DEFAULT_SHOP_FEATURES.filter(f => !dbIds.includes(f.id))
-      setFeatures([...data, ...missing])
-    } else {
-      // Fallback: defaults zeigen
-      setFeatures(DEFAULT_SHOP_FEATURES)
+    // cash_payment_enabled aus shop_settings laden
+    const { data: settings } = await supabase
+      .from('shop_settings')
+      .select('cash_payment_enabled')
+      .eq('id', 'main')
+      .single()
+
+    const cashEnabled = settings?.cash_payment_enabled ?? false
+
+    // Cash als virtueller Feature-Eintrag
+    const cashFeature: Feature = {
+      id:          'cash',
+      name:        'Barzahlung',
+      description: 'Kunden können bei Lieferung bar bezahlen (nur eingeloggte Kunden)',
+      enabled:     cashEnabled,
     }
+
+    if (data && data.length > 0) {
+      const dbIds   = data.map((f: Feature) => f.id)
+      const missing = DEFAULT_SHOP_FEATURES.filter(f => !dbIds.includes(f.id))
+      // Cash nicht aus feature_toggles – kommt aus shop_settings
+      const withoutCash = [...data, ...missing].filter(f => f.id !== 'cash')
+      setFeatures([...withoutCash, cashFeature])
+    } else {
+      setFeatures([...DEFAULT_SHOP_FEATURES, cashFeature])
+    }
+
     setLoading(false)
   }
 
@@ -83,14 +103,30 @@ export default function FeaturesPage() {
     const newEnabled = !currentEnabled
     setFeatures(prev => prev.map(f => f.id === id ? { ...f, enabled: newEnabled } : f))
 
-    // Versuche in DB zu updaten, falls nicht vorhanden → insert
+    // ── Barzahlung: in shop_settings speichern ──
+    if (id === 'cash') {
+      const { error } = await supabase
+        .from('shop_settings')
+        .update({ cash_payment_enabled: newEnabled })
+        .eq('id', 'main')
+
+      if (error) {
+        setFeatures(prev => prev.map(f => f.id === id ? { ...f, enabled: currentEnabled } : f))
+        showToast('❌ Fehler beim Speichern')
+      } else {
+        showToast(newEnabled ? '✅ Barzahlung aktiviert' : '⏸️ Barzahlung deaktiviert')
+      }
+      setSaving(null)
+      return
+    }
+
+    // ── Alle anderen: in feature_toggles speichern ──
     const { error: updateError } = await supabase
       .from('feature_toggles')
       .update({ enabled: newEnabled, updated_at: new Date().toISOString() })
       .eq('id', id)
 
     if (updateError) {
-      // Zeile existiert nicht → insert
       const { error: insertError } = await supabase
         .from('feature_toggles')
         .insert({ id, enabled: newEnabled, name: DEFAULT_SHOP_FEATURES.find(f => f.id === id)?.name || id })
@@ -177,9 +213,7 @@ export default function FeaturesPage() {
           </div>
           <div className="divide-y divide-gray-50">
             {shopFeatures.length === 0 ? (
-              <div className="px-6 py-8 text-center text-gray-400 text-sm">
-                Keine Shop-Features gefunden.
-              </div>
+              <div className="px-6 py-8 text-center text-gray-400 text-sm">Keine Shop-Features gefunden.</div>
             ) : (
               shopFeatures.map(feature => (
                 <FeatureRow
