@@ -6,7 +6,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import Navbar from '@/components/Navbar'
-import { AlertCircle, Tag, X, Check, Loader2, MapPin, CreditCard, User } from 'lucide-react'
+import { AlertCircle, Tag, X, Check, Loader2, MapPin, CreditCard, User, Clock } from 'lucide-react'
 import { searchStreets, type Street } from '@/lib/langenfeld-streets'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -29,9 +29,7 @@ interface AppliedVoucher {
   discountAmount: number
 }
 
-const DELIVERY_FEE  = 3.00
-const MINIMUM_ORDER = 15.00
-const TIP_OPTIONS   = [0, 5, 10, 15]
+const TIP_OPTIONS = [0, 5, 10, 15]
 
 async function validateVoucher(
   code: string,
@@ -223,14 +221,19 @@ function TipSelector({ subtotal, onTipChange }: {
 
 // ── Hauptseite ────────────────────────────────────────────────
 export default function Checkout({ session }: { session: Session | null }) {
-  const router  = useRouter()
+  const router    = useRouter()
   const { guest } = router.query
-  const isGuest = guest === 'true'
+  const isGuest   = guest === 'true'
 
   const [cart, setCart]                 = useState<CartItem[]>([])
   const [clientSecret, setClientSecret] = useState('')
   const [shopOpen, setShopOpen]         = useState<boolean | null>(null)
   const [shopMessage, setShopMessage]   = useState('')
+
+  // ── FIX: Vorbestellung ──
+  const [isPreorder, setIsPreorder]     = useState(false)
+  const [preorderHint, setPreorderHint] = useState('')
+
   const [voucher, setVoucher]           = useState<AppliedVoucher | null>(null)
   const [tip, setTip]                   = useState(0)
   const [showVoucher, setShowVoucher]   = useState(true)
@@ -238,7 +241,11 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [showPayPal, setShowPayPal]     = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
 
-  // Lieferdaten State (geteilt zwischen Stripe und PayPal)
+  // ── FIX: Dynamisch aus Supabase ──
+  const [deliveryFee, setDeliveryFee]   = useState(3.00)
+  const [minimumOrder, setMinimumOrder] = useState(15.00)
+  const [paypalClientId, setPaypalClientId] = useState('')
+
   const [name,   setName]   = useState('')
   const [email,  setEmail]  = useState(session?.user?.email || '')
   const [phone,  setPhone]  = useState('')
@@ -248,11 +255,40 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [notes,  setNotes]  = useState('')
 
   useEffect(() => {
+    // Shop-Status inkl. Vorbestellung
     fetch('/api/shop-status')
       .then(r => r.json())
-      .then(data => { setShopOpen(data.isOpen); setShopMessage(data.message || '') })
+      .then(data => {
+        setShopOpen(data.isOpen)
+        setShopMessage(data.message || '')
+        setIsPreorder(data.isPreorder || false)
+        setPreorderHint(data.preorderHint || '')
+      })
       .catch(() => setShopOpen(true))
 
+    // ── FIX: Liefergebühr + Mindestbestellwert + PayPal-Key aus Supabase ──
+    supabase
+      .from('shop_settings')
+      .select('delivery_fee, min_order_value, payment_keys')
+      .eq('id', 'main')
+      .single()
+      .then(({ data }) => {
+        if (!data) return
+        if (data.delivery_fee  != null) setDeliveryFee(data.delivery_fee)
+        if (data.min_order_value != null) setMinimumOrder(data.min_order_value)
+
+        // PayPal Client ID aus payment_keys laden (nicht aus env!)
+        const keys = data.payment_keys
+        if (keys?.paypal) {
+          const mode     = keys.paypal.mode || 'sandbox'
+          const clientId = mode === 'live'
+            ? keys.paypal.live_client_id
+            : keys.paypal.sandbox_client_id
+          if (clientId) setPaypalClientId(clientId)
+        }
+      })
+
+    // Feature Toggles
     supabase
       .from('feature_toggles')
       .select('id, enabled')
@@ -268,11 +304,12 @@ export default function Checkout({ session }: { session: Session | null }) {
         }
       })
 
+    // Cart laden
     const savedCart = localStorage.getItem('simonetti-cart') || localStorage.getItem('cart')
     if (savedCart) {
       const parsedCart = JSON.parse(savedCart)
       setCart(parsedCart)
-      createPaymentIntent(parsedCart, null, 0)
+      createPaymentIntent(parsedCart, null, 0, 3.00)
     } else {
       router.push('/')
     }
@@ -280,16 +317,18 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const subtotal   = cart.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity), 0)
   const discount   = voucher?.discountAmount || 0
-  const grandTotal = parseFloat(Math.max(0, subtotal - discount + DELIVERY_FEE + tip).toFixed(2))
+  const grandTotal = parseFloat(Math.max(0, subtotal - discount + deliveryFee + tip).toFixed(2))
 
   const createPaymentIntent = async (
     cartItems: CartItem[],
     appliedVoucher: AppliedVoucher | null,
-    tipAmount: number
+    tipAmount: number,
+    fee?: number,
   ) => {
     const sub   = cartItems.reduce((sum, i) => sum + (i.totalPrice || i.price * i.quantity), 0)
     const disc  = appliedVoucher?.discountAmount || 0
-    const total = parseFloat(Math.max(0, sub - disc + DELIVERY_FEE + tipAmount).toFixed(2))
+    const useFee = fee ?? deliveryFee
+    const total = parseFloat(Math.max(0, sub - disc + useFee + tipAmount).toFixed(2))
     try {
       const res  = await fetch('/api/stripe/create-payment-intent', {
         method:  'POST',
@@ -321,27 +360,26 @@ export default function Checkout({ session }: { session: Session | null }) {
     createPaymentIntent(cart, voucher, amount)
   }
 
-  // Bestellung in DB speichern (für PayPal)
   const saveOrder = async (paymentId: string, method: string) => {
     const orderData = {
-      user_id:          session?.user?.id || null,
-      guest_email:      isGuest ? email : null,
-      customer_name:    name,
-      customer_email:   isGuest ? email : session?.user?.email,
-      customer_phone:   phone || null,
-      items:            cart,
+      user_id:           session?.user?.id || null,
+      guest_email:       isGuest ? email : null,
+      customer_name:     name,
+      customer_email:    isGuest ? email : session?.user?.email,
+      customer_phone:    phone || null,
+      items:             cart,
       subtotal,
-      discount:         voucher?.discountAmount || 0,
-      voucher_code:     voucher?.code || null,
-      voucher_id:       voucher?.id   || null,
-      delivery_fee:     3.00,
+      discount:          voucher?.discountAmount || 0,
+      voucher_code:      voucher?.code || null,
+      voucher_id:        voucher?.id   || null,
+      delivery_fee:      deliveryFee,
       tip,
-      total:            grandTotal,
-      delivery_address: { name, street, zip, city },
-      notes:            notes || null,
+      total:             grandTotal,
+      delivery_address:  { name, street, zip, city },
+      notes:             notes || null,
       payment_intent_id: paymentId,
-      payment_method:   method,
-      status:           'OFFEN',
+      payment_method:    method,
+      status:            'OFFEN',
     }
     await fetch('/api/orders', {
       method:  'POST',
@@ -373,6 +411,17 @@ export default function Checkout({ session }: { session: Session | null }) {
           <p className="text-gray-400 mt-1 text-sm">Nur noch wenige Schritte bis zu deinem Eis 🍦</p>
         </div>
 
+        {/* ── FIX: Vorbestellungs-Banner ── */}
+        {isPreorder && (
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
+            <Clock size={20} className="text-blue-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-bold text-blue-800 text-sm">Vorbestellung</p>
+              <p className="text-blue-700 text-sm mt-0.5">{preorderHint}</p>
+            </div>
+          </div>
+        )}
+
         {shopOpen === false && (
           <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-10 text-center mb-8">
             <div className="text-6xl mb-4">🔒</div>
@@ -396,10 +445,9 @@ export default function Checkout({ session }: { session: Session | null }) {
         {shopOpen === true && (
           <div className="grid lg:grid-cols-11 gap-6">
 
-            {/* ── Links: Übersicht + Gutschein + Trinkgeld ── */}
+            {/* ── Links ── */}
             <div className="lg:col-span-6 space-y-5">
 
-              {/* Bestellübersicht */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-gray-900">🍦 Bestellübersicht</h2>
@@ -440,8 +488,9 @@ export default function Checkout({ session }: { session: Session | null }) {
                       <span>− {discount.toFixed(2)} €</span>
                     </div>
                   )}
+                  {/* ── FIX: Dynamische Liefergebühr ── */}
                   <div className="flex justify-between text-sm text-gray-500">
-                    <span>🚗 Liefergebühr</span><span>{DELIVERY_FEE.toFixed(2)} €</span>
+                    <span>🚗 Liefergebühr</span><span>{deliveryFee.toFixed(2)} €</span>
                   </div>
                   {tip > 0 && (
                     <div className="flex justify-between text-sm text-gray-500">
@@ -472,11 +521,10 @@ export default function Checkout({ session }: { session: Session | null }) {
               )}
             </div>
 
-            {/* ── Rechts: Checkout-Formular ── */}
+            {/* ── Rechts ── */}
             <div className="lg:col-span-5">
               <div className="sticky top-6 space-y-4">
 
-                {/* Lieferdaten (immer sichtbar) */}
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 space-y-4">
                   <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
                     <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white">
@@ -531,23 +579,22 @@ export default function Checkout({ session }: { session: Session | null }) {
                   </Field>
                 </div>
 
-                {/* Mindestbestellwert */}
-                {subtotal < MINIMUM_ORDER && (
+                {/* ── FIX: Dynamischer Mindestbestellwert ── */}
+                {subtotal < minimumOrder && (
                   <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-3 text-sm text-amber-700 flex items-center gap-2">
                     <AlertCircle size={15} />
-                    <span>Mindestbestellwert <b>{MINIMUM_ORDER.toFixed(2)} €</b> – noch <b>{(MINIMUM_ORDER - subtotal).toFixed(2)} €</b> fehlen</span>
+                    <span>Mindestbestellwert <b>{minimumOrder.toFixed(2)} €</b> – noch <b>{(minimumOrder - subtotal).toFixed(2)} €</b> fehlen</span>
                   </div>
                 )}
 
-                {/* Zahlungsmethode wählen */}
-                {subtotal >= MINIMUM_ORDER && (
+                {subtotal >= minimumOrder && (
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
                       <CreditCard size={13} /> Zahlungsmethode
                     </div>
 
-                    {/* Tab-Auswahl */}
-                    <div className={`grid gap-2 ${showPayPal ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    {/* ── FIX: PayPal nur zeigen wenn clientId geladen ── */}
+                    <div className={`grid gap-2 ${showPayPal && paypalClientId ? 'grid-cols-2' : 'grid-cols-1'}`}>
                       <button type="button" onClick={() => setPaymentMethod('stripe')}
                         className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
                           paymentMethod === 'stripe'
@@ -556,7 +603,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                         }`}>
                         💳 Karte / SEPA
                       </button>
-                      {showPayPal && (
+                      {showPayPal && paypalClientId && (
                         <button type="button" onClick={() => setPaymentMethod('paypal')}
                           className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${
                             paymentMethod === 'paypal'
@@ -577,7 +624,8 @@ export default function Checkout({ session }: { session: Session | null }) {
                         <StripeForm
                           session={session} isGuest={isGuest} cart={cart}
                           total={grandTotal} subtotal={subtotal} shopOpen={shopOpen}
-                          minimumOrder={MINIMUM_ORDER} voucher={voucher} tip={tip}
+                          minimumOrder={minimumOrder} deliveryFee={deliveryFee}
+                          voucher={voucher} tip={tip}
                           name={name} email={email} phone={phone}
                           street={street} zip={zip} city={city} notes={notes}
                         />
@@ -591,12 +639,9 @@ export default function Checkout({ session }: { session: Session | null }) {
                       </div>
                     )}
 
-                    {/* PayPal */}
-                    {paymentMethod === 'paypal' && showPayPal && (
-                      <PayPalScriptProvider options={{
-                        clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
-                        currency: 'EUR',
-                      }}>
+                    {/* ── FIX: PayPal mit dynamischer clientId ── */}
+                    {paymentMethod === 'paypal' && showPayPal && paypalClientId && (
+                      <PayPalScriptProvider options={{ clientId: paypalClientId, currency: 'EUR' }}>
                         <div className="space-y-3">
                           {!isFormValid && (
                             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
@@ -611,11 +656,8 @@ export default function Checkout({ session }: { session: Session | null }) {
                                 return actions.order.create({
                                   intent: 'CAPTURE',
                                   purchase_units: [{
-                                    amount: {
-                                      currency_code: 'EUR',
-                                      value: grandTotal.toFixed(2),
-                                    },
-                                    description: `Eiscafe Simonetti Bestellung`,
+                                    amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) },
+                                    description: 'Eiscafe Simonetti Bestellung',
                                   }],
                                 })
                               }}
@@ -623,9 +665,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                                 const order = await actions.order!.capture()
                                 await saveOrder(order.id || 'paypal-' + Date.now(), 'paypal')
                               }}
-                              onError={(err) => {
-                                console.error('PayPal error:', err)
-                              }}
+                              onError={err => console.error('PayPal error:', err)}
                             />
                           </div>
                         </div>
@@ -644,11 +684,9 @@ export default function Checkout({ session }: { session: Session | null }) {
   )
 }
 
-// ── Straßen-Input ausgelagert ─────────────────────────────────
+// ── Straßen-Input ─────────────────────────────────────────────
 function StreetInput({ street, setStreet, inputClass }: {
-  street: string
-  setStreet: (v: string) => void
-  inputClass: string
+  street: string; setStreet: (v: string) => void; inputClass: string
 }) {
   const [suggestions, setSuggestions] = useState<Street[]>([])
   const [show, setShow]               = useState(false)
@@ -679,12 +717,13 @@ function StreetInput({ street, setStreet, inputClass }: {
 
 // ── Stripe Formular ───────────────────────────────────────────
 function StripeForm({
-  session, isGuest, cart, total, subtotal, shopOpen, minimumOrder, voucher, tip,
-  name, email, phone, street, zip, city, notes
+  session, isGuest, cart, total, subtotal, shopOpen, minimumOrder, deliveryFee,
+  voucher, tip, name, email, phone, street, zip, city, notes
 }: {
   session: Session | null; isGuest: boolean; cart: CartItem[]
   total: number; subtotal: number; shopOpen: boolean | null
-  minimumOrder: number; voucher: AppliedVoucher | null; tip: number
+  minimumOrder: number; deliveryFee: number
+  voucher: AppliedVoucher | null; tip: number
   name: string; email: string; phone: string
   street: string; zip: string; city: string; notes: string
 }) {
@@ -719,24 +758,24 @@ function StripeForm({
       }
 
       const orderData = {
-        user_id:          session?.user?.id || null,
-        guest_email:      isGuest ? email : null,
-        customer_name:    name,
-        customer_email:   isGuest ? email : session?.user?.email,
-        customer_phone:   phone || null,
-        items:            cart,
+        user_id:           session?.user?.id || null,
+        guest_email:       isGuest ? email : null,
+        customer_name:     name,
+        customer_email:    isGuest ? email : session?.user?.email,
+        customer_phone:    phone || null,
+        items:             cart,
         subtotal,
-        discount:         voucher?.discountAmount || 0,
-        voucher_code:     voucher?.code || null,
-        voucher_id:       voucher?.id   || null,
-        delivery_fee:     3.00,
+        discount:          voucher?.discountAmount || 0,
+        voucher_code:      voucher?.code || null,
+        voucher_id:        voucher?.id   || null,
+        delivery_fee:      deliveryFee,
         tip,
         total,
-        delivery_address: { name, street, zip, city },
-        notes:            notes || null,
+        delivery_address:  { name, street, zip, city },
+        notes:             notes || null,
         payment_intent_id: paymentIntent?.id,
-        payment_method:   'stripe',
-        status:           'OFFEN',
+        payment_method:    'stripe',
+        status:            'OFFEN',
       }
 
       await fetch('/api/orders', {
@@ -771,11 +810,12 @@ function StripeForm({
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
             : 'bg-gray-900 text-white hover:bg-gray-700 active:scale-[0.98] shadow-sm'
         }`}>
-        {loading ? (
-          <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Zahlung wird verarbeitet...</>
-        ) : shopOpen === false ? '🔒 Shop geschlossen'
+        {loading
+          ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Zahlung wird verarbeitet...</>
+          : shopOpen === false ? '🔒 Shop geschlossen'
           : subtotal < minimumOrder ? 'Mindestbestellwert nicht erreicht'
-          : `✅ Jetzt bezahlen · ${total.toFixed(2)} €`}
+          : `✅ Jetzt bezahlen · ${total.toFixed(2)} €`
+        }
       </button>
     </form>
   )

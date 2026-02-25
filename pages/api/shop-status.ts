@@ -26,12 +26,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: settings } = await supabase
       .from('shop_settings').select('*').eq('id', 'main').single()
 
-    if (!settings) return res.status(200).json({ isOpen: false, message: 'Shop nicht verfügbar' })
+    if (!settings) return res.status(200).json({ isOpen: false, isPreorder: false, message: 'Shop nicht verfügbar' })
 
     // 1. Manuell geschlossen
     if (settings.manual_close) {
       return res.status(200).json({
-        isOpen: false,
+        isOpen: false, isPreorder: false,
         message: settings.close_message || 'Der Shop ist momentan geschlossen.'
       })
     }
@@ -45,37 +45,61 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (specialDay) {
       if (specialDay.is_closed) {
         return res.status(200).json({
-          isOpen: false,
+          isOpen: false, isPreorder: false,
           message: specialDay.label ? `Heute geschlossen: ${specialDay.label}` : 'Heute leider geschlossen.'
         })
       }
-      const isOpen = isNowBetween(specialDay.open_from, specialDay.open_until)
+      // Feldnamen-Kompatibilität: custom_open/custom_close (neu) oder open_from/open_until (alt)
+      const from  = specialDay.custom_open  || specialDay.open_from  || '14:00'
+      const until = specialDay.custom_close || specialDay.open_until || '22:00'
+      const isOpen = isNowBetween(from, until)
       return res.status(200).json({
-        isOpen,
-        message: isOpen ? 'Geöffnet' : `Geöffnet von ${specialDay.open_from} bis ${specialDay.open_until} Uhr`,
-        openFrom: specialDay.open_from,
-        openUntil: specialDay.open_until
+        isOpen, isPreorder: false,
+        message: isOpen ? `Geöffnet bis ${until} Uhr` : `Geöffnet von ${from} bis ${until} Uhr`,
+        openFrom: from, openUntil: until
       })
     }
 
     // 3. Reguläre Öffnungszeiten
     const dayKey = DAY_KEYS[new Date().getDay()]
-    const hours = settings.opening_hours?.[dayKey]
+    const hours  = settings.opening_hours?.[dayKey]
 
     if (!hours || hours.closed) {
-      return res.status(200).json({ isOpen: false, message: 'Heute leider geschlossen.' })
+      return res.status(200).json({ isOpen: false, isPreorder: false, message: 'Heute leider geschlossen.' })
     }
 
-    const isOpen = isNowBetween(hours.open, hours.close)
+    const from   = hours.open  || '14:00'
+    const until  = hours.close || '22:00'
+    const isOpen = isNowBetween(from, until)
+
+    // 4. Vorbestellung prüfen
+    if (!isOpen && settings.preorder_enabled) {
+      const nowHour         = new Date().getHours()
+      const preorderStart   = settings.preorder_start_hour ?? 10
+      const preorderAllowed = nowHour >= preorderStart
+
+      if (preorderAllowed) {
+        return res.status(200).json({
+          isOpen:       true,
+          isPreorder:   true,
+          message:      `Jetzt vorbestellen – Lieferung ab ${from} Uhr`,
+          preorderHint: settings.preorder_hint || `Du kannst jetzt vorbestellen – Lieferung startet ab ${from} Uhr.`,
+          openFrom:     from,
+          openUntil:    until
+        })
+      }
+    }
+
     return res.status(200).json({
-      isOpen,
-      message: isOpen ? 'Geöffnet' : `Geöffnet von ${hours.open} bis ${hours.close} Uhr`,
-      openFrom: hours.open,
-      openUntil: hours.close
+      isOpen, isPreorder: false,
+      message: isOpen
+        ? `Geöffnet bis ${until} Uhr`
+        : `Geöffnet von ${from} bis ${until} Uhr`,
+      openFrom: from, openUntil: until
     })
 
   } catch (err) {
     console.error('shop-status error:', err)
-    return res.status(200).json({ isOpen: true, message: '' })
+    return res.status(200).json({ isOpen: true, isPreorder: false, message: '' })
   }
 }
