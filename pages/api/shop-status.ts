@@ -13,9 +13,26 @@ function timeToMinutes(t: string): number {
   return h * 60 + m
 }
 
-function isNowBetween(from: string, until: string): boolean {
-  const now = new Date()
-  const nowMins = now.getHours() * 60 + now.getMinutes()
+// ── FIX: Immer deutsche Zeit (Europe/Berlin), egal wo der Server läuft ──
+function getNowDE(): { hours: number; minutes: number; dayOfWeek: number; dateStr: string } {
+  const now    = new Date()
+  const locale = 'de-DE'
+  const tz     = 'Europe/Berlin'
+
+  const hours      = parseInt(now.toLocaleString(locale, { timeZone: tz, hour:   '2-digit', hour12: false }))
+  const minutes    = parseInt(now.toLocaleString(locale, { timeZone: tz, minute: '2-digit' }))
+  const dayOfWeek  = parseInt(now.toLocaleString(locale, { timeZone: tz, weekday: 'long' })
+    .replace('Sonntag','0').replace('Montag','1').replace('Dienstag','2')
+    .replace('Mittwoch','3').replace('Donnerstag','4').replace('Freitag','5').replace('Samstag','6'))
+
+  // Datum in DE-Zeitzone für Sondertage
+  const dateStr = now.toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD
+
+  return { hours, minutes, dayOfWeek, dateStr }
+}
+
+function isNowBetween(from: string, until: string, nowDE: { hours: number; minutes: number }): boolean {
+  const nowMins = nowDE.hours * 60 + nowDE.minutes
   return nowMins >= timeToMinutes(from) && nowMins < timeToMinutes(until)
 }
 
@@ -36,11 +53,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const todayStr = new Date().toISOString().split('T')[0]
+    const nowDE = getNowDE()
 
     // 2. Sondertag
     const { data: specialDay } = await supabase
-      .from('special_hours').select('*').eq('date', todayStr).maybeSingle()
+      .from('special_hours').select('*').eq('date', nowDE.dateStr).maybeSingle()
 
     if (specialDay) {
       if (specialDay.is_closed) {
@@ -49,10 +66,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           message: specialDay.label ? `Heute geschlossen: ${specialDay.label}` : 'Heute leider geschlossen.'
         })
       }
-      // Feldnamen-Kompatibilität: custom_open/custom_close (neu) oder open_from/open_until (alt)
       const from  = specialDay.custom_open  || specialDay.open_from  || '14:00'
       const until = specialDay.custom_close || specialDay.open_until || '22:00'
-      const isOpen = isNowBetween(from, until)
+      const isOpen = isNowBetween(from, until, nowDE)
       return res.status(200).json({
         isOpen, isPreorder: false,
         message: isOpen ? `Geöffnet bis ${until} Uhr` : `Geöffnet von ${from} bis ${until} Uhr`,
@@ -61,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 3. Reguläre Öffnungszeiten
-    const dayKey = DAY_KEYS[new Date().getDay()]
+    const dayKey = DAY_KEYS[nowDE.dayOfWeek]
     const hours  = settings.opening_hours?.[dayKey]
 
     if (!hours || hours.closed) {
@@ -70,13 +86,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const from   = hours.open  || '14:00'
     const until  = hours.close || '22:00'
-    const isOpen = isNowBetween(from, until)
+    const isOpen = isNowBetween(from, until, nowDE)
 
     // 4. Vorbestellung prüfen
     if (!isOpen && settings.preorder_enabled) {
-      const nowHour         = new Date().getHours()
       const preorderStart   = settings.preorder_start_hour ?? 10
-      const preorderAllowed = nowHour >= preorderStart
+      const preorderAllowed = nowDE.hours >= preorderStart
 
       if (preorderAllowed) {
         return res.status(200).json({

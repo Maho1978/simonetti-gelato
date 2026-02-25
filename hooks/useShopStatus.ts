@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
-// Sonntag=0, Montag=1, ...
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
 export interface ShopStatus {
   isOpen: boolean
-  isPreorder: boolean   // Vorbestellung möglich, aber noch nicht geöffnet
+  isPreorder: boolean
   openFrom: string
   openUntil: string
   message: string
-  preorderHint: string  // Hinweis-Text für Vorbestellung
+  preorderHint: string
   loading: boolean
 }
 
@@ -19,26 +18,37 @@ function timeToMinutes(t: string): number {
   return h * 60 + m
 }
 
+// ── FIX: Deutsche Zeit im Browser (läuft client-side, aber zur Sicherheit explizit) ──
+function getNowDE() {
+  const now  = new Date()
+  const tz   = 'Europe/Berlin'
+  const hours   = parseInt(now.toLocaleString('de-DE', { timeZone: tz, hour: '2-digit', hour12: false }))
+  const minutes = parseInt(now.toLocaleString('de-DE', { timeZone: tz, minute: '2-digit' }))
+  const day     = now.toLocaleDateString('de-DE', { timeZone: tz, weekday: 'long' })
+  const dayMap: Record<string, number> = {
+    'Sonntag': 0, 'Montag': 1, 'Dienstag': 2, 'Mittwoch': 3,
+    'Donnerstag': 4, 'Freitag': 5, 'Samstag': 6
+  }
+  const dateStr = now.toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD
+  return { hours, minutes, dayOfWeek: dayMap[day] ?? new Date().getDay(), dateStr }
+}
+
 function isNowBetween(from: string, until: string): boolean {
-  const now = new Date()
-  const nowMins = now.getHours() * 60 + now.getMinutes()
+  const { hours, minutes } = getNowDE()
+  const nowMins = hours * 60 + minutes
   return nowMins >= timeToMinutes(from) && nowMins < timeToMinutes(until)
 }
 
 export async function fetchShopStatus(): Promise<ShopStatus> {
   try {
     const { data: settings } = await supabase
-      .from('shop_settings')
-      .select('*')
-      .eq('id', 'main')
-      .single()
+      .from('shop_settings').select('*').eq('id', 'main').single()
 
     if (!settings) return {
       isOpen: false, isPreorder: false, openFrom: '', openUntil: '',
       message: 'Shop nicht erreichbar', preorderHint: '', loading: false,
     }
 
-    // 1. Manuell geschlossen?
     if (settings.manual_close) {
       return {
         isOpen: false, isPreorder: false, openFrom: '', openUntil: '',
@@ -47,11 +57,10 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
       }
     }
 
-    const todayStr = new Date().toISOString().split('T')[0]
+    const nowDE = getNowDE()
 
-    // 2. Sondertag?
     const { data: specialDay } = await supabase
-      .from('special_hours').select('*').eq('date', todayStr).maybeSingle()
+      .from('special_hours').select('*').eq('date', nowDE.dateStr).maybeSingle()
 
     if (specialDay) {
       if (specialDay.is_closed) {
@@ -61,18 +70,17 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
           preorderHint: '', loading: false,
         }
       }
-      const from  = specialDay.custom_open  || '14:00'
-      const until = specialDay.custom_close || '22:00'
+      const from  = specialDay.custom_open  || specialDay.open_from  || '14:00'
+      const until = specialDay.custom_close || specialDay.open_until || '22:00'
       const open  = isNowBetween(from, until)
       return {
         isOpen: open, isPreorder: false, openFrom: from, openUntil: until,
-        message: open ? `Geöffnet bis ${until} Uhr` : `Heute geöffnet von ${from} bis ${until} Uhr`,
+        message: open ? `Geöffnet bis ${until} Uhr` : `Geöffnet von ${from} bis ${until} Uhr`,
         preorderHint: '', loading: false,
       }
     }
 
-    // 3. Reguläre Öffnungszeiten
-    const dayKey = DAY_KEYS[new Date().getDay()]
+    const dayKey = DAY_KEYS[nowDE.dayOfWeek]
     const hours  = settings.opening_hours?.[dayKey]
 
     if (!hours || hours.closed) {
@@ -87,16 +95,14 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
     const until = hours.close || '22:00'
     const open  = isNowBetween(from, until)
 
-    // 4. Vorbestellung prüfen
     if (!open && settings.preorder_enabled) {
-      const nowHour         = new Date().getHours()
       const preorderStart   = settings.preorder_start_hour ?? 10
-      const preorderAllowed = nowHour >= preorderStart
+      const preorderAllowed = nowDE.hours >= preorderStart
 
       if (preorderAllowed) {
         return {
-          isOpen:       true,   // Checkout erlaubt!
-          isPreorder:   true,   // Als Vorbestellung markiert
+          isOpen:       true,
+          isPreorder:   true,
           openFrom:     from,
           openUntil:    until,
           message:      `Jetzt vorbestellen – Lieferung ab ${from} Uhr`,
@@ -113,7 +119,7 @@ export async function fetchShopStatus(): Promise<ShopStatus> {
       openUntil:    until,
       message: open
         ? `Geöffnet bis ${until} Uhr · Lieferung in ca. ${settings.delivery_duration_min || 30}–${settings.delivery_duration_max || 45} Min.`
-        : `Heute geöffnet von ${from} bis ${until} Uhr`,
+        : `Geöffnet von ${from} bis ${until} Uhr`,
       preorderHint: '',
       loading:      false,
     }
