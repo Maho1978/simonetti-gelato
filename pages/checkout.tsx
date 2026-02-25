@@ -246,8 +246,11 @@ export default function Checkout({ session }: { session: Session | null }) {
         if (data.min_order_value != null) setMinimumOrder(data.min_order_value)
 
         // Barzahlung: nur für eingeloggte Kunden
-        if (data.cash_payment_enabled && session && !isGuest) {
-          setShowCash(true)
+        // Session direkt aus Supabase prüfen (Prop kann beim ersten Render null sein)
+        if (data.cash_payment_enabled && !isGuest) {
+          supabase.auth.getSession().then(({ data: { session: s } }) => {
+            if (s) setShowCash(true)
+          })
         }
 
         const keys = data.payment_keys
