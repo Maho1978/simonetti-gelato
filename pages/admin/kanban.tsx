@@ -320,7 +320,152 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
   )
 }
 
-function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onAccept, onReject, drivers }: any) {
+function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, colIdx }: any) {
+  const [waText, setWaText] = useState('')
+  const status   = COLUMNS[colIdx]?.id
+  const isPickup = order.order_type === 'pickup'
+  const phone    = order.customer_phone?.replace(/\s+/g, '').replace(/^\+/, '').replace(/^0/, '49')
+  const name     = order.customer_name || 'Kunde'
+  const orderNr  = order.order_number || order.id?.slice(-6).toUpperCase()
+
+  const WA_TEMPLATES = [
+    {
+      label: '✅ Bestellung bestätigt',
+      text: `Hallo ${name}! Deine Bestellung #${orderNr} ist bei uns eingegangen und wird gerade zubereitet. 🍦 Ca. 30–45 Min. – Dein Simonetti Team`,
+    },
+    {
+      label: '🚗 Unterwegs',
+      text: `Hallo ${name}! Dein Eis ist unterwegs! 🚗 Unser Fahrer ist ca. 15–20 Min. bei dir. Guten Appetit! – Simonetti`,
+    },
+    {
+      label: '🎉 Zugestellt',
+      text: `Hallo ${name}! Deine Bestellung wurde zugestellt. Guten Appetit! 🍦 Wir freuen uns über eine Google Bewertung: https://g.page/r/CeAm6-NrGrYhEBE/review`,
+    },
+    {
+      label: '⏰ Verzögerung',
+      text: `Hallo ${name}! Kurze Info: Deine Bestellung #${orderNr} verzögert sich leider etwas. Wir sind so schnell wie möglich bei dir! Danke für deine Geduld 🙏 – Simonetti`,
+    },
+    {
+      label: '❌ Abgelehnt',
+      text: `Hallo ${name}! Leider können wir deine Bestellung #${orderNr} heute nicht annehmen. Du wirst nicht belastet. Wir entschuldigen uns! – Simonetti`,
+    },
+  ]
+
+  const openWhatsApp = () => {
+    if (!phone || !waText.trim()) return
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`
+    window.open(url, '_blank')
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
+          <div>
+            <span className="font-black text-xl">#{orderNr}</span>
+            <span className="text-gray-400 text-sm ml-2">{new Date(order.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} Uhr</span>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-700 text-xl font-bold">✕</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Kunde */}
+          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Kunde</div>
+            <div className="flex items-center gap-2"><User size={15} className="text-gray-400" /><span className="font-bold text-gray-900">{order.customer_name}</span></div>
+            {order.customer_phone && (
+              <div className="flex items-center gap-2">
+                <Phone size={15} className="text-gray-400" />
+                <a href={`tel:${order.customer_phone}`} className="text-blue-600 font-semibold hover:underline">{order.customer_phone}</a>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <MapPin size={15} className="text-gray-400" />
+              <span className="text-gray-700">{isPickup ? '🏪 Abholung' : formatAddress(order.delivery_address)}</span>
+            </div>
+            {order.customer_email && <div className="text-xs text-gray-400">✉️ {order.customer_email}</div>}
+          </div>
+
+          {/* Artikel */}
+          <div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Bestellung</div>
+            <div className="space-y-2">
+              {(order.items || []).map((item: any, i: number) => (
+                <div key={i} className="flex justify-between items-start bg-gray-50 rounded-xl p-3">
+                  <div>
+                    <span className="font-bold text-gray-900">{item.quantity}x {item.name}</span>
+                    {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-500 mt-0.5">🍦 {item.selectedFlavors.join(', ')}</div>}
+                    {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-500">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
+                  </div>
+                  <span className="font-bold text-gray-700 ml-4">{((item.totalPrice || item.price * item.quantity) || 0).toFixed(2)} €</span>
+                </div>
+              ))}
+            </div>
+            {order.notes && (
+              <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm text-yellow-800">
+                💬 {order.notes}
+              </div>
+            )}
+            <div className="mt-3 flex justify-between font-black text-lg border-t pt-3">
+              <span>Gesamt</span><span>{(order.total || 0).toFixed(2)} €</span>
+            </div>
+          </div>
+
+          {/* WhatsApp */}
+          {order.customer_phone && (
+            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xl">💬</span>
+                <span className="font-bold text-green-800">WhatsApp senden</span>
+                <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">kostenlos</span>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {WA_TEMPLATES.map((t) => (
+                  <button key={t.label} onClick={() => setWaText(t.text)}
+                    className={`text-xs px-3 py-1.5 rounded-full border-2 font-semibold transition ${waText === t.text ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:border-green-400'}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={waText}
+                onChange={e => setWaText(e.target.value)}
+                rows={3}
+                placeholder="Vorlage auswählen oder eigenen Text schreiben..."
+                className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-green-400 focus:outline-none resize-none mb-2"
+              />
+              <button onClick={openWhatsApp} disabled={!waText.trim()}
+                className="w-full py-2.5 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
+                <span>📲</span> WhatsApp öffnen → {order.customer_phone}
+              </button>
+            </div>
+          )}
+
+          {/* Aktionen */}
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => { printOrder(order); }} className="flex-1 py-2.5 bg-gray-800 text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition">🖨️ Drucken</button>
+            {status !== 'GELIEFERT' && colIdx > 0 && (
+              <button onClick={() => { onMoveLeft(); onClose(); }} className="px-4 py-2.5 border-2 border-gray-200 rounded-xl font-bold text-sm hover:border-black transition">← Zurück</button>
+            )}
+            {status !== 'GELIEFERT' && colIdx < 2 && (
+              <button onClick={() => { onMoveRight(); onClose(); }} className="px-4 py-2.5 bg-blue-500 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition">Weiter →</button>
+            )}
+            {status === 'AN_FAHRER' && (
+              <button onClick={() => { onMarkDelivered(); onClose(); }}
+                className="flex-1 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition">
+                {isPickup ? '🏪 Abgeholt' : '✅ Geliefert'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onAccept, onReject, drivers, onSelect }: any) {
   const status      = COLUMNS[colIdx].id
   const isDelivered = status === 'GELIEFERT'
   const isOffen     = status === 'OFFEN'
@@ -334,7 +479,7 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
           className={`p-1.5 rounded-lg transition ${colIdx > 0 && !isDelivered ? 'hover:bg-gray-100 text-gray-700' : 'text-gray-200 cursor-not-allowed'}`}>
           <ChevronLeft size={16} />
         </button>
-        <div className="flex-1 text-center px-2">
+        <div className="flex-1 text-center px-2 cursor-pointer" onClick={onSelect}>
           <div className="font-bold text-xs text-gray-500">#{order.order_number || order.id?.slice(-6).toUpperCase()}</div>
           <div className="font-bold text-lg text-gray-900">{(order.total || 0).toFixed(2)}€</div>
           {isPickup && <div className="text-xs font-bold text-purple-600 bg-purple-50 rounded-full px-2 py-0.5 mt-0.5">🏪 Abholung</div>}
@@ -427,6 +572,7 @@ export default function KanbanPage() {
   const [popupOrder, setPopupOrder]     = useState<any>(null)
   const [rejectTarget, setRejectTarget] = useState<any>(null)
   const [newOrderBanner, setNewOrderBanner] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
 
   const knownIds    = useRef<Set<string>>(new Set())
   const isFirstLoad = useRef(true)
@@ -580,6 +726,20 @@ export default function KanbanPage() {
 
   return (
     <AdminLayout>
+      {selectedOrder && (
+        <OrderDetailPopup
+          order={selectedOrder}
+          drivers={drivers}
+          colIdx={COLUMNS.findIndex(c => c.id === selectedOrder.status)}
+          onClose={() => setSelectedOrder(null)}
+          onAccept={() => acceptOrder(selectedOrder.id)}
+          onReject={() => { setRejectTarget(selectedOrder); setSelectedOrder(null) }}
+          onMoveLeft={() => moveOrder(selectedOrder.id, COLUMNS.findIndex(c => c.id === selectedOrder.status), -1)}
+          onMoveRight={() => moveOrder(selectedOrder.id, COLUMNS.findIndex(c => c.id === selectedOrder.status), 1)}
+          onMarkDelivered={() => markDelivered(selectedOrder.id)}
+          onAssignDriver={assignDriver}
+        />
+      )}
       {rejectTarget && (
         <RejectModal order={rejectTarget} onConfirm={confirmReject} onCancel={() => setRejectTarget(null)} />
       )}
@@ -711,6 +871,7 @@ export default function KanbanPage() {
                       onAssignDriver={assignDriver}
                       onAccept={() => acceptOrder(order.id)}
                       onReject={() => setRejectTarget(order)}
+                      onSelect={() => setSelectedOrder(order)}
                       drivers={drivers}
                     />
                   ))}
