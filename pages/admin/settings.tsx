@@ -635,14 +635,13 @@ export default function SettingsPage() {
                         </div>
                         <div className="p-3 grid grid-cols-2 gap-3">
                           {/* Lieferung */}
-                          <div className="bg-blue-50 rounded-xl p-3 space-y-2">
+                          <div className={`rounded-xl p-3 space-y-2 transition-colors ${day.delivery.closed ? 'bg-gray-100' : 'bg-blue-50'}`}>
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-blue-700">🚗 Lieferung</span>
-                              <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" checked={day.delivery.closed}
-                                  onChange={e => updateDayType(key, 'delivery', 'closed', e.target.checked)} className="w-3.5 h-3.5" />
-                                <span className="text-xs text-gray-500">Zu</span>
-                              </label>
+                              <span className={`text-xs font-bold ${day.delivery.closed ? 'text-gray-400' : 'text-blue-700'}`}>🚗 Lieferung</span>
+                              <button type="button" onClick={() => updateDayType(key, 'delivery', 'closed', !day.delivery.closed)}
+                                className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${!day.delivery.closed ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${!day.delivery.closed ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                              </button>
                             </div>
                             {!day.delivery.closed ? (
                               <div className="flex items-center gap-1.5 flex-wrap">
@@ -651,19 +650,18 @@ export default function SettingsPage() {
                                 <TimeInput value={day.delivery.close} onChange={v => updateDayType(key, 'delivery', 'close', v)} />
                               </div>
                             ) : (
-                              <span className="text-xs text-red-500 font-semibold">Geschlossen</span>
+                              <span className="text-xs text-gray-400 font-semibold">Geschlossen</span>
                             )}
                           </div>
 
                           {/* Abholung */}
-                          <div className="bg-purple-50 rounded-xl p-3 space-y-2">
+                          <div className={`rounded-xl p-3 space-y-2 transition-colors ${day.pickup.closed ? 'bg-gray-100' : 'bg-purple-50'}`}>
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-purple-700">🏪 Abholung</span>
-                              <label className="flex items-center gap-1.5 cursor-pointer">
-                                <input type="checkbox" checked={day.pickup.closed}
-                                  onChange={e => updateDayType(key, 'pickup', 'closed', e.target.checked)} className="w-3.5 h-3.5" />
-                                <span className="text-xs text-gray-500">Zu</span>
-                              </label>
+                              <span className={`text-xs font-bold ${day.pickup.closed ? 'text-gray-400' : 'text-purple-700'}`}>🏪 Abholung</span>
+                              <button type="button" onClick={() => updateDayType(key, 'pickup', 'closed', !day.pickup.closed)}
+                                className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${!day.pickup.closed ? 'bg-purple-500' : 'bg-gray-300'}`}>
+                                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${!day.pickup.closed ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                              </button>
                             </div>
                             {!day.pickup.closed ? (
                               <div className="flex items-center gap-1.5 flex-wrap">
@@ -672,7 +670,7 @@ export default function SettingsPage() {
                                 <TimeInput value={day.pickup.close} onChange={v => updateDayType(key, 'pickup', 'close', v)} />
                               </div>
                             ) : (
-                              <span className="text-xs text-red-500 font-semibold">Geschlossen</span>
+                              <span className="text-xs text-gray-400 font-semibold">Geschlossen</span>
                             )}
                           </div>
                         </div>
@@ -1069,14 +1067,16 @@ export default function SettingsPage() {
               </div>
 
               {/* Lieferung */}
-              <div className="bg-blue-50 rounded-xl p-4 space-y-3">
+              <div className={`rounded-xl p-4 space-y-3 transition-colors ${formData.delivery_closed ? 'bg-gray-100' : 'bg-blue-50'}`}>
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-blue-800">🚗 Lieferung</span>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <span className="text-sm text-gray-600">Geschlossen</span>
-                    <input type="checkbox" checked={formData.delivery_closed}
-                      onChange={e => setFormData({ ...formData, delivery_closed: e.target.checked })} className="w-4 h-4" />
-                  </label>
+                  <span className={`font-bold ${formData.delivery_closed ? 'text-gray-400' : 'text-blue-800'}`}>🚗 Lieferung</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">{formData.delivery_closed ? 'Geschlossen' : 'Geöffnet'}</span>
+                    <button type="button" onClick={() => setFormData({ ...formData, delivery_closed: !formData.delivery_closed })}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${!formData.delivery_closed ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${!formData.delivery_closed ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
                 </div>
                 {!formData.delivery_closed && (
                   <div className="flex items-center gap-3">
@@ -1096,14 +1096,16 @@ export default function SettingsPage() {
               </div>
 
               {/* Abholung */}
-              <div className="bg-purple-50 rounded-xl p-4 space-y-3">
+              <div className={`rounded-xl p-4 space-y-3 transition-colors ${formData.pickup_closed ? 'bg-gray-100' : 'bg-purple-50'}`}>
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-purple-800">🏪 Abholung</span>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <span className="text-sm text-gray-600">Geschlossen</span>
-                    <input type="checkbox" checked={formData.pickup_closed}
-                      onChange={e => setFormData({ ...formData, pickup_closed: e.target.checked })} className="w-4 h-4" />
-                  </label>
+                  <span className={`font-bold ${formData.pickup_closed ? 'text-gray-400' : 'text-purple-800'}`}>🏪 Abholung</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">{formData.pickup_closed ? 'Geschlossen' : 'Geöffnet'}</span>
+                    <button type="button" onClick={() => setFormData({ ...formData, pickup_closed: !formData.pickup_closed })}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${!formData.pickup_closed ? 'bg-purple-500' : 'bg-gray-300'}`}>
+                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${!formData.pickup_closed ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
                 </div>
                 {!formData.pickup_closed && (
                   <div className="flex items-center gap-3">
