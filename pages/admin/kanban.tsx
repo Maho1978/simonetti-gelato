@@ -571,12 +571,10 @@ export default function KanbanPage() {
 
   // ── Umsatz Berechnung ─────────────────────────────────────
   const deliveredOrders = orders['GELIEFERT'] || []
-  const totalRevenue    = deliveredOrders.reduce((sum, o) => sum + (o.total || 0), 0)
-  const totalTip        = deliveredOrders.reduce((sum, o) => sum + (o.tip || 0), 0)
-  const revenueNoTip    = totalRevenue - totalTip
-  const stripeRevenue   = deliveredOrders.filter(o => o.payment_method === 'stripe').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
-  const paypalRevenue   = deliveredOrders.filter(o => o.payment_method === 'paypal').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
-  const cashRevenue     = deliveredOrders.filter(o => o.payment_method === 'cash').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const stripeTotal     = deliveredOrders.filter(o => o.payment_method === 'stripe').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const paypalTotal     = deliveredOrders.filter(o => o.payment_method === 'paypal').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const cashTotal       = deliveredOrders.filter(o => o.payment_method === 'cash').reduce((sum, o)  => sum + (o.total || 0) - (o.tip || 0), 0)
+  const tipTotal        = deliveredOrders.reduce((s, o) => s + (o.tip || 0), 0)
   const deliveredCount  = deliveredOrders.length
   const openCount       = orders['OFFEN']?.length || 0
 
@@ -613,47 +611,24 @@ export default function KanbanPage() {
             )}
 
             {/* ── Umsatz Box ── */}
-            <div className="bg-white border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm">
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="text-center">
-                  <div className="text-xs text-gray-400 font-medium">Gesamt</div>
-                  <div className="text-lg font-black text-gray-900">{totalRevenue.toFixed(2)}€</div>
-                </div>
-                <div className="w-px h-8 bg-gray-200" />
-                <div className="text-center">
-                  <div className="text-xs text-gray-400 font-medium">Umsatz</div>
-                  <div className="text-lg font-black text-green-600">{revenueNoTip.toFixed(2)}€</div>
-                </div>
-                <div className="w-px h-8 bg-gray-200" />
-                <div className="flex items-center gap-3 text-xs">
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <CreditCard size={12} className="text-blue-500" />
-                    <span className="font-semibold">{stripeRevenue.toFixed(2)}€</span>
-                    <span className="text-gray-400">Karte</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <span className="text-blue-600 font-bold text-xs">P</span>
-                    <span className="font-semibold">{paypalRevenue.toFixed(2)}€</span>
-                    <span className="text-gray-400">PayPal</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <Banknote size={12} className="text-green-500" />
-                    <span className="font-semibold">{cashRevenue.toFixed(2)}€</span>
-                    <span className="text-gray-400">Bar</span>
-                  </div>
-                  {totalTip > 0 && (
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <span>🙏</span>
-                      <span className="font-semibold">{totalTip.toFixed(2)}€</span>
-                      <span className="text-gray-400">Tipp</span>
-                    </div>
-                  )}
-                </div>
-                <div className="w-px h-8 bg-gray-200" />
-                <div className="text-center">
-                  <div className="text-xs text-gray-400">{deliveredCount} geliefert</div>
-                </div>
+            <div className="bg-white border-2 border-gray-200 rounded-xl px-5 py-3 text-sm space-y-2 min-w-[260px]">
+              <div className="flex justify-between items-center gap-8">
+                <span className="text-gray-500">💳 Stripe</span>
+                <span className="font-bold text-gray-800">{stripeTotal.toFixed(2)} €</span>
               </div>
+              <div className="flex justify-between items-center gap-8">
+                <span className="text-gray-500">🅿️ PayPal</span>
+                <span className="font-bold text-gray-800">{paypalTotal.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between items-center gap-8">
+                <span className="text-gray-500">💵 Bar</span>
+                <span className="font-bold text-gray-800">{cashTotal.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between items-center gap-8">
+                <span className="text-gray-500">💝 Trinkgeld</span>
+                <span className="font-bold text-purple-600">{tipTotal.toFixed(2)} €</span>
+              </div>
+              <div className="text-center text-xs text-gray-400 pt-1 border-t border-gray-100">{deliveredCount} geliefert heute</div>
             </div>
 
             <button
