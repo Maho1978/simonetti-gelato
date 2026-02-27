@@ -170,7 +170,7 @@ export default function SettingsPage() {
   const [emailSettings, setEmailSettings]     = useState<any>(DEFAULT_EMAIL_SETTINGS)
   const [emailSaving, setEmailSaving]         = useState(false)
   const [emailTestSending, setEmailTestSending] = useState<string | null>(null)
-  const [testEmailAddress, setTestEmailAddress] = useState('mahmutduran@hotmail.de')
+  const [testEmailAddress, setTestEmailAddress] = useState('bestellung@eiscafe-simonetti.de')
   const [socialLinks, setSocialLinks]         = useState<any>(DEFAULT_SOCIAL)
   const [socialSaving, setSocialSaving]       = useState(false)
   const [paymentKeys, setPaymentKeys]         = useState<any>(DEFAULT_PAYMENT_KEYS)
