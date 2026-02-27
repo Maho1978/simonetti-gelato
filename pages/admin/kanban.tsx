@@ -611,24 +611,37 @@ export default function KanbanPage() {
             )}
 
             {/* ── Umsatz Box ── */}
-            <div className="bg-white border-2 border-gray-200 rounded-xl px-5 py-3 text-sm space-y-2 min-w-[260px]">
-              <div className="flex justify-between items-center gap-8">
-                <span className="text-gray-500">💳 Stripe</span>
-                <span className="font-bold text-gray-800">{stripeTotal.toFixed(2)} €</span>
+            <div className="bg-white border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="text-center">
+                  <div className="text-xs text-gray-400 font-medium">💳 Stripe</div>
+                  <div className="text-base font-black text-gray-900">{stripeTotal.toFixed(2)} €</div>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-xs text-gray-400 font-medium">🅿️ PayPal</div>
+                  <div className="text-base font-black text-gray-900">{paypalTotal.toFixed(2)} €</div>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-xs text-gray-400 font-medium">💵 Bar</div>
+                  <div className="text-base font-black text-gray-900">{cashTotal.toFixed(2)} €</div>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-xs text-gray-400 font-medium">💝 Trinkgeld</div>
+                  <div className="text-base font-black text-purple-600">{tipTotal.toFixed(2)} €</div>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-xs text-gray-400 font-medium">Gesamt</div>
+                  <div className="text-base font-black text-green-600">{(stripeTotal + paypalTotal + cashTotal + tipTotal).toFixed(2)} €</div>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-xs text-gray-400">{deliveredCount} geliefert</div>
+                </div>
               </div>
-              <div className="flex justify-between items-center gap-8">
-                <span className="text-gray-500">🅿️ PayPal</span>
-                <span className="font-bold text-gray-800">{paypalTotal.toFixed(2)} €</span>
-              </div>
-              <div className="flex justify-between items-center gap-8">
-                <span className="text-gray-500">💵 Bar</span>
-                <span className="font-bold text-gray-800">{cashTotal.toFixed(2)} €</span>
-              </div>
-              <div className="flex justify-between items-center gap-8">
-                <span className="text-gray-500">💝 Trinkgeld</span>
-                <span className="font-bold text-purple-600">{tipTotal.toFixed(2)} €</span>
-              </div>
-              <div className="text-center text-xs text-gray-400 pt-1 border-t border-gray-100">{deliveredCount} geliefert heute</div>
             </div>
 
             <button
