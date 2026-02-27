@@ -179,7 +179,8 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [city,   setCity]   = useState('Langenfeld')
   const [notes,  setNotes]  = useState('')
 
-  const effectiveDeliveryFee = orderType === 'pickup' ? 0 : deliveryFee
+  const effectiveDeliveryFee  = orderType === 'pickup' ? 0 : deliveryFee
+  const effectiveMinimumOrder = orderType === 'pickup' ? 0 : minimumOrder
 
   // ── Prüft ob der gewählte Bestelltyp gerade offen ist ──
   const shopOpenForType: boolean | null = shopStatus === null ? null
@@ -574,14 +575,14 @@ export default function Checkout({ session }: { session: Session | null }) {
                   </Field>
                 </div>
 
-                {subtotal < minimumOrder && (
+                {effectiveMinimumOrder > 0 && subtotal < effectiveMinimumOrder && (
                   <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-3 text-sm text-amber-700 flex items-center gap-2">
                     <AlertCircle size={15} />
-                    <span>Mindestbestellwert <b>{minimumOrder.toFixed(2)} €</b> – noch <b>{(minimumOrder - subtotal).toFixed(2)} €</b> fehlen</span>
+                    <span>Mindestbestellwert <b>{effectiveMinimumOrder.toFixed(2)} €</b> – noch <b>{(effectiveMinimumOrder - subtotal).toFixed(2)} €</b> fehlen</span>
                   </div>
                 )}
 
-                {subtotal >= minimumOrder && (
+                {(effectiveMinimumOrder === 0 || subtotal >= effectiveMinimumOrder) && (
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
                       <CreditCard size={13} /> Zahlungsmethode
@@ -599,7 +600,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                       <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#111827', borderRadius: '12px' } } }}>
                         <StripeForm
                           session={session} isGuest={isGuest} cart={cart} total={grandTotal} subtotal={subtotal}
-                          shopOpenForType={shopOpenForType} minimumOrder={minimumOrder} deliveryFee={effectiveDeliveryFee}
+                          shopOpenForType={shopOpenForType} minimumOrder={effectiveMinimumOrder} deliveryFee={effectiveDeliveryFee}
                           voucher={voucher} tip={tip} name={name} email={email} phone={phone}
                           street={street} zip={zip} city={city} notes={notes} orderType={orderType}
                           isPreorder={shopStatus?.isPreorder ?? false}
