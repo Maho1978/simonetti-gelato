@@ -11,9 +11,9 @@ async function sendBrevoEmail(to: string, subject: string, html: string): Promis
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: 'Eiscafé Simonetti', email: 'bestellung@eiscafe-simonetti.de' },
+      sender: { name: 'Eiscafé Simonetti', email: 'mahmutduran@hotmail.de' },
       to: [{ email: to }],
-      replyTo: { email: 'bestellung@eiscafe-simonetti.de' },
+      replyTo: { email: 'mahmutduran@hotmail.de' },
       subject,
       htmlContent: html,
     }),
@@ -174,10 +174,13 @@ function emailDelivered(order: any): string {
       <div style="font-weight:900;color:#2d6a4f;font-size:18px;">Vielen Dank für deine Bestellung!</div>
       <div style="color:#888;font-size:13px;margin-top:6px;">Bestellung #${order.order_number || (order.id || '').slice(-6).toUpperCase()}</div>
     </div>
-    <div style="text-align:center;margin-bottom:24px;">
-      <a href="https://www.google.com/maps/place/Eiscafe+Simonetti+Langenfeld"
-        style="display:inline-block;background:#4a5d54;color:white;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:14px;">
-        ⭐ Bei Google bewerten
+    <div style="background:#fffbeb;border-radius:16px;padding:24px;text-align:center;margin-bottom:24px;">
+      <div style="font-size:28px;margin-bottom:8px;">⭐⭐⭐⭐⭐</div>
+      <div style="font-weight:900;color:#92400e;font-size:16px;margin-bottom:6px;">Hat dir dein Eis geschmeckt?</div>
+      <div style="color:#a16207;font-size:13px;margin-bottom:16px;">Eine kurze Bewertung hilft uns sehr – dauert nur 30 Sekunden!</div>
+      <a href="https://maps.app.goo.gl/SUtHGMGNrpDScR4x5"
+        style="display:inline-block;background:#f59e0b;color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:900;font-size:15px;">
+        ⭐ Jetzt bei Google bewerten
       </a>
     </div>
     <div style="background:#f8f7f5;border-radius:12px;padding:18px 20px;text-align:center;">
