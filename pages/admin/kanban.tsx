@@ -4,7 +4,7 @@ import AdminLayout from '@/components/AdminLayout'
 import {
   ChevronLeft, ChevronRight, User, MapPin, Clock,
   Bell, BellOff, Check, Phone, Package, XCircle, Printer,
-  TrendingUp
+  TrendingUp, CreditCard, Banknote, ShoppingBag
 } from 'lucide-react'
 
 const COLUMNS = [
@@ -14,7 +14,6 @@ const COLUMNS = [
   { id: 'GELIEFERT',      title: 'Geliefert',      color: 'bg-green-50',  border: 'border-green-200',  icon: '✅' },
 ]
 
-// ── Helpers ───────────────────────────────────────────────────
 async function apiUpdateOrder(orderId: string, data: any) {
   const res = await fetch(`/api/orders/${orderId}`, {
     method: 'PATCH',
@@ -86,7 +85,6 @@ function OrderTimer({ createdAt }: { createdAt: string }) {
   return <span className={`text-xs ${color}`}>⏱ {label}</span>
 }
 
-// ── Thermodrucker Bon 80mm ────────────────────────────────────
 function printOrder(order: any) {
   const items = (order.items || []).map((item: any) => {
     const flavors   = item.flavors || item.selectedFlavors || []
@@ -108,173 +106,85 @@ function printOrder(order: any) {
 
   let itemsHtml = ''
   for (const item of items) {
-    itemsHtml += `
-      <tr>
-        <td class="item-qty">${item.quantity}x</td>
-        <td class="item-name">${item.name}</td>
-        <td class="item-price">${item.lineTotal} EUR</td>
-      </tr>`
-    if (item.flavors.length > 0) {
-      itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Sorten: ${item.flavors.join(', ')}</td></tr>`
-    }
-    if (item.extras.length > 0) {
-      itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Extras: ${item.extras.join(', ')}</td></tr>`
-    }
+    itemsHtml += `<tr><td class="item-qty">${item.quantity}x</td><td class="item-name">${item.name}</td><td class="item-price">${item.lineTotal} EUR</td></tr>`
+    if (item.flavors.length > 0) itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Sorten: ${item.flavors.join(', ')}</td></tr>`
+    if (item.extras.length > 0)  itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Extras: ${item.extras.join(', ')}</td></tr>`
   }
 
-  const discountHtml = discount > 0
-    ? `<tr class="total-row"><td colspan="2">Gutschein${order.voucher_code ? ` (${order.voucher_code})` : ''}</td><td>${(-discount).toFixed(2)} EUR</td></tr>`
-    : ''
-  const tipHtml = tip > 0
-    ? `<tr class="total-row"><td colspan="2">Trinkgeld</td><td>${tip.toFixed(2)} EUR</td></tr>`
-    : ''
-  const notesHtml = order.notes
-    ? `<tr><td colspan="3"><div class="sep-dashed"></div></td></tr>
-       <tr><td colspan="3" class="section-label">ANMERKUNG:</td></tr>
-       <tr><td colspan="3" class="notes-text">${order.notes}</td></tr>`
-    : ''
-  const phoneHtml = order.customer_phone
-    ? `<tr><td colspan="3">Tel: <b>${order.customer_phone}</b></td></tr>`
-    : ''
-  const paymentLabel = order.payment_method === 'cash' ? 'Barzahlung'
-                     : order.payment_method === 'paypal' ? 'PayPal'
-                     : 'Online'
+  const discountHtml = discount > 0 ? `<tr class="total-row"><td colspan="2">Gutschein${order.voucher_code ? ` (${order.voucher_code})` : ''}</td><td>${(-discount).toFixed(2)} EUR</td></tr>` : ''
+  const tipHtml = tip > 0 ? `<tr class="total-row"><td colspan="2">Trinkgeld</td><td>${tip.toFixed(2)} EUR</td></tr>` : ''
+  const notesHtml = order.notes ? `<tr><td colspan="3"><div class="sep-dashed"></div></td></tr><tr><td colspan="3" class="section-label">ANMERKUNG:</td></tr><tr><td colspan="3" class="notes-text">${order.notes}</td></tr>` : ''
+  const phoneHtml = order.customer_phone ? `<tr><td colspan="3">Tel: <b>${order.customer_phone}</b></td></tr>` : ''
+  const paymentLabel = order.payment_method === 'cash' ? 'Barzahlung' : order.payment_method === 'paypal' ? 'PayPal' : 'Online'
+  const pickupLabel  = order.order_type === 'pickup' ? 'ABHOLUNG' : 'LIEFERUNG'
 
-  const html = `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8"/>
-<title>Bon #${orderNr}</title>
+  const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
 <style>
   @page { margin: 2mm 3mm; size: 80mm auto; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 16px;
-    font-weight: bold;
-    width: 74mm;
-    color: #000;
-    background: #fff;
-    line-height: 1.5;
-  }
-
-  /* Header */
-  .center    { text-align: center; }
-  .logo      { font-size: 26px; font-weight: 900; letter-spacing: 4px; margin-bottom: 1px; }
-  .tagline   { font-size: 12px; letter-spacing: 6px; margin-bottom: 5px; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: bold; width: 74mm; color: #000; background: #fff; line-height: 1.5; }
+  .center { text-align: center; }
+  .logo { font-size: 26px; font-weight: 900; letter-spacing: 4px; margin-bottom: 1px; }
+  .tagline { font-size: 12px; letter-spacing: 6px; margin-bottom: 5px; }
   .shop-info { font-size: 13px; font-weight: normal; line-height: 1.7; }
-
-  /* Trenner */
   .sep-solid { border-top: 3px solid #000; margin: 6px 0; }
-  .sep-dashed{ border-top: 2px dashed #000; margin: 5px 0; }
-
-  /* Tabellen */
+  .sep-dashed { border-top: 2px dashed #000; margin: 5px 0; }
   table { width: 100%; border-collapse: collapse; }
-  td    { vertical-align: top; padding: 1px 0; font-size: 15px; }
-
-  /* Abschnitt-Titel */
+  td { vertical-align: top; padding: 1px 0; font-size: 15px; }
   .section-label { font-size: 13px; font-weight: 900; letter-spacing: 2px; padding-top: 4px; padding-bottom: 2px; }
-
-  /* Bestellpositionen */
-  .item-qty   { width: 22px; font-size: 17px; font-weight: 900; white-space: nowrap; }
-  .item-name  { font-size: 17px; font-weight: 900; padding-right: 4px; }
+  .item-qty { width: 22px; font-size: 17px; font-weight: 900; white-space: nowrap; }
+  .item-name { font-size: 17px; font-weight: 900; padding-right: 4px; }
   .item-price { font-size: 17px; font-weight: 900; text-align: right; white-space: nowrap; }
-  .item-detail{ font-size: 13px; font-weight: normal; padding-left: 4px; padding-bottom: 3px; color: #111; }
-
-  /* Summen */
-  .total-row td          { font-size: 15px; padding: 2px 0; }
+  .item-detail { font-size: 13px; font-weight: normal; padding-left: 4px; padding-bottom: 3px; color: #111; }
+  .total-row td { font-size: 15px; padding: 2px 0; }
   .total-row td:last-child { text-align: right; white-space: nowrap; }
-
-  /* Gesamtbetrag */
   .grand-label { font-size: 24px; font-weight: 900; }
   .grand-value { font-size: 24px; font-weight: 900; text-align: right; white-space: nowrap; }
-
-  /* Anmerkung */
   .notes-text { font-size: 16px; font-weight: bold; padding-bottom: 4px; }
-
-  /* Footer */
-  .footer-main  { font-size: 15px; font-weight: 900; }
+  .footer-main { font-size: 15px; font-weight: 900; }
   .footer-small { font-size: 12px; font-weight: normal; }
-</style>
-</head>
-<body>
-
-<!-- HEADER -->
-<div class="center">
-  <div class="logo">SIMONETTI</div>
-  <div class="tagline">E I S C A F E</div>
-  <div class="shop-info">
-    Konrad-Adenauer-Platz 2, 40764 Langenfeld<br/>
-    Tel: 02173 / 16 22 780
-  </div>
-</div>
-
+</style></head><body>
+<div class="center"><div class="logo">SIMONETTI</div><div class="tagline">E I S C A F E</div>
+<div class="shop-info">Konrad-Adenauer-Platz 2, 40764 Langenfeld<br/>Tel: 02173 / 16 22 780</div></div>
 <div class="sep-solid"></div>
-
-<!-- BESTELLINFO -->
 <table>
   <tr><td>Bestellung</td><td style="text-align:right"><b>#${orderNr}</b></td></tr>
   <tr><td>Datum</td><td style="text-align:right">${dateStr}</td></tr>
   <tr><td>Uhrzeit</td><td style="text-align:right">${timeStr} Uhr</td></tr>
+  <tr><td>Art</td><td style="text-align:right"><b>${pickupLabel}</b></td></tr>
   <tr><td>Zahlung</td><td style="text-align:right">${paymentLabel}</td></tr>
 </table>
-
 <div class="sep-dashed"></div>
-
-<!-- LIEFERADRESSE -->
 <table>
-  <tr><td colspan="3" class="section-label">LIEFERUNG AN</td></tr>
+  <tr><td colspan="3" class="section-label">${order.order_type === 'pickup' ? 'ABHOLUNG DURCH' : 'LIEFERUNG AN'}</td></tr>
   <tr><td colspan="3" style="font-size:18px"><b>${order.customer_name || '–'}</b></td></tr>
   ${phoneHtml}
-  <tr><td colspan="3" style="font-weight:normal">${addrStr}</td></tr>
+  ${order.order_type !== 'pickup' ? `<tr><td colspan="3" style="font-weight:normal">${addrStr}</td></tr>` : ''}
 </table>
-
 <div class="sep-dashed"></div>
-
-<!-- ARTIKEL -->
 <table>
   <tr><td colspan="3" class="section-label">BESTELLUNG</td></tr>
   ${itemsHtml}
   ${notesHtml}
 </table>
-
 <div class="sep-dashed"></div>
-
-<!-- SUMMEN -->
 <table>
   <tr class="total-row"><td colspan="2">Zwischensumme</td><td>${subtotal.toFixed(2)} EUR</td></tr>
-  <tr class="total-row"><td colspan="2">Liefergebuehr</td><td>${deliveryFee.toFixed(2)} EUR</td></tr>
+  ${order.order_type !== 'pickup' ? `<tr class="total-row"><td colspan="2">Liefergebuehr</td><td>${deliveryFee.toFixed(2)} EUR</td></tr>` : ''}
   ${discountHtml}
   ${tipHtml}
 </table>
-
 <div class="sep-solid"></div>
-
-<!-- GESAMT -->
-<table>
-  <tr>
-    <td class="grand-label">GESAMT</td>
-    <td class="grand-value">${grandTotal.toFixed(2)} EUR</td>
-  </tr>
-</table>
-
+<table><tr><td class="grand-label">GESAMT</td><td class="grand-value">${grandTotal.toFixed(2)} EUR</td></tr></table>
 <div class="sep-solid"></div>
-
-<!-- FOOTER -->
 <div class="center" style="margin-top:8px">
   <div class="footer-main">Vielen Dank & Guten Appetit!</div>
   <div class="footer-small" style="margin-top:3px">www.eiscafe-simonetti.de</div>
   <div class="sep-dashed" style="margin-top:8px"></div>
   <div class="footer-small">Beleg #${orderNr} · ${dateStr} · ${timeStr} Uhr</div>
 </div>
-
-<script>
-  window.onload = function() {
-    setTimeout(function() { window.print(); window.close(); }, 400);
-  };
-</script>
-</body>
-</html>`
+<script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 400); };</script>
+</body></html>`
 
   const win = window.open('', '_blank', 'width=340,height=700')
   if (!win) return
@@ -282,7 +192,6 @@ function printOrder(order: any) {
   win.document.close()
 }
 
-// ── Ablehnen Modal ────────────────────────────────────────────
 function RejectModal({ order, onConfirm, onCancel }: { order: any; onConfirm: (r: string) => void; onCancel: () => void }) {
   const [reason, setReason] = useState('')
   const REASONS = ['Liefergebiet nicht erreichbar', 'Zu viele Bestellungen – ausgelastet', 'Produkt nicht mehr verfügbar', 'Shop schließt gleich', 'Sonstiges']
@@ -311,7 +220,6 @@ function RejectModal({ order, onConfirm, onCancel }: { order: any; onConfirm: (r
   )
 }
 
-// ── Neues Bestellung Popup ────────────────────────────────────
 function NewOrderPopup({ order, onAccept, onReject, onLater }: {
   order: any; onAccept: () => void; onReject: () => void; onLater: () => void
 }) {
@@ -347,7 +255,9 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
               )}
               <div className="flex items-start gap-2">
                 <MapPin size={18} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-700">{formatAddress(order.delivery_address)}</span>
+                <span className="text-gray-700">
+                  {order.order_type === 'pickup' ? '🏪 Abholung' : formatAddress(order.delivery_address)}
+                </span>
               </div>
             </div>
             <div className="bg-gray-50 rounded-2xl p-5">
@@ -410,11 +320,11 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
   )
 }
 
-// ── Order Card ────────────────────────────────────────────────
 function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onAccept, onReject, drivers }: any) {
   const status      = COLUMNS[colIdx].id
   const isDelivered = status === 'GELIEFERT'
   const isOffen     = status === 'OFFEN'
+  const isPickup    = order.order_type === 'pickup'
 
   return (
     <div className={`bg-white rounded-xl p-3 shadow-sm border-2 hover:shadow-md transition mb-2 text-xs
@@ -427,6 +337,7 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
         <div className="flex-1 text-center px-2">
           <div className="font-bold text-xs text-gray-500">#{order.order_number || order.id?.slice(-6).toUpperCase()}</div>
           <div className="font-bold text-lg text-gray-900">{(order.total || 0).toFixed(2)}€</div>
+          {isPickup && <div className="text-xs font-bold text-purple-600 bg-purple-50 rounded-full px-2 py-0.5 mt-0.5">🏪 Abholung</div>}
         </div>
         <button onClick={onMoveRight} disabled={colIdx >= 2 || isDelivered}
           className={`p-1.5 rounded-lg transition ${colIdx < 2 && !isDelivered ? 'hover:bg-gray-100 text-gray-700' : 'text-gray-200 cursor-not-allowed'}`}>
@@ -440,7 +351,9 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
         </div>
         <div className="flex items-center gap-1.5 truncate">
           <MapPin size={11} className="text-gray-400 flex-shrink-0" />
-          <span className="truncate text-gray-500">{formatAddress(order.delivery_address).split(',')[0]}</span>
+          <span className="truncate text-gray-500">
+            {isPickup ? '🏪 Abholung' : formatAddress(order.delivery_address).split(',')[0]}
+          </span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -470,7 +383,7 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
         className="w-full py-1.5 bg-gray-800 text-white rounded-lg text-xs font-bold hover:bg-gray-900 transition mb-1.5">
         🖨️ Drucken
       </button>
-      {status === 'AN_FAHRER' && (
+      {status === 'AN_FAHRER' && !isPickup && (
         <div className="mt-1 space-y-1.5">
           {order.driver_id ? (
             <div className="bg-blue-50 rounded-lg px-2 py-1.5 text-center text-blue-700 font-semibold text-xs">
@@ -489,6 +402,12 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
           </button>
         </div>
       )}
+      {status === 'AN_FAHRER' && isPickup && (
+        <button onClick={onMarkDelivered}
+          className="w-full py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition mt-1">
+          🏪 Als abgeholt markieren
+        </button>
+      )}
       {isDelivered && order.delivered_at && (
         <div className="text-center text-green-600 text-xs font-semibold mt-1">
           ✅ {new Date(order.delivered_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
@@ -498,7 +417,6 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
   )
 }
 
-// ── Hauptseite ────────────────────────────────────────────────
 export default function KanbanPage() {
   const [orders, setOrders]             = useState<Record<string, any[]>>({ OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] })
   const [loading, setLoading]           = useState(true)
@@ -618,7 +536,8 @@ export default function KanbanPage() {
   }
 
   const markDelivered = async (orderId: string) => {
-    if (!confirm('Bestellung als geliefert markieren?')) return
+    const label = orders['AN_FAHRER']?.find(o => o.id === orderId)?.order_type === 'pickup' ? 'abgeholt' : 'geliefert'
+    if (!confirm(`Bestellung als ${label} markieren?`)) return
     const order = Object.values(orders).flat().find(o => o.id === orderId)
     const ok = await apiUpdateOrder(orderId, { status: 'GELIEFERT', delivered_at: new Date().toISOString() })
     if (ok) { if (order) await sendEmail('order_delivered', order); loadOrders() }
@@ -650,10 +569,16 @@ export default function KanbanPage() {
     }
   }
 
-  const allOrders      = Object.values(orders).flat()
-  const todayTotal     = allOrders.filter(o => o.status === 'GELIEFERT').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
-  const deliveredCount = orders['GELIEFERT']?.length || 0
-  const openCount      = orders['OFFEN']?.length || 0
+  // ── Umsatz Berechnung ─────────────────────────────────────
+  const deliveredOrders = orders['GELIEFERT'] || []
+  const totalRevenue    = deliveredOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+  const totalTip        = deliveredOrders.reduce((sum, o) => sum + (o.tip || 0), 0)
+  const revenueNoTip    = totalRevenue - totalTip
+  const stripeRevenue   = deliveredOrders.filter(o => o.payment_method === 'stripe').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const paypalRevenue   = deliveredOrders.filter(o => o.payment_method === 'paypal').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const cashRevenue     = deliveredOrders.filter(o => o.payment_method === 'cash').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const deliveredCount  = deliveredOrders.length
+  const openCount       = orders['OFFEN']?.length || 0
 
   return (
     <AdminLayout>
@@ -680,16 +605,57 @@ export default function KanbanPage() {
             <h1 className="text-2xl font-bold">Bestellungen</h1>
             <p className="text-gray-400 text-xs mt-0.5">Aktualisiert alle 15 Sek · Neue Bestellungen erscheinen als Popup</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {openCount > 0 && (
               <div className="bg-red-100 text-red-700 px-3 py-1.5 rounded-full font-bold text-sm animate-pulse">
                 🔔 {openCount} offen
               </div>
             )}
-            <div className="text-right">
-              <div className="text-xl font-bold text-green-600">{todayTotal.toFixed(2)}€</div>
-              <div className="text-xs text-gray-400">{deliveredCount} geliefert heute (ohne Trinkgeld)</div>
+
+            {/* ── Umsatz Box ── */}
+            <div className="bg-white border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="text-center">
+                  <div className="text-xs text-gray-400 font-medium">Gesamt</div>
+                  <div className="text-lg font-black text-gray-900">{totalRevenue.toFixed(2)}€</div>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-xs text-gray-400 font-medium">Umsatz</div>
+                  <div className="text-lg font-black text-green-600">{revenueNoTip.toFixed(2)}€</div>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="flex items-center gap-3 text-xs">
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <CreditCard size={12} className="text-blue-500" />
+                    <span className="font-semibold">{stripeRevenue.toFixed(2)}€</span>
+                    <span className="text-gray-400">Karte</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <span className="text-blue-600 font-bold text-xs">P</span>
+                    <span className="font-semibold">{paypalRevenue.toFixed(2)}€</span>
+                    <span className="text-gray-400">PayPal</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <Banknote size={12} className="text-green-500" />
+                    <span className="font-semibold">{cashRevenue.toFixed(2)}€</span>
+                    <span className="text-gray-400">Bar</span>
+                  </div>
+                  {totalTip > 0 && (
+                    <div className="flex items-center gap-1 text-gray-600">
+                      <span>🙏</span>
+                      <span className="font-semibold">{totalTip.toFixed(2)}€</span>
+                      <span className="text-gray-400">Tipp</span>
+                    </div>
+                  )}
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="text-center">
+                  <div className="text-xs text-gray-400">{deliveredCount} geliefert</div>
+                </div>
+              </div>
             </div>
+
             <button
               onClick={() => window.location.href = '/admin/reports'}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border-2 border-gray-200 hover:border-black transition">
@@ -704,12 +670,10 @@ export default function KanbanPage() {
               {soundEnabled && (
                 <div className="flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 rounded-lg px-3 py-1.5">
                   <span className="text-xs">🔈</span>
-                  <input
-                    type="range" min="0.1" max="2.0" step="0.1" value={soundVolume}
+                  <input type="range" min="0.1" max="2.0" step="0.1" value={soundVolume}
                     onChange={e => setSoundVolume(parseFloat(e.target.value))}
                     className="w-20 accent-yellow-500"
-                    title={`Lautstärke: ${Math.round(soundVolume * 100)}%`}
-                  />
+                    title={`Lautstärke: ${Math.round(soundVolume * 100)}%`} />
                   <span className="text-xs font-bold text-yellow-700 w-8">{Math.round(soundVolume * 100)}%</span>
                   <button onClick={() => playSound(soundVolume)} className="text-xs text-yellow-600 hover:text-yellow-800 font-semibold">▶</button>
                 </div>
