@@ -30,6 +30,17 @@ interface AppliedVoucher {
   discountAmount: number
 }
 
+// ── NEU: Getrennte Zeiten für Lieferung / Abholung ──────────────────────────
+interface ShopTimes { isOpen: boolean; openFrom: string; openUntil: string }
+interface ShopStatusData {
+  isOpen: boolean
+  isPreorder: boolean
+  preorderHint: string
+  delivery: ShopTimes
+  pickup: ShopTimes
+  message: string
+}
+
 const TIP_OPTIONS = [0, 5, 10, 15]
 
 async function validateVoucher(code: string, subtotal: number): Promise<{ voucher: AppliedVoucher | null; error: string | null }> {
@@ -142,10 +153,11 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const [cart, setCart]                 = useState<CartItem[]>([])
   const [clientSecret, setClientSecret] = useState('')
-  const [shopOpen, setShopOpen]         = useState<boolean | null>(null)
-  const [shopMessage, setShopMessage]   = useState('')
-  const [isPreorder, setIsPreorder]     = useState(false)
-  const [preorderHint, setPreorderHint] = useState('')
+
+  // ── NEU: Kompletter Shop-Status mit getrennten Zeiten ──
+  const [shopStatus, setShopStatus]     = useState<ShopStatusData | null>(null)
+  const [shopLoading, setShopLoading]   = useState(true)
+
   const [voucher, setVoucher]           = useState<AppliedVoucher | null>(null)
   const [tip, setTip]                   = useState(0)
   const [showVoucher, setShowVoucher]   = useState(true)
@@ -156,9 +168,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [deliveryFee, setDeliveryFee]   = useState(3.00)
   const [minimumOrder, setMinimumOrder] = useState(15.00)
   const [paypalClientId, setPaypalClientId] = useState('')
-
-  // ── NEU: Abholung ──
-  const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery')
+  const [orderType, setOrderType]       = useState<'delivery' | 'pickup'>('delivery')
   const [pickupEnabled, setPickupEnabled] = useState(false)
 
   const [name,   setName]   = useState('')
@@ -169,19 +179,45 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [city,   setCity]   = useState('Langenfeld')
   const [notes,  setNotes]  = useState('')
 
-  // Effektive Liefergebühr: bei Abholung 0
   const effectiveDeliveryFee = orderType === 'pickup' ? 0 : deliveryFee
 
+  // ── Prüft ob der gewählte Bestelltyp gerade offen ist ──
+  const shopOpenForType: boolean | null = shopStatus === null ? null
+    : shopStatus.isPreorder ? true
+    : orderType === 'pickup'
+      ? shopStatus.pickup.isOpen
+      : shopStatus.delivery.isOpen
+
+  // ── Zeigt Hinweis wenn anderer Typ offen ist ──
+  const alternativeTypeHint = (() => {
+    if (!shopStatus || shopStatus.isPreorder) return null
+    if (orderType === 'delivery' && !shopStatus.delivery.isOpen && shopStatus.pickup.isOpen) {
+      const t = shopStatus.pickup
+      return { type: 'pickup' as const, msg: `🏪 Abholung ist geöffnet (${t.openFrom}–${t.openUntil} Uhr) → Wechseln?` }
+    }
+    if (orderType === 'pickup' && !shopStatus.pickup.isOpen && shopStatus.delivery.isOpen) {
+      const t = shopStatus.delivery
+      return { type: 'delivery' as const, msg: `🚗 Lieferung ist geöffnet (${t.openFrom}–${t.openUntil} Uhr) → Wechseln?` }
+    }
+    return null
+  })()
+
   useEffect(() => {
+    // Shop-Status laden
     fetch('/api/shop-status')
       .then(r => r.json())
-      .then(data => {
-        setShopOpen(data.isOpen)
-        setShopMessage(data.message || '')
-        setIsPreorder(data.isPreorder || false)
-        setPreorderHint(data.preorderHint || '')
+      .then((data: ShopStatusData) => {
+        setShopStatus(data)
+        setShopLoading(false)
+        // Wenn Lieferung zu, aber Abholung offen: automatisch auf Abholung wechseln
+        if (!data.delivery.isOpen && data.pickup.isOpen && !data.isPreorder) {
+          setOrderType('pickup')
+        }
       })
-      .catch(() => setShopOpen(true))
+      .catch(() => {
+        setShopStatus({ isOpen: true, isPreorder: false, preorderHint: '', delivery: { isOpen: true, openFrom: '', openUntil: '' }, pickup: { isOpen: true, openFrom: '', openUntil: '' }, message: '' })
+        setShopLoading(false)
+      })
 
     supabase.from('shop_settings').select('delivery_fee, min_order_value, payment_keys, cash_payment_enabled, pickup_enabled').eq('id', 'main').single()
       .then(({ data }) => {
@@ -189,11 +225,9 @@ export default function Checkout({ session }: { session: Session | null }) {
         if (data.delivery_fee    != null) setDeliveryFee(data.delivery_fee)
         if (data.min_order_value != null) setMinimumOrder(data.min_order_value)
         if (data.pickup_enabled)          setPickupEnabled(true)
-
         if (data.cash_payment_enabled && !isGuest) {
           supabase.auth.getSession().then(({ data: { session: s } }) => { if (s) setShowCash(true) })
         }
-
         const keys = data.payment_keys
         if (keys?.paypal) {
           const mode     = keys.paypal.mode || 'sandbox'
@@ -221,12 +255,9 @@ export default function Checkout({ session }: { session: Session | null }) {
     }
   }, [])
 
-  // PaymentIntent neu erstellen wenn Bestelltyp wechselt
+  // PaymentIntent neu wenn Bestelltyp wechselt
   useEffect(() => {
-    if (cart.length > 0) {
-      setClientSecret('')
-      createPaymentIntent(cart, voucher, tip, effectiveDeliveryFee)
-    }
+    if (cart.length > 0) { setClientSecret(''); createPaymentIntent(cart, voucher, tip, effectiveDeliveryFee) }
   }, [orderType])
 
   const updateCart = (newCart: CartItem[]) => {
@@ -303,9 +334,14 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const handleCashOrder = async () => {
     if (!isFormValid) return
+    // Live-Check ob gewählter Typ noch offen
     try {
-      const statusData = await fetch('/api/shop-status').then(r => r.json())
-      if (!statusData.isOpen) { alert('Der Shop ist momentan geschlossen.'); return }
+      const statusData: ShopStatusData = await fetch('/api/shop-status').then(r => r.json())
+      const typeOpen = orderType === 'pickup' ? statusData.pickup?.isOpen : statusData.delivery?.isOpen
+      if (!typeOpen && !statusData.isPreorder) {
+        alert(`${orderType === 'pickup' ? 'Abholung' : 'Lieferung'} ist momentan nicht verfügbar.`)
+        return
+      }
     } catch {}
     await saveOrder('cash-' + Date.now(), 'cash')
   }
@@ -320,6 +356,9 @@ export default function Checkout({ session }: { session: Session | null }) {
     { id: 'cash',   label: '💵 Barzahlung',    show: showCash },
   ].filter(o => o.always || o.show)
 
+  // Shop komplett geschlossen (beide Typen zu, kein Vorbestellung)
+  const shopCompletelyClosed = shopStatus !== null && !shopStatus.isOpen && !shopStatus.isPreorder
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar session={session} cartCount={0} onCartClick={() => {}} />
@@ -330,28 +369,35 @@ export default function Checkout({ session }: { session: Session | null }) {
           <p className="text-gray-400 mt-1 text-sm">Nur noch wenige Schritte bis zu deinem Eis 🍦</p>
         </div>
 
-        {isPreorder && (
+        {/* Vorbestellung Banner */}
+        {shopStatus?.isPreorder && (
           <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
             <Clock size={20} className="text-blue-500 mt-0.5 flex-shrink-0" />
-            <div><p className="font-bold text-blue-800 text-sm">Vorbestellung</p><p className="text-blue-700 text-sm mt-0.5">{preorderHint}</p></div>
+            <div>
+              <p className="font-bold text-blue-800 text-sm">Vorbestellung</p>
+              <p className="text-blue-700 text-sm mt-0.5">{shopStatus.preorderHint}</p>
+            </div>
           </div>
         )}
 
-        {shopOpen === false && (
+        {/* Shop komplett geschlossen */}
+        {shopCompletelyClosed && (
           <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-10 text-center mb-8">
             <div className="text-6xl mb-4">🔒</div>
             <h2 className="text-2xl font-bold text-red-800 mb-2">Shop momentan geschlossen</h2>
-            <p className="text-red-600">{shopMessage || 'Wir nehmen gerade keine Bestellungen an.'}</p>
+            <p className="text-red-600">{shopStatus?.message || 'Wir nehmen gerade keine Bestellungen an.'}</p>
             <p className="text-sm text-red-400 mt-2">Bitte schau zu unseren Öffnungszeiten wieder vorbei!</p>
             <button onClick={() => router.push('/')} className="mt-6 px-6 py-3 bg-white border-2 border-red-200 text-red-700 font-semibold rounded-xl hover:bg-red-100 transition">← Zurück zum Shop</button>
           </div>
         )}
 
-        {shopOpen === null && (
+        {/* Laden */}
+        {shopLoading && (
           <div className="text-center py-16"><div className="text-5xl mb-3 animate-pulse">🍦</div><p className="text-sm text-gray-400">Wird geladen...</p></div>
         )}
 
-        {shopOpen === true && (
+        {/* Hauptinhalt */}
+        {!shopLoading && !shopCompletelyClosed && (
           <div className="grid lg:grid-cols-11 gap-6">
             <div className="lg:col-span-6 space-y-5">
 
@@ -412,24 +458,66 @@ export default function Checkout({ session }: { session: Session | null }) {
             <div className="lg:col-span-5">
               <div className="sticky top-6 space-y-4">
 
-                {/* ── NEU: Liefern / Abholen Auswahl ── */}
+                {/* ── Liefern / Abholen ── */}
                 {pickupEnabled && (
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <h2 className="font-bold text-gray-900 mb-3">Wie möchtest du deine Bestellung erhalten?</h2>
                     <div className="grid grid-cols-2 gap-3">
+                      {/* Lieferung */}
                       <button type="button" onClick={() => setOrderType('delivery')}
                         className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all font-semibold text-sm ${orderType === 'delivery' ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                         <span className="text-2xl">🚗</span>
                         <span>Lieferung</span>
-                        <span className="text-xs opacity-70">+{deliveryFee.toFixed(2)} €</span>
+                        {/* Uhrzeiten anzeigen */}
+                        {shopStatus?.delivery.openFrom && (
+                          <span className={`text-xs ${orderType === 'delivery' ? 'opacity-70' : 'text-gray-400'}`}>
+                            {shopStatus.delivery.isOpen
+                              ? `${shopStatus.delivery.openFrom}–${shopStatus.delivery.openUntil} Uhr`
+                              : shopStatus.delivery.openFrom ? `ab ${shopStatus.delivery.openFrom} Uhr` : ''}
+                          </span>
+                        )}
+                        <span className={`text-xs ${orderType === 'delivery' ? 'opacity-70' : 'text-gray-400'}`}>+{deliveryFee.toFixed(2)} €</span>
+                        {shopStatus && !shopStatus.delivery.isOpen && !shopStatus.isPreorder && (
+                          <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-bold">Geschlossen</span>
+                        )}
                       </button>
+
+                      {/* Abholung */}
                       <button type="button" onClick={() => setOrderType('pickup')}
                         className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all font-semibold text-sm ${orderType === 'pickup' ? 'border-purple-600 bg-purple-600 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                         <span className="text-2xl">🏪</span>
                         <span>Selbst abholen</span>
-                        <span className="text-xs opacity-70">Kostenlos</span>
+                        {shopStatus?.pickup.openFrom && (
+                          <span className={`text-xs ${orderType === 'pickup' ? 'opacity-70' : 'text-gray-400'}`}>
+                            {shopStatus.pickup.isOpen
+                              ? `${shopStatus.pickup.openFrom}–${shopStatus.pickup.openUntil} Uhr`
+                              : shopStatus.pickup.openFrom ? `ab ${shopStatus.pickup.openFrom} Uhr` : ''}
+                          </span>
+                        )}
+                        <span className={`text-xs ${orderType === 'pickup' ? 'opacity-70' : 'text-gray-400'}`}>Kostenlos</span>
+                        {shopStatus && !shopStatus.pickup.isOpen && !shopStatus.isPreorder && (
+                          <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-bold">Geschlossen</span>
+                        )}
                       </button>
                     </div>
+
+                    {/* Hinweis wenn der andere Typ offen ist */}
+                    {alternativeTypeHint && (
+                      <button type="button" onClick={() => setOrderType(alternativeTypeHint.type)}
+                        className="mt-3 w-full bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-700 font-semibold hover:bg-green-100 transition text-left flex items-center justify-between">
+                        <span>{alternativeTypeHint.msg}</span>
+                        <span className="text-xs flex-shrink-0">→</span>
+                      </button>
+                    )}
+
+                    {/* Warnung wenn gewählter Typ gerade zu */}
+                    {shopOpenForType === false && !shopStatus?.isPreorder && (
+                      <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700 flex items-center gap-2">
+                        <AlertCircle size={15} className="flex-shrink-0" />
+                        <span><b>{orderType === 'delivery' ? '🚗 Lieferung' : '🏪 Abholung'}</b> ist gerade nicht möglich.</span>
+                      </div>
+                    )}
+
                     {orderType === 'pickup' && (
                       <div className="mt-3 bg-purple-50 border border-purple-200 rounded-xl p-3 text-sm text-purple-800">
                         <p className="font-bold mb-1">📍 Abholadresse</p>
@@ -440,7 +528,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                   </div>
                 )}
 
-                {/* Kundendaten */}
+                {/* ── Kundendaten ── */}
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 space-y-4">
                   <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
                     <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white"><User size={18} /></div>
@@ -509,7 +597,13 @@ export default function Checkout({ session }: { session: Session | null }) {
 
                     {paymentMethod === 'stripe' && clientSecret && (
                       <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#111827', borderRadius: '12px' } } }}>
-                        <StripeForm session={session} isGuest={isGuest} cart={cart} total={grandTotal} subtotal={subtotal} shopOpen={shopOpen} minimumOrder={minimumOrder} deliveryFee={effectiveDeliveryFee} voucher={voucher} tip={tip} name={name} email={email} phone={phone} street={street} zip={zip} city={city} notes={notes} orderType={orderType} />
+                        <StripeForm
+                          session={session} isGuest={isGuest} cart={cart} total={grandTotal} subtotal={subtotal}
+                          shopOpenForType={shopOpenForType} minimumOrder={minimumOrder} deliveryFee={effectiveDeliveryFee}
+                          voucher={voucher} tip={tip} name={name} email={email} phone={phone}
+                          street={street} zip={zip} city={city} notes={notes} orderType={orderType}
+                          isPreorder={shopStatus?.isPreorder ?? false}
+                        />
                       </Elements>
                     )}
                     {paymentMethod === 'stripe' && !clientSecret && (
@@ -540,9 +634,10 @@ export default function Checkout({ session }: { session: Session | null }) {
                           </div>
                         </div>
                         {!isFormValid && <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">⚠️ Bitte zuerst alle Pflichtfelder ausfüllen</div>}
-                        <button type="button" onClick={handleCashOrder} disabled={!isFormValid}
-                          className={`w-full py-4 text-base font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${!isFormValid ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-sm'}`}>
-                          <Banknote size={20} /> Jetzt bestellen · {grandTotal.toFixed(2)} € bar
+                        <button type="button" onClick={handleCashOrder} disabled={!isFormValid || shopOpenForType === false}
+                          className={`w-full py-4 text-base font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${!isFormValid || shopOpenForType === false ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-sm'}`}>
+                          <Banknote size={20} />
+                          {shopOpenForType === false ? 'Diese Option ist gerade geschlossen' : `Jetzt bestellen · ${grandTotal.toFixed(2)} € bar`}
                         </button>
                       </div>
                     )}
@@ -583,21 +678,32 @@ function StreetInput({ street, setStreet, inputClass }: { street: string; setStr
   )
 }
 
-function StripeForm({ session, isGuest, cart, total, subtotal, shopOpen, minimumOrder, deliveryFee, voucher, tip, name, email, phone, street, zip, city, notes, orderType }: {
+function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder }: {
   session: Session | null; isGuest: boolean; cart: CartItem[]; total: number; subtotal: number
-  shopOpen: boolean | null; minimumOrder: number; deliveryFee: number; voucher: AppliedVoucher | null
-  tip: number; name: string; email: string; phone: string; street: string; zip: string; city: string; notes: string; orderType: string
+  shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number; voucher: AppliedVoucher | null
+  tip: number; name: string; email: string; phone: string; street: string; zip: string; city: string; notes: string
+  orderType: string; isPreorder: boolean
 }) {
   const stripe   = useStripe()
   const elements = useElements()
   const router   = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
-  const isBlocked = shopOpen === false || subtotal < minimumOrder
+
+  const isFormValid = orderType === 'pickup'
+    ? !!(name.trim() && phone.trim() && (!isGuest || email.trim()))
+    : !!(name.trim() && phone.trim() && street.trim() && (!isGuest || email.trim()))
+
+  const isBlocked = shopOpenForType === false || subtotal < minimumOrder || !isFormValid
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    try { const statusData = await fetch('/api/shop-status').then(r => r.json()); if (!statusData.isOpen) { setError('Der Shop ist momentan geschlossen.'); return } } catch {}
+    // Live-Check beim Absenden
+    try {
+      const statusData = await fetch('/api/shop-status').then(r => r.json())
+      const typeOpen = orderType === 'pickup' ? statusData.pickup?.isOpen : statusData.delivery?.isOpen
+      if (!typeOpen && !statusData.isPreorder) { setError(`${orderType === 'pickup' ? 'Abholung' : 'Lieferung'} ist momentan nicht verfügbar.`); return }
+    } catch {}
     if (!stripe || !elements) return
     setLoading(true); setError('')
     try {
@@ -620,16 +726,21 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpen, minimum
     } catch (err: any) { setError(err.message || 'Zahlung fehlgeschlagen') } finally { setLoading(false) }
   }
 
+  const btnLabel = loading ? null
+    : shopOpenForType === false ? `🔒 ${orderType === 'pickup' ? 'Abholung' : 'Lieferung'} geschlossen`
+    : subtotal < minimumOrder   ? 'Mindestbestellwert nicht erreicht'
+    : !isFormValid               ? 'Bitte alle Felder ausfüllen'
+    : `✅ Jetzt bezahlen · ${total.toFixed(2)} €`
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm"><AlertCircle size={16} /> {error}</div>}
       <div className="border-2 border-gray-100 rounded-2xl p-4"><PaymentElement /></div>
       <button type="submit" disabled={!stripe || loading || isBlocked}
         className={`w-full py-4 text-base font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${isBlocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-700 active:scale-[0.98] shadow-sm'}`}>
-        {loading ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Zahlung wird verarbeitet...</>
-          : shopOpen === false ? '🔒 Shop geschlossen'
-          : subtotal < minimumOrder ? 'Mindestbestellwert nicht erreicht'
-          : `✅ Jetzt bezahlen · ${total.toFixed(2)} €`}
+        {loading
+          ? <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Zahlung wird verarbeitet...</>
+          : btnLabel}
       </button>
     </form>
   )
