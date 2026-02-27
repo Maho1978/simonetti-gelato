@@ -178,7 +178,7 @@ function emailDelivered(order: any): string {
       <div style="font-size:28px;margin-bottom:8px;">⭐⭐⭐⭐⭐</div>
       <div style="font-weight:900;color:#92400e;font-size:16px;margin-bottom:6px;">Hat dir dein Eis geschmeckt?</div>
       <div style="color:#a16207;font-size:13px;margin-bottom:16px;">Eine kurze Bewertung hilft uns sehr – dauert nur 30 Sekunden!</div>
-      <a href="https://maps.app.goo.gl/SUtHGMGNrpDScR4x5"
+      <a href="https://g.page/r/CeAm6-NrGrYhEBE/review"
         style="display:inline-block;background:#f59e0b;color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:900;font-size:15px;">
         ⭐ Jetzt bei Google bewerten
       </a>
