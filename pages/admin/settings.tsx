@@ -206,6 +206,13 @@ export default function SettingsPage() {
   const [features, setFeatures]             = useState<Record<string, boolean>>({})
   const [featuresSaving, setFeaturesSaving] = useState(false)
 
+  // Liefergebiete
+  const [deliveryZones, setDeliveryZones] = useState<{ id: string; zip: string; city: string; enabled: boolean }[]>([
+    { id: "1", zip: "40764", city: "Langenfeld", enabled: true }
+  ])
+  const [newZip, setNewZip]   = useState("")
+  const [newCity, setNewCity] = useState("")
+
   useEffect(() => { loadSettings(); loadSpecialHours(); loadFeatures() }, [])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
@@ -229,6 +236,7 @@ export default function SettingsPage() {
         preorder_hint:         data.preorder_hint         || 'Du kannst jetzt vorbestellen – Lieferung startet ab {from} Uhr.',
       })
       if (data.email_notifications) setEmailSettings({ ...DEFAULT_EMAIL_SETTINGS, ...data.email_notifications })
+      if (data.delivery_zones && data.delivery_zones.length > 0) setDeliveryZones(data.delivery_zones)
       if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
       if (data.payment_keys)        setPaymentKeys({ ...DEFAULT_PAYMENT_KEYS, ...data.payment_keys })
       setMarketing({
@@ -257,7 +265,7 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true)
-    const { error } = await supabase.from('shop_settings').update(settings).eq('id', 'main')
+    const { error } = await supabase.from('shop_settings').update({ ...settings, delivery_zones: deliveryZones }).eq('id', 'main')
     if (!error) showToast('✅ Einstellungen gespeichert!')
     else showToast('❌ Fehler: ' + error.message)
     setSaving(false)
@@ -604,6 +612,54 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+
+              {/* Liefergebiete */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="font-bold text-xl mb-1 flex items-center gap-2">🗺️ Liefergebiete</h2>
+                <p className="text-sm text-gray-400 mb-4">Aktive PLZ-Gebiete werden im Checkout validiert</p>
+
+                <div className="space-y-2 mb-4">
+                  {deliveryZones.map(zone => (
+                    <div key={zone.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-colors ${zone.enabled ? 'border-green-200 bg-green-50' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
+                      <div className="flex-1">
+                        <span className="font-bold text-gray-800">{zone.zip}</span>
+                        <span className="text-gray-500 ml-2">{zone.city}</span>
+                      </div>
+                      <button type="button"
+                        onClick={() => setDeliveryZones(deliveryZones.map(z => z.id === zone.id ? { ...z, enabled: !z.enabled } : z))}
+                        className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${zone.enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                        <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${zone.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                      </button>
+                      {deliveryZones.length > 1 && (
+                        <button type="button"
+                          onClick={() => setDeliveryZones(deliveryZones.filter(z => z.id !== zone.id))}
+                          className="p-1.5 hover:bg-red-100 rounded-lg text-gray-300 hover:text-red-500 transition">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <input type="text" value={newZip} onChange={e => setNewZip(e.target.value)} maxLength={5}
+                    placeholder="PLZ" className="w-28 px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm font-mono font-bold" />
+                  <input type="text" value={newCity} onChange={e => setNewCity(e.target.value)}
+                    placeholder="Stadt" className="flex-1 px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm" />
+                  <button type="button"
+                    onClick={() => {
+                      if (!newZip.trim() || !newCity.trim()) return
+                      if (deliveryZones.find(z => z.zip === newZip.trim())) { alert('PLZ bereits vorhanden'); return }
+                      setDeliveryZones([...deliveryZones, { id: Date.now().toString(), zip: newZip.trim(), city: newCity.trim(), enabled: true }])
+                      setNewZip(''); setNewCity('')
+                    }}
+                    className="px-4 py-2.5 bg-black text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition flex items-center gap-1.5 flex-shrink-0">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                    Hinzufügen
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-3">💡 Gespeichert wird mit dem großen "Einstellungen speichern" Button</p>
+              </div>
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{saving ? 'Speichert...' : 'Einstellungen speichern'}

@@ -170,6 +170,8 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [paypalClientId, setPaypalClientId] = useState('')
   const [orderType, setOrderType]       = useState<'delivery' | 'pickup'>('delivery')
   const [pickupEnabled, setPickupEnabled] = useState(false)
+  const [deliveryZones, setDeliveryZones] = useState<{ id: string; zip: string; city: string; enabled: boolean }[]>([{ id: '1', zip: '40764', city: 'Langenfeld', enabled: true }])
+
 
   const [name,   setName]   = useState('')
   const [email,  setEmail]  = useState(session?.user?.email || '')
@@ -220,7 +222,7 @@ export default function Checkout({ session }: { session: Session | null }) {
         setShopLoading(false)
       })
 
-    supabase.from('shop_settings').select('delivery_fee, min_order_value, payment_keys, cash_payment_enabled, pickup_enabled').eq('id', 'main').single()
+    supabase.from('shop_settings').select('delivery_fee, min_order_value, payment_keys, cash_payment_enabled, pickup_enabled, delivery_zones').eq('id', 'main').single()
       .then(({ data }) => {
         if (!data) return
         if (data.delivery_fee    != null) setDeliveryFee(data.delivery_fee)
@@ -228,6 +230,7 @@ export default function Checkout({ session }: { session: Session | null }) {
         if (data.pickup_enabled)          setPickupEnabled(true)
         if (data.cash_payment_enabled && !isGuest) {
           supabase.auth.getSession().then(({ data: { session: s } }) => { if (s) setShowCash(true) })
+        if (data.delivery_zones?.length) setDeliveryZones(data.delivery_zones)
         }
         const keys = data.payment_keys
         if (keys?.paypal) {
@@ -461,6 +464,15 @@ export default function Checkout({ session }: { session: Session | null }) {
 
                 {/* ── Liefern / Abholen ── */}
                 {pickupEnabled && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+                    <span className="text-xl">🏪</span>
+                    <div className="flex-1">
+                      <p className="font-semibold text-amber-800 text-sm">Abholung nur für registrierte Kunden</p>
+                      <p className="text-xs text-amber-600 mt-0.5">Bitte <a href="/login" className="underline font-bold">anmelden</a> oder <a href="/register" className="underline font-bold">registrieren</a> um Abholung zu nutzen.</p>
+                    </div>
+                  </div>
+                )}
+                {pickupEnabled && (
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <h2 className="font-bold text-gray-900 mb-3">Wie möchtest du deine Bestellung erhalten?</h2>
                     <div className="grid grid-cols-2 gap-3">
@@ -554,18 +566,31 @@ export default function Checkout({ session }: { session: Session | null }) {
                       <Field label="Straße & Hausnummer" required>
                         <StreetInput street={street} setStreet={setStreet} inputClass={inputClass} />
                       </Field>
-                      <div className="grid grid-cols-5 gap-3">
-                        <div className="col-span-2">
-                          <Field label="PLZ" required>
-                            <input type="text" value={zip} readOnly className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`} />
-                          </Field>
+                      {deliveryZones.filter(z => z.enabled).length > 1 ? (
+                        <Field label="Liefergebiet" required>
+                          <select value={zip} onChange={e => {
+                            const zone = deliveryZones.find(z => z.zip === e.target.value)
+                            if (zone) { setZip(zone.zip); setCity(zone.city) }
+                          }} className={inputClass}>
+                            {deliveryZones.filter(z => z.enabled).map(z => (
+                              <option key={z.id} value={z.zip}>{z.zip} – {z.city}</option>
+                            ))}
+                          </select>
+                        </Field>
+                      ) : (
+                        <div className="grid grid-cols-5 gap-3">
+                          <div className="col-span-2">
+                            <Field label="PLZ" required>
+                              <input type="text" value={zip} readOnly className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`} />
+                            </Field>
+                          </div>
+                          <div className="col-span-3">
+                            <Field label="Stadt" required>
+                              <input type="text" value={city} readOnly className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`} />
+                            </Field>
+                          </div>
                         </div>
-                        <div className="col-span-3">
-                          <Field label="Stadt" required>
-                            <input type="text" value={city} readOnly className={`${inputClass} bg-gray-50 cursor-not-allowed text-gray-500`} />
-                          </Field>
-                        </div>
-                      </div>
+                      )}
                     </>
                   )}
                   <Field label="Anmerkungen">
