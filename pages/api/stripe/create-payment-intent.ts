@@ -5,7 +5,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { amount, metadata, customerName, customerEmail } = req.body
+    const { amount, metadata, customerEmail } = req.body
 
     if (!amount || amount < 0.5) {
       return res.status(400).json({ error: 'Ungültiger Betrag: ' + amount })
@@ -21,26 +21,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Klarna braucht customer name + email
-    const paymentIntentData: any = {
+    const paymentIntent = await stripe.paymentIntents.create({
       amount:   Math.round(amount * 100),
       currency: 'eur',
-      // Explizite Liste – nur gewünschte Methoden
       payment_method_types: [
         'card',    // Kreditkarte + Apple Pay + Google Pay
-        'klarna',  // Klarna (Sofort, Ratenkauf, Rechnung)
+        'klarna',  // Klarna (jetzt, in 30 Tagen, Raten)
         'paypal',  // PayPal
-        'link',    // Stripe Link (gespeicherte Karten)
+        'link',    // Stripe Link
       ],
+      // Klarna + PayPal brauchen return_url für Weiterleitung nach externer Zahlung
+      return_url: 'https://www.eiscafe-simonetti.de/bestellung-erfolgreich',
+      receipt_email: customerEmail || undefined,
       metadata: safeMetadata,
-    }
-
-    // Klarna benötigt Kundendaten
-    if (customerName || customerEmail) {
-      paymentIntentData.receipt_email = customerEmail || undefined
-    }
-
-    const paymentIntent = await stripe.paymentIntents.create(paymentIntentData)
+    })
 
     res.status(200).json({ clientSecret: paymentIntent.client_secret })
 
