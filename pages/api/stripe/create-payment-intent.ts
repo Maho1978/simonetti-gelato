@@ -24,14 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const paymentIntent = await stripe.paymentIntents.create({
       amount:   Math.round(amount * 100),
       currency: 'eur',
-      payment_method_types: [
-        'card',    // Kreditkarte + Apple Pay + Google Pay
-        'klarna',  // Klarna (jetzt, in 30 Tagen, Raten)
-        'paypal',  // PayPal
-        'link',    // Stripe Link
-      ],
-      // Klarna + PayPal brauchen return_url für Weiterleitung nach externer Zahlung
-      return_url: 'https://www.eiscafe-simonetti.de/bestellung-erfolgreich',
+      payment_method_types: ['card', 'klarna', 'paypal', 'link'],
       receipt_email: customerEmail || undefined,
       metadata: safeMetadata,
     })
