@@ -25,9 +25,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const paymentIntentData: any = {
       amount:   Math.round(amount * 100),
       currency: 'eur',
-      // automatic_payment_methods zeigt alle in Stripe aktivierten Methoden an
-      // inkl. Karte, Apple Pay, Google Pay, Klarna, Link usw.
-      automatic_payment_methods: { enabled: true },
+      // Explizite Liste – nur gewünschte Methoden
+      payment_method_types: [
+        'card',    // Kreditkarte + Apple Pay + Google Pay
+        'klarna',  // Klarna (Sofort, Ratenkauf, Rechnung)
+        'paypal',  // PayPal
+        'link',    // Stripe Link (gespeicherte Karten)
+      ],
       metadata: safeMetadata,
     }
 
