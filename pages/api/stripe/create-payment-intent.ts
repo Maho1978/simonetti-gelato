@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+﻿import type { NextApiRequest, NextApiResponse } from 'next'
 import { stripe } from '@/lib/stripe'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const paymentIntent = await stripe.paymentIntents.create({
       amount:   Math.round(amount * 100),
       currency: 'eur',
-      payment_method_types: ['card', 'klarna', 'paypal', 'link'],
+      payment_method_types: ['card', 'klarna'],
       receipt_email: customerEmail || undefined,
       metadata: safeMetadata,
     })
