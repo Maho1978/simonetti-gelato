@@ -14,7 +14,6 @@ export default function FavoriteButton({ productId, size = 24, className = '' }:
   const [session, setSession] = useState<any>(null)
 
   useEffect(() => {
-    // Session laden
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       if (data.session) {
@@ -29,7 +28,7 @@ export default function FavoriteButton({ productId, size = 24, className = '' }:
       .select('id')
       .eq('user_id', userId)
       .eq('product_id', productId)
-      .single()
+      .maybeSingle()  // Fix: kein 406 wenn kein Favorit gefunden
     
     setIsFavorite(!!data)
   }
@@ -47,7 +46,6 @@ export default function FavoriteButton({ productId, size = 24, className = '' }:
 
     try {
       if (isFavorite) {
-        // Entfernen
         await supabase
           .from('customer_favorites')
           .delete()
@@ -56,7 +54,6 @@ export default function FavoriteButton({ productId, size = 24, className = '' }:
         
         setIsFavorite(false)
       } else {
-        // Hinzufügen
         await supabase
           .from('customer_favorites')
           .insert({
@@ -90,10 +87,6 @@ export default function FavoriteButton({ productId, size = 24, className = '' }:
     </button>
   )
 }
-
-// ============================================================
-// FAVORITEN-LISTE Component
-// ============================================================
 
 export function FavoritesList() {
   const [favorites, setFavorites] = useState<any[]>([])
@@ -165,12 +158,9 @@ export function FavoritesList() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {favorites.map(fav => (
           <div key={fav.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative">
-            {/* Favorit entfernen */}
             <div className="absolute top-4 right-4">
               <FavoriteButton productId={fav.products.id} size={28} />
             </div>
-
-            {/* Produkt */}
             <div className="text-6xl mb-4">{fav.products.emoji || '🍦'}</div>
             <h3 className="font-bold text-xl mb-2" style={{ color: '#4a5d54' }}>
               {fav.products.name}
@@ -178,7 +168,6 @@ export function FavoritesList() {
             <div className="text-2xl font-bold" style={{ color: '#4a5d54' }}>
               {fav.products.price.toFixed(2)} €
             </div>
-            
             <button 
               className="mt-4 w-full py-2 rounded-xl font-bold text-white transition hover:opacity-90"
               style={{ backgroundColor: '#4a5d54' }}
