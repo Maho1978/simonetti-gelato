@@ -11,9 +11,9 @@ async function sendBrevoEmail(to: string, subject: string, html: string): Promis
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: 'Eiscafé Simonetti', email: 'bestellung@eiscafe-simonetti.de.de' },
+      sender: { name: 'Eiscafé Simonetti', email: 'bestellung@eiscafe-simonetti.de' },
       to: [{ email: to }],
-      replyTo: { email: 'bestellun@eiscafe-simonetti.de' },
+      replyTo: { email: 'bestellung@eiscafe-simonetti.de' },
       subject,
       htmlContent: html,
     }),
