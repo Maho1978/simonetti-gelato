@@ -30,7 +30,6 @@ interface AppliedVoucher {
   discountAmount: number
 }
 
-// ── NEU: Getrennte Zeiten für Lieferung / Abholung ──────────────────────────
 interface ShopTimes { isOpen: boolean; openFrom: string; openUntil: string }
 interface ShopStatusData {
   isOpen: boolean
@@ -154,7 +153,6 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [cart, setCart]                 = useState<CartItem[]>([])
   const [clientSecret, setClientSecret] = useState('')
 
-  // ── NEU: Kompletter Shop-Status mit getrennten Zeiten ──
   const [shopStatus, setShopStatus]     = useState<ShopStatusData | null>(null)
   const [shopLoading, setShopLoading]   = useState(true)
 
@@ -172,7 +170,6 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [pickupEnabled, setPickupEnabled] = useState(false)
   const [deliveryZones, setDeliveryZones] = useState<{ id: string; zip: string; city: string; enabled: boolean }[]>([{ id: '1', zip: '40764', city: 'Langenfeld', enabled: true }])
 
-
   const [name,   setName]   = useState('')
   const [email,  setEmail]  = useState(session?.user?.email || '')
   const [phone,  setPhone]  = useState('')
@@ -184,14 +181,12 @@ export default function Checkout({ session }: { session: Session | null }) {
   const effectiveDeliveryFee  = orderType === 'pickup' ? 0 : deliveryFee
   const effectiveMinimumOrder = orderType === 'pickup' ? 0 : minimumOrder
 
-  // ── Prüft ob der gewählte Bestelltyp gerade offen ist ──
   const shopOpenForType: boolean | null = shopStatus === null ? null
     : shopStatus.isPreorder ? true
     : orderType === 'pickup'
       ? shopStatus.pickup.isOpen
       : shopStatus.delivery.isOpen
 
-  // ── Zeigt Hinweis wenn anderer Typ offen ist ──
   const alternativeTypeHint = (() => {
     if (!shopStatus || shopStatus.isPreorder) return null
     if (orderType === 'delivery' && !shopStatus.delivery.isOpen && shopStatus.pickup.isOpen) {
@@ -206,13 +201,11 @@ export default function Checkout({ session }: { session: Session | null }) {
   })()
 
   useEffect(() => {
-    // Shop-Status laden
     fetch('/api/shop-status')
       .then(r => r.json())
       .then((data: ShopStatusData) => {
         setShopStatus(data)
         setShopLoading(false)
-        // Wenn Lieferung zu, aber Abholung offen: automatisch auf Abholung wechseln
         if (!data.delivery.isOpen && data.pickup.isOpen && !data.isPreorder) {
           setOrderType('pickup')
         }
@@ -259,7 +252,6 @@ export default function Checkout({ session }: { session: Session | null }) {
     }
   }, [])
 
-  // PaymentIntent neu wenn Bestelltyp wechselt
   useEffect(() => {
     if (cart.length > 0) { setClientSecret(''); createPaymentIntent(cart, voucher, tip, effectiveDeliveryFee) }
   }, [orderType])
@@ -338,7 +330,6 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const handleCashOrder = async () => {
     if (!isFormValid) return
-    // Live-Check ob gewählter Typ noch offen
     try {
       const statusData: ShopStatusData = await fetch('/api/shop-status').then(r => r.json())
       const typeOpen = orderType === 'pickup' ? statusData.pickup?.isOpen : statusData.delivery?.isOpen
@@ -360,7 +351,6 @@ export default function Checkout({ session }: { session: Session | null }) {
     { id: 'cash',   label: '💵 Barzahlung',    show: showCash },
   ].filter(o => o.always || o.show)
 
-  // Shop komplett geschlossen (beide Typen zu, kein Vorbestellung)
   const shopCompletelyClosed = shopStatus !== null && !shopStatus.isOpen && !shopStatus.isPreorder
 
   return (
@@ -373,7 +363,6 @@ export default function Checkout({ session }: { session: Session | null }) {
           <p className="text-gray-400 mt-1 text-sm">Nur noch wenige Schritte bis zu deinem Eis 🍦</p>
         </div>
 
-        {/* Vorbestellung Banner */}
         {shopStatus?.isPreorder && (
           <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
             <Clock size={20} className="text-blue-500 mt-0.5 flex-shrink-0" />
@@ -384,7 +373,6 @@ export default function Checkout({ session }: { session: Session | null }) {
           </div>
         )}
 
-        {/* Shop komplett geschlossen */}
         {shopCompletelyClosed && (
           <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-10 text-center mb-8">
             <div className="text-6xl mb-4">🔒</div>
@@ -395,17 +383,13 @@ export default function Checkout({ session }: { session: Session | null }) {
           </div>
         )}
 
-        {/* Laden */}
         {shopLoading && (
           <div className="text-center py-16"><div className="text-5xl mb-3 animate-pulse">🍦</div><p className="text-sm text-gray-400">Wird geladen...</p></div>
         )}
 
-        {/* Hauptinhalt */}
         {!shopLoading && !shopCompletelyClosed && (
           <div className="grid lg:grid-cols-11 gap-6">
             <div className="lg:col-span-6 space-y-5">
-
-              {/* ── Bestellübersicht ── */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-gray-900">🍦 Bestellübersicht</h2>
@@ -461,8 +445,6 @@ export default function Checkout({ session }: { session: Session | null }) {
 
             <div className="lg:col-span-5">
               <div className="sticky top-6 space-y-4">
-
-                {/* ── Liefern / Abholen ── */}
                 {pickupEnabled && (
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
                     <span className="text-xl">🏪</span>
@@ -476,17 +458,13 @@ export default function Checkout({ session }: { session: Session | null }) {
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <h2 className="font-bold text-gray-900 mb-3">Wie möchtest du deine Bestellung erhalten?</h2>
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Lieferung */}
                       <button type="button" onClick={() => setOrderType('delivery')}
                         className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all font-semibold text-sm ${orderType === 'delivery' ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                         <span className="text-2xl">🚗</span>
                         <span>Lieferung</span>
-                        {/* Uhrzeiten anzeigen */}
                         {shopStatus?.delivery.openFrom && (
                           <span className={`text-xs ${orderType === 'delivery' ? 'opacity-70' : 'text-gray-400'}`}>
-                            {shopStatus.delivery.isOpen
-                              ? `${shopStatus.delivery.openFrom}–${shopStatus.delivery.openUntil} Uhr`
-                              : shopStatus.delivery.openFrom ? `ab ${shopStatus.delivery.openFrom} Uhr` : ''}
+                            {shopStatus.delivery.isOpen ? `${shopStatus.delivery.openFrom}–${shopStatus.delivery.openUntil} Uhr` : shopStatus.delivery.openFrom ? `ab ${shopStatus.delivery.openFrom} Uhr` : ''}
                           </span>
                         )}
                         <span className={`text-xs ${orderType === 'delivery' ? 'opacity-70' : 'text-gray-400'}`}>+{deliveryFee.toFixed(2)} €</span>
@@ -494,17 +472,13 @@ export default function Checkout({ session }: { session: Session | null }) {
                           <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-bold">Geschlossen</span>
                         )}
                       </button>
-
-                      {/* Abholung */}
                       <button type="button" onClick={() => setOrderType('pickup')}
                         className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all font-semibold text-sm ${orderType === 'pickup' ? 'border-purple-600 bg-purple-600 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                         <span className="text-2xl">🏪</span>
                         <span>Selbst abholen</span>
                         {shopStatus?.pickup.openFrom && (
                           <span className={`text-xs ${orderType === 'pickup' ? 'opacity-70' : 'text-gray-400'}`}>
-                            {shopStatus.pickup.isOpen
-                              ? `${shopStatus.pickup.openFrom}–${shopStatus.pickup.openUntil} Uhr`
-                              : shopStatus.pickup.openFrom ? `ab ${shopStatus.pickup.openFrom} Uhr` : ''}
+                            {shopStatus.pickup.isOpen ? `${shopStatus.pickup.openFrom}–${shopStatus.pickup.openUntil} Uhr` : shopStatus.pickup.openFrom ? `ab ${shopStatus.pickup.openFrom} Uhr` : ''}
                           </span>
                         )}
                         <span className={`text-xs ${orderType === 'pickup' ? 'opacity-70' : 'text-gray-400'}`}>Kostenlos</span>
@@ -513,8 +487,6 @@ export default function Checkout({ session }: { session: Session | null }) {
                         )}
                       </button>
                     </div>
-
-                    {/* Hinweis wenn der andere Typ offen ist */}
                     {alternativeTypeHint && (
                       <button type="button" onClick={() => setOrderType(alternativeTypeHint.type)}
                         className="mt-3 w-full bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-700 font-semibold hover:bg-green-100 transition text-left flex items-center justify-between">
@@ -522,15 +494,12 @@ export default function Checkout({ session }: { session: Session | null }) {
                         <span className="text-xs flex-shrink-0">→</span>
                       </button>
                     )}
-
-                    {/* Warnung wenn gewählter Typ gerade zu */}
                     {shopOpenForType === false && !shopStatus?.isPreorder && (
                       <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700 flex items-center gap-2">
                         <AlertCircle size={15} className="flex-shrink-0" />
                         <span><b>{orderType === 'delivery' ? '🚗 Lieferung' : '🏪 Abholung'}</b> ist gerade nicht möglich.</span>
                       </div>
                     )}
-
                     {orderType === 'pickup' && (
                       <div className="mt-3 bg-purple-50 border border-purple-200 rounded-xl p-3 text-sm text-purple-800">
                         <p className="font-bold mb-1">📍 Abholadresse</p>
@@ -541,7 +510,6 @@ export default function Checkout({ session }: { session: Session | null }) {
                   </div>
                 )}
 
-                {/* ── Kundendaten ── */}
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 space-y-4">
                   <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
                     <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white"><User size={18} /></div>
@@ -724,7 +692,6 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Live-Check beim Absenden
     try {
       const statusData = await fetch('/api/shop-status').then(r => r.json())
       const typeOpen = orderType === 'pickup' ? statusData.pickup?.isOpen : statusData.delivery?.isOpen
@@ -733,7 +700,14 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
     if (!stripe || !elements) return
     setLoading(true); setError('')
     try {
-      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
+      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        redirect: 'if_required',
+        confirmParams: {
+          // Klarna + PayPal leiten den Kunden extern weiter – return_url bringt ihn zurück
+          return_url: 'https://www.eiscafe-simonetti.de/order-success',
+        },
+      })
       if (stripeError) throw new Error(stripeError.message)
       if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
       const orderData = {
