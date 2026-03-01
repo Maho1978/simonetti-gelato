@@ -13,29 +13,38 @@ function timeToMinutes(t: string): number {
   return h * 60 + m
 }
 
+function getBerlinMinutes(): number {
+  // UTC + 1 (Winter) oder UTC + 2 (Sommer) — via Offset berechnen
+  const now = new Date()
+  const utcMs = now.getTime()
+  // Berlin Offset in Minuten herausfinden
+  const berlinDateStr = now.toLocaleString('en-US', { timeZone: 'Europe/Berlin', hour12: false, hour: '2-digit', minute: '2-digit' })
+  // Format: "14:25" oder "02:05"
+  const clean = berlinDateStr.replace(/\s*(AM|PM)/i, '').trim()
+  const parts = clean.split(':')
+  const h = parseInt(parts[0], 10)
+  const m = parseInt(parts[1], 10)
+  return h * 60 + m
+}
+
 function getNowBerlin(): { hours: number; minutes: number; day: number; dateStr: string } {
   const now = new Date()
-  // Robuste Methode: Intl.DateTimeFormat mit Europe/Berlin
-  const fmt = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/Berlin',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: false
-  })
-  const parts = fmt.formatToParts(now)
-  const get = (t: string) => parseInt(parts.find(p => p.type === t)?.value || '0', 10)
-  const h = get('hour')
-  const m = get('minute')
-  const day = get('weekday') // nicht vorhanden, daher separate Berechnung
-  // Wochentag über Berlin-Datum
+  const berlinDateStr = now.toLocaleString('en-US', { timeZone: 'Europe/Berlin', hour12: false, hour: '2-digit', minute: '2-digit' })
+  const clean = berlinDateStr.replace(/\s*(AM|PM)/i, '').trim()
+  const parts = clean.split(':')
+  const hours = parseInt(parts[0], 10)
+  const minutes = parseInt(parts[1], 10)
+  // Datum in Berlin
+  const dateParts = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' }) // format: YYYY-MM-DD
   const berlinDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Berlin' }))
-  const dateStr = `${parts.find(p=>p.type==="year")?.value}-${parts.find(p=>p.type==="month")?.value}-${parts.find(p=>p.type==="day")?.value}`
-  return { hours: h, minutes: m, day: berlinDate.getDay(), dateStr }
+  return { hours, minutes, day: berlinDate.getDay(), dateStr: dateParts }
 }
 
 function isNowBetween(from: string, until: string): boolean {
-  const { hours, minutes } = getNowBerlin()
-  const nowMins = hours * 60 + minutes
-  return nowMins >= timeToMinutes(from) && nowMins < timeToMinutes(until)
+  const nowMins = getBerlinMinutes()
+  const result = nowMins >= timeToMinutes(from) && nowMins < timeToMinutes(until)
+  console.log(`isNowBetween(${from}, ${until}): nowMins=${nowMins}, from=${timeToMinutes(from)}, until=${timeToMinutes(until)}, result=${result}`)
+  return result
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
