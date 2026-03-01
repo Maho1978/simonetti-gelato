@@ -61,6 +61,7 @@ const FEATURE_DEFINITIONS = [
   { id: 'whatsapp_notify',  icon: '💬', label: 'WhatsApp Benachrichtigung', description: 'WhatsApp-Button im Kanban für direkte Kundenkommunikation. Kostenlos via wa.me Links.', adminLink: null,             adminLabel: null,                      comingSoon: false },
   { id: 'payment_paypal',   icon: '🅿️', label: 'PayPal',                   description: 'PayPal als Zahlungsmethode im Checkout anzeigen.',                                      adminLink: null,             adminLabel: null,                      comingSoon: false },
   { id: 'payment_klarna',   icon: '🛒', label: 'Klarna (Ratenkauf)',        description: 'Klarna als Zahlungsmethode im Checkout anzeigen.',                                      adminLink: null,             adminLabel: null,                      comingSoon: true  },
+  { id: 'upsell',           icon: '✨', label: 'Upselling',             description: 'Zeigt Toppings & Tagesspecial dezent unterhalb des Warenkorbs im Checkout.',         adminLink: null,             adminLabel: null,                      comingSoon: false },
   { id: 'loyalty',          icon: '🎁', label: 'Treueprogramm',             description: 'Jede 10. Bestellung gratis.',                                                           adminLink: null,             adminLabel: null,                      comingSoon: true  },
   { id: 'favorites',        icon: '❤️', label: 'Favoriten',                 description: 'Kunden können Produkte als Favoriten speichern.',                                       adminLink: null,             adminLabel: null,                      comingSoon: true  },
 ]
@@ -213,6 +214,18 @@ export default function SettingsPage() {
   const [newZip, setNewZip]   = useState("")
   const [newCity, setNewCity] = useState("")
 
+  // Upselling
+  const [upsellEnabled, setUpsellEnabled] = useState(false)
+  const [upsellToppings, setUpsellToppings] = useState<{ id: string; name: string; price: number; enabled: boolean }[]>([
+    { id: '1', name: 'Schokosoße', price: 0.50, enabled: true },
+    { id: '2', name: 'Erdbeersoße', price: 0.50, enabled: true },
+    { id: '3', name: 'Streusel', price: 0.30, enabled: true },
+    { id: '4', name: 'Waffel', price: 0.50, enabled: true },
+  ])
+  const [dailySpecial, setDailySpecial] = useState({ enabled: false, name: '', description: '', price: 0.0 })
+  const [newToppingName, setNewToppingName] = useState('')
+  const [newToppingPrice, setNewToppingPrice] = useState('0.50')
+
   useEffect(() => { loadSettings(); loadSpecialHours(); loadFeatures() }, [])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
@@ -237,6 +250,9 @@ export default function SettingsPage() {
       })
       if (data.email_notifications) setEmailSettings({ ...DEFAULT_EMAIL_SETTINGS, ...data.email_notifications })
       if (data.delivery_zones && data.delivery_zones.length > 0) setDeliveryZones(data.delivery_zones)
+      if (data.upsell_enabled != null) setUpsellEnabled(data.upsell_enabled)
+      if (data.upsell_toppings?.length) setUpsellToppings(data.upsell_toppings)
+      if (data.daily_special) setDailySpecial(data.daily_special)
       if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
       if (data.payment_keys)        setPaymentKeys({ ...DEFAULT_PAYMENT_KEYS, ...data.payment_keys })
       setMarketing({
@@ -265,7 +281,7 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true)
-    const { error } = await supabase.from('shop_settings').update({ ...settings, delivery_zones: deliveryZones }).eq('id', 'main')
+    const { error } = await supabase.from('shop_settings').update({ ...settings, delivery_zones: deliveryZones, upsell_enabled: upsellEnabled, upsell_toppings: upsellToppings, daily_special: dailySpecial }).eq('id', 'main')
     if (!error) showToast('✅ Einstellungen gespeichert!')
     else showToast('❌ Fehler: ' + error.message)
     setSaving(false)
@@ -660,6 +676,88 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-xs text-gray-400 mt-3">💡 Gespeichert wird mit dem großen "Einstellungen speichern" Button</p>
               </div>
+
+              {/* Upselling */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="font-bold text-xl flex items-center gap-2">✨ Upselling</h2>
+                  <button type="button" onClick={() => setUpsellEnabled(!upsellEnabled)}
+                    className={`relative flex-shrink-0 w-14 h-7 rounded-full transition-colors ${upsellEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    <span className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${upsellEnabled ? 'translate-x-8' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-400 mb-5">Dezente "Dazu noch?" Sektion im Warenkorb – ein Klick genügt zum Hinzufügen</p>
+
+                {upsellEnabled && (
+                  <div className="space-y-5">
+
+                    {/* Tagesspecial */}
+                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-bold text-amber-800">⭐ Tagesspecial</span>
+                        <button type="button" onClick={() => setDailySpecial({ ...dailySpecial, enabled: !dailySpecial.enabled })}
+                          className={`relative w-11 h-6 rounded-full transition-colors ${dailySpecial.enabled ? 'bg-amber-400' : 'bg-gray-300'}`}>
+                          <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${dailySpecial.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        </button>
+                      </div>
+                      {dailySpecial.enabled && (
+                        <div className="space-y-2">
+                          <input type="text" value={dailySpecial.name} onChange={e => setDailySpecial({ ...dailySpecial, name: e.target.value })}
+                            placeholder="z.B. Mango-Sorbet" className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl focus:border-amber-400 focus:outline-none text-sm" />
+                          <input type="text" value={dailySpecial.description} onChange={e => setDailySpecial({ ...dailySpecial, description: e.target.value })}
+                            placeholder="Kurze Beschreibung (optional)" className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl focus:border-amber-400 focus:outline-none text-sm" />
+                          <div className="flex items-center gap-2">
+                            <input type="number" step="0.10" value={dailySpecial.price} onChange={e => setDailySpecial({ ...dailySpecial, price: parseFloat(e.target.value) })}
+                              className="w-28 px-3 py-2 border-2 border-amber-200 rounded-xl focus:border-amber-400 focus:outline-none text-sm font-bold" />
+                            <span className="text-sm text-gray-500">€</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Toppings */}
+                    <div>
+                      <p className="font-semibold text-gray-700 mb-2">🍫 Toppings</p>
+                      <div className="space-y-2 mb-3">
+                        {upsellToppings.map(t => (
+                          <div key={t.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-colors ${t.enabled ? 'border-gray-200 bg-gray-50' : 'border-gray-100 bg-white opacity-50'}`}>
+                            <div className="flex-1">
+                              <span className="font-medium text-gray-800 text-sm">{t.name}</span>
+                              <span className="text-gray-400 text-sm ml-2">+{t.price.toFixed(2)} €</span>
+                            </div>
+                            <button type="button" onClick={() => setUpsellToppings(upsellToppings.map(x => x.id === t.id ? { ...x, enabled: !x.enabled } : x))}
+                              className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${t.enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${t.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                            </button>
+                            <button type="button" onClick={() => setUpsellToppings(upsellToppings.filter(x => x.id !== t.id))}
+                              className="p-1.5 hover:bg-red-100 rounded-lg text-gray-300 hover:text-red-500 transition">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input type="text" value={newToppingName} onChange={e => setNewToppingName(e.target.value)}
+                          placeholder="Topping Name" className="flex-1 px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm" />
+                        <input type="number" step="0.10" value={newToppingPrice} onChange={e => setNewToppingPrice(e.target.value)}
+                          className="w-24 px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm font-mono" />
+                        <span className="self-center text-gray-500 text-sm">€</span>
+                        <button type="button"
+                          onClick={() => {
+                            if (!newToppingName.trim()) return
+                            setUpsellToppings([...upsellToppings, { id: Date.now().toString(), name: newToppingName.trim(), price: parseFloat(newToppingPrice) || 0.50, enabled: true }])
+                            setNewToppingName(''); setNewToppingPrice('0.50')
+                          }}
+                          className="px-4 py-2.5 bg-black text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition flex items-center gap-1.5 flex-shrink-0">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                          Hinzufügen
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{saving ? 'Speichert...' : 'Einstellungen speichern'}
