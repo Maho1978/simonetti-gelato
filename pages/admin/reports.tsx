@@ -45,7 +45,6 @@ function StatCard({ icon, label, value, sub, trend }: { icon: React.ReactNode; l
       <div className="text-sm text-gray-400">{label}</div>
       {sub && <div className="text-xs text-gray-300 mt-0.5">{sub}</div>}
     </div>
-    </AdminLayout>
   )
 }
 
