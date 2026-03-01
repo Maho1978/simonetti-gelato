@@ -11,6 +11,7 @@ export default function Document() {
         <meta name="author" content="Eiscafé Simonetti" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://www.eiscafe-simonetti.de" />
+        <meta name="google-site-verification" content="bqsyTeKIMKQc23aJ7bTaW093sAdp1XjUSgZ_lcEtCeM" />
 
         {/* ── Open Graph (WhatsApp, Facebook, etc.) ── */}
         <meta property="og:type" content="website" />
