@@ -12,23 +12,18 @@ export default function Document() {
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://www.eiscafe-simonetti.de" />
 
-        {/* ── Open Graph (Facebook, WhatsApp, etc.) ── */}
+        {/* ── Open Graph (WhatsApp, Facebook, etc.) ── */}
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="de_DE" />
         <meta property="og:site_name" content="Eiscafé Simonetti" />
         <meta property="og:title" content="Eiscafé Simonetti Langenfeld – Eis & Gelato mit Lieferservice" />
         <meta property="og:description" content="Frisches Eis & Gelato jetzt bequem online bestellen. Lieferservice in Langenfeld (40764). Täglich frisch zubereitet!" />
         <meta property="og:url" content="https://www.eiscafe-simonetti.de" />
-        <meta property="og:image" content="https://www.eiscafe-simonetti.de/og-image.jpg" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="Eiscafé Simonetti Langenfeld" />
 
         {/* ── Twitter Card ── */}
-        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content="Eiscafé Simonetti – Eis mit Lieferservice Langenfeld" />
         <meta name="twitter:description" content="Frisches Gelato online bestellen. Lieferservice in Langenfeld 40764." />
-        <meta name="twitter:image" content="https://www.eiscafe-simonetti.de/og-image.jpg" />
 
         {/* ── Favicon ── */}
         <link rel="icon" href="/favicon.ico" />
@@ -47,9 +42,8 @@ export default function Document() {
               "name": "Eiscafé Simonetti",
               "description": "Frisches Eis & Gelato mit Lieferservice in Langenfeld. Täglich frisch zubereitet – jetzt online bestellen!",
               "url": "https://www.eiscafe-simonetti.de",
-              "telephone": "+492173162278",
+              "telephone": "+4921731622780",
               "email": "bestellung@eiscafe-simonetti.de",
-              "image": "https://www.eiscafe-simonetti.de/og-image.jpg",
               "priceRange": "€",
               "servesCuisine": ["Gelato", "Eis", "Desserts"],
               "hasMenu": "https://www.eiscafe-simonetti.de",
@@ -64,9 +58,17 @@ export default function Document() {
               },
               "geo": {
                 "@type": "GeoCoordinates",
-                "latitude": 51.1089,
-                "longitude": 6.9482
+                "latitude": 51.10693,
+                "longitude": 6.94938
               },
+              "openingHoursSpecification": [
+                {
+                  "@type": "OpeningHoursSpecification",
+                  "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+                  "opens": "14:00",
+                  "closes": "18:30"
+                }
+              ],
               "hasOfferCatalog": {
                 "@type": "OfferCatalog",
                 "name": "Eiskarte",
@@ -91,16 +93,16 @@ export default function Document() {
                     "http://schema.org/MobileWebPlatform"
                   ]
                 },
-                "deliveryMethod": ["http://purl.org/goodrelations/v1#DeliveryModeDirectDownload"],
+                "deliveryMethod": ["http://purl.org/goodrelations/v1#DeliveryModeMail"],
                 "result": {
                   "@type": "Order",
                   "orderStatus": "http://schema.org/OrderProcessing"
+                },
+                "areaServed": {
+                  "@type": "PostalCodeRangeSpecification",
+                  "postalCodeBegin": "40764",
+                  "postalCodeEnd": "40764"
                 }
-              },
-              "areaServed": {
-                "@type": "PostalCodeRangeSpecification",
-                "postalCodeBegin": "40764",
-                "postalCodeEnd": "40764"
               },
               "sameAs": [
                 "https://www.google.com/maps/place/Eiscaf%C3%A9+Simonetti"
