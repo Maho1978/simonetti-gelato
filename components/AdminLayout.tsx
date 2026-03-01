@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { label: 'Kategorien',  href: '/admin/categories', icon: '📂' },
   { label: 'Fahrer',      href: '/admin/drivers',    icon: '🚗' },
   { label: 'Reports',     href: '/admin/reports',    icon: '📈' },
+  { label: 'Kampagnen',   href: '/admin/campaigns',  icon: '📣' },
   { label: 'Gutscheine',  href: '/admin/vouchers',   icon: '🎟️' },
   { label: 'Kunden',      href: '/admin/customers',  icon: '👥' },
   { label: 'Bewertungen', href: '/admin/reviews',    icon: '⭐' },

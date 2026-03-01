@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import AdminLayout from '@/components/AdminLayout'
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
-import { Download, TrendingUp, Euro, ShoppingBag, Users, ArrowLeft, ArrowUp, ArrowDown, Minus } from 'lucide-react'
+import { Download, TrendingUp, Euro, ShoppingBag, Users, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 
 interface Order {
   id: string
@@ -44,6 +45,7 @@ function StatCard({ icon, label, value, sub, trend }: { icon: React.ReactNode; l
       <div className="text-sm text-gray-400">{label}</div>
       {sub && <div className="text-xs text-gray-300 mt-0.5">{sub}</div>}
     </div>
+    </AdminLayout>
   )
 }
 
@@ -217,16 +219,14 @@ export default function Reports({ session }: { session: Session | null }) {
   )
 
   return (
+    <AdminLayout>
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <button onClick={() => router.push('/admin')} className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 text-sm mb-2 transition">
-              <ArrowLeft size={15} /> Admin
-            </button>
-            <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+<h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
             <p className="text-gray-400 text-sm mt-0.5">Eiscafé Simonetti · Bestellstatistiken</p>
           </div>
           <div className="flex items-center gap-3">
@@ -388,5 +388,6 @@ export default function Reports({ session }: { session: Session | null }) {
 
       </div>
     </div>
+    </AdminLayout>
   )
 }
