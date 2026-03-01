@@ -13,9 +13,19 @@ function timeToMinutes(t: string): number {
   return h * 60 + m
 }
 
-function isNowBetween(from: string, until: string): boolean {
+function getNowBerlin(): { hours: number; minutes: number; day: number; dateStr: string } {
   const now = new Date()
-  const nowMins = now.getHours() * 60 + now.getMinutes()
+  // Immer Europe/Berlin Zeitzone verwenden (UTC+1 / UTC+2 je nach Sommer/Winterzeit)
+  const berlinStr = now.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hour12: false })
+  const [h, m] = berlinStr.split(':').map(Number)
+  const berlinDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Berlin' }))
+  const dateStr = berlinDate.toISOString().split('T')[0]
+  return { hours: h, minutes: m, day: berlinDate.getDay(), dateStr }
+}
+
+function isNowBetween(from: string, until: string): boolean {
+  const { hours, minutes } = getNowBerlin()
+  const nowMins = hours * 60 + minutes
   return nowMins >= timeToMinutes(from) && nowMins < timeToMinutes(until)
 }
 
@@ -43,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const todayStr = new Date().toISOString().split('T')[0]
+    const { dateStr: todayStr, day: berlinDay } = getNowBerlin()
 
     // 2. Sondertag prüfen
     const { data: specialDay } = await supabase
@@ -68,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let isPreorder = false, preorderHint = ''
       if (!anyOpen && settings.preorder_enabled && !h.dClosed) {
         const ph = settings.preorder_start_hour || 10
-        const nowH = new Date().getHours()
+        const { hours: nowH } = getNowBerlin()
         if (nowH >= ph) {
           isPreorder = true
           preorderHint = (settings.preorder_hint || 'Vorbestellung möglich – Lieferung ab {from} Uhr.').replace('{from}', h.dFrom)
@@ -90,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 3. Reguläre Öffnungszeiten
-    const dayKey = DAY_KEYS[new Date().getDay()]
+    const dayKey = DAY_KEYS[berlinDay]
     const raw    = settings.opening_hours?.[dayKey]
 
     let h: any
