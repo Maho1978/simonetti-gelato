@@ -15,11 +15,20 @@ function timeToMinutes(t: string): number {
 
 function getNowBerlin(): { hours: number; minutes: number; day: number; dateStr: string } {
   const now = new Date()
-  // Immer Europe/Berlin Zeitzone verwenden (UTC+1 / UTC+2 je nach Sommer/Winterzeit)
-  const berlinStr = now.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute: '2-digit', hour12: false })
-  const [h, m] = berlinStr.split(':').map(Number)
+  // Robuste Methode: Intl.DateTimeFormat mit Europe/Berlin
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Berlin',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  })
+  const parts = fmt.formatToParts(now)
+  const get = (t: string) => parseInt(parts.find(p => p.type === t)?.value || '0', 10)
+  const h = get('hour')
+  const m = get('minute')
+  const day = get('weekday') // nicht vorhanden, daher separate Berechnung
+  // Wochentag über Berlin-Datum
   const berlinDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Berlin' }))
-  const dateStr = berlinDate.toISOString().split('T')[0]
+  const dateStr = `${parts.find(p=>p.type==="year")?.value}-${parts.find(p=>p.type==="month")?.value}-${parts.find(p=>p.type==="day")?.value}`
   return { hours: h, minutes: m, day: berlinDate.getDay(), dateStr }
 }
 
