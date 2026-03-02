@@ -125,7 +125,7 @@ function printOrder(order: any) {
   const tipHtml = tip > 0 ? `<tr class="total-row"><td colspan="2">Trinkgeld</td><td>${tip.toFixed(2)} EUR</td></tr>` : ''
   const notesHtml = order.notes ? `<tr><td colspan="3"><div class="sep-dashed"></div></td></tr><tr><td colspan="3" class="section-label">ANMERKUNG:</td></tr><tr><td colspan="3" class="notes-text">${order.notes}</td></tr>` : ''
   const phoneHtml = order.customer_phone ? `<tr><td colspan="3">Tel: <b>${order.customer_phone}</b></td></tr>` : ''
-  const paymentLabel = order.payment_method === 'cash' ? 'Barzahlung' : order.payment_method === 'paypal' ? 'PayPal' : 'Online'
+  const paymentLabel = order.payment_method === 'cash' ? 'Barzahlung' : order.payment_method === 'paypal' ? 'PayPal' : 'Kreditkarte'
   const pickupLabel  = order.order_type === 'pickup' ? 'ABHOLUNG' : 'LIEFERUNG'
 
   const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
@@ -749,14 +749,11 @@ export default function KanbanPage() {
 
   // ── Umsatz Berechnung ─────────────────────────────────────
   const deliveredOrders = orders['GELIEFERT'] || []
-  // Debug: log payment methods
-  if (deliveredOrders.length > 0) {
-    console.log('Delivered orders payment methods:', deliveredOrders.map((o: any) => ({ id: o.id?.slice(-6), pm: o.payment_method, total: o.total })))
-  }
-  const stripeTotal     = deliveredOrders.filter(o => o.payment_method === 'stripe').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const stripeTotal     = deliveredOrders.filter(o => o.payment_method === 'stripe' || o.payment_method === 'card').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
   const paypalTotal     = deliveredOrders.filter(o => o.payment_method === 'paypal').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
-  const cashTotal       = deliveredOrders.filter(o => o.payment_method === 'cash').reduce((sum, o)  => sum + (o.total || 0) - (o.tip || 0), 0)
+  const cashTotal       = deliveredOrders.filter(o => o.payment_method === 'cash' || !o.payment_method).reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
   const tipTotal        = deliveredOrders.reduce((s, o) => s + (o.tip || 0), 0)
+  const grandTotal      = deliveredOrders.reduce((s, o) => s + (o.total || 0), 0)
   const deliveredCount  = deliveredOrders.length
   const openCount       = orders['OFFEN']?.length || 0
 
@@ -831,7 +828,7 @@ export default function KanbanPage() {
                 <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
                   <div className="text-xs text-gray-400 font-medium">Gesamt</div>
-                  <div className="text-base font-black text-green-600">{(stripeTotal + paypalTotal + cashTotal + tipTotal).toFixed(2)} €</div>
+                  <div className="text-base font-black text-green-600">{grandTotal.toFixed(2)} €</div>
                 </div>
                 <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
