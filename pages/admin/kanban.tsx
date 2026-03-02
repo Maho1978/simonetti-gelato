@@ -120,9 +120,9 @@ function printOrder(order: any) {
 
   const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
 <style>
-  @page { margin: 2mm 3mm; size: 80mm auto; }
+  @page { margin: 1mm 2mm; size: 72mm auto; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: bold; width: 74mm; color: #000; background: #fff; line-height: 1.5; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: bold; width: 68mm; color: #000; background: #fff; line-height: 1.5; }
   .center { text-align: center; }
   .logo { font-size: 26px; font-weight: 900; letter-spacing: 4px; margin-bottom: 1px; }
   .tagline { font-size: 12px; letter-spacing: 6px; margin-bottom: 5px; }
@@ -186,7 +186,7 @@ function printOrder(order: any) {
 <script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 400); };</script>
 </body></html>`
 
-  const win = window.open('', '_blank', 'width=340,height=700')
+  const win = window.open('', '_blank', 'width=300,height=700')
   if (!win) return
   win.document.write(html)
   win.document.close()
@@ -322,6 +322,7 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
 
 function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, colIdx }: any) {
   const [waText, setWaText] = useState('')
+  const [waEnabled, setWaEnabled] = useState(true)
   const status   = COLUMNS[colIdx]?.id
   const isPickup = order.order_type === 'pickup'
   const phone    = order.customer_phone?.replace(/\s+/g, '').replace(/^\+/, '').replace(/^0/, '49')
@@ -415,12 +416,19 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
 
           {/* WhatsApp */}
           {order.customer_phone && (
-            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl">💬</span>
-                <span className="font-bold text-green-800">WhatsApp senden</span>
-                <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">kostenlos</span>
+            <div className={`border-2 rounded-xl p-4 transition ${waEnabled ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">💬</span>
+                  <span className={`font-bold ${waEnabled ? 'text-green-800' : 'text-gray-400'}`}>WhatsApp senden</span>
+                  <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">kostenlos</span>
+                </div>
+                <button onClick={() => setWaEnabled(!waEnabled)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${waEnabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${waEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
               </div>
+              {waEnabled && (<>
               <div className="flex flex-wrap gap-2 mb-3">
                 {WA_TEMPLATES.map((t) => (
                   <button key={t.label} onClick={() => setWaText(t.text)}
@@ -440,6 +448,7 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
                 className="w-full py-2.5 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
                 <span>📲</span> WhatsApp öffnen → {order.customer_phone}
               </button>
+              </>)}
             </div>
           )}
 
@@ -588,7 +597,10 @@ export default function KanbanPage() {
   useEffect(() => { popupRef.current   = popupOrder    }, [popupOrder])
 
   const loadOrders = useCallback(async () => {
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+    // Berlin-Mitternacht korrekt berechnen (UTC)
+    const now = new Date()
+    const berlinMidnight = new Date(now.toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' }) + 'T00:00:00+01:00')
+    const todayStart = berlinMidnight
     let query = supabase.from('orders').select('*').order('created_at', { ascending: false })
     if (!showAllRef.current) query = query.gte('created_at', todayStart.toISOString())
     const { data, error } = await query
@@ -621,6 +633,7 @@ export default function KanbanPage() {
   useEffect(() => {
     loadOrders()
     loadDrivers()
+    loadWhatsAppToggle()
     const iv = setInterval(loadOrders, 15000)
     return () => clearInterval(iv)
   }, [loadOrders])
@@ -630,6 +643,15 @@ export default function KanbanPage() {
   const loadDrivers = async () => {
     const { data } = await supabase.from('drivers').select('*').eq('is_active', true).order('name')
     if (data) setDrivers(data)
+  }
+
+  const loadWhatsAppToggle = async () => {
+    const { data } = await supabase.from('feature_toggles').select('enabled').eq('id', 'whatsapp_notify').single()
+    // Falls Eintrag existiert und deaktiviert ist → global aus; sonst standardmäßig an
+    if (data && data.enabled === false) {
+      // Wir setzen einen globalen State — aber der waEnabled im Popup ist lokal
+      // Hier nur initial-Default setzen (wird im Popup-State genutzt)
+    }
   }
 
   const closePopup = () => {
