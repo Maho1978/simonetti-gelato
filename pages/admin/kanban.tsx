@@ -749,9 +749,12 @@ export default function KanbanPage() {
 
   // ── Umsatz Berechnung ─────────────────────────────────────
   const deliveredOrders = orders['GELIEFERT'] || []
-  const stripeTotal     = deliveredOrders.filter(o => o.payment_method === 'stripe' || o.payment_method === 'card').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
-  const paypalTotal     = deliveredOrders.filter(o => o.payment_method === 'paypal').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
-  const cashTotal       = deliveredOrders.filter(o => o.payment_method === 'cash' || !o.payment_method).reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const isStripe  = (o: any) => (o.payment_method === 'stripe' || o.payment_method === 'card' || o.payment_method === 'STRIPE') && (!o.payment_intent_id || o.payment_intent_id.startsWith('pi_'))
+  const isPayPal  = (o: any) => o.payment_method === 'paypal' || (o.payment_intent_id && !o.payment_intent_id.startsWith('pi_') && o.payment_intent_id !== '')
+  const isCash    = (o: any) => o.payment_method === 'cash' || (!isStripe(o) && !isPayPal(o) && !o.payment_intent_id)
+  const stripeTotal     = deliveredOrders.filter(isStripe).reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const paypalTotal     = deliveredOrders.filter(isPayPal).reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
+  const cashTotal       = deliveredOrders.filter(isCash).reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
   const tipTotal        = deliveredOrders.reduce((s, o) => s + (o.tip || 0), 0)
   const grandTotal      = deliveredOrders.reduce((s, o) => s + (o.total || 0), 0)
   const deliveredCount  = deliveredOrders.length
