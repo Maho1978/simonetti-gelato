@@ -58,6 +58,7 @@ const DEFAULT_PAYMENT_KEYS = {
 
 const FEATURE_DEFINITIONS = [
   { id: 'reviews',          icon: '⭐', label: 'Bewertungssystem',          description: 'Kunden können bestellte Produkte mit 1–5 Sternen bewerten.',                           adminLink: '/admin/reviews', adminLabel: 'Bewertungen verwalten →', comingSoon: false },
+  { id: 'telegram_notify',  icon: '✈️', label: 'Telegram Benachrichtigung', description: 'Sofort-Benachrichtigung auf dein Telegram bei neuer Bestellung – mit allen Details.', adminLink: null, adminLabel: null, comingSoon: false },
   { id: 'whatsapp_notify',  icon: '💬', label: 'WhatsApp Benachrichtigung', description: 'WhatsApp-Button im Kanban für direkte Kundenkommunikation. Kostenlos via wa.me Links.', adminLink: null,             adminLabel: null,                      comingSoon: false },
   { id: 'payment_paypal',   icon: '🅿️', label: 'PayPal',                   description: 'PayPal als Zahlungsmethode im Checkout anzeigen.',                                      adminLink: null,             adminLabel: null,                      comingSoon: false },
   { id: 'payment_klarna',   icon: '🛒', label: 'Klarna (Ratenkauf)',        description: 'Klarna als Zahlungsmethode im Checkout anzeigen.',                                      adminLink: null,             adminLabel: null,                      comingSoon: true  },

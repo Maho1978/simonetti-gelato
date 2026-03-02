@@ -35,6 +35,16 @@ async function sendEmail(type: string, order: any) {
   } catch (e) {}
 }
 
+async function sendTelegram(order: any) {
+  try {
+    await fetch('/api/telegram/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order }),
+    })
+  } catch (e) {}
+}
+
 function formatAddress(addr: any): string {
   if (!addr) return '–'
   if (typeof addr === 'string') return addr
@@ -664,7 +674,7 @@ export default function KanbanPage() {
 
   const acceptFromPopup = async (order: any) => {
     const ok = await apiUpdateOrder(order.id, { status: 'IN_BEARBEITUNG' })
-    if (ok) { await sendEmail('order_confirmed', order); closePopup(); loadOrders() }
+    if (ok) { await sendEmail('order_confirmed', order); await sendTelegram(order); closePopup(); loadOrders() }
   }
 
   const acceptOrder = async (orderId: string) => {
@@ -697,7 +707,7 @@ export default function KanbanPage() {
     if (newStatus === 'AN_FAHRER' && !order.assigned_at) updateData.assigned_at = new Date().toISOString()
     const ok = await apiUpdateOrder(orderId, updateData)
     if (ok) {
-      if (newStatus === 'IN_BEARBEITUNG') await sendEmail('order_confirmed', order)
+      if (newStatus === 'IN_BEARBEITUNG') { await sendEmail('order_confirmed', order); await sendTelegram(order) }
       if (newStatus === 'AN_FAHRER')      await sendEmail('order_out_for_delivery', order)
       loadOrders()
     }
@@ -739,6 +749,10 @@ export default function KanbanPage() {
 
   // ── Umsatz Berechnung ─────────────────────────────────────
   const deliveredOrders = orders['GELIEFERT'] || []
+  // Debug: log payment methods
+  if (deliveredOrders.length > 0) {
+    console.log('Delivered orders payment methods:', deliveredOrders.map((o: any) => ({ id: o.id?.slice(-6), pm: o.payment_method, total: o.total })))
+  }
   const stripeTotal     = deliveredOrders.filter(o => o.payment_method === 'stripe').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
   const paypalTotal     = deliveredOrders.filter(o => o.payment_method === 'paypal').reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
   const cashTotal       = deliveredOrders.filter(o => o.payment_method === 'cash').reduce((sum, o)  => sum + (o.total || 0) - (o.tip || 0), 0)
