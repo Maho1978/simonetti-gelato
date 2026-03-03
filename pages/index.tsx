@@ -5,7 +5,6 @@ import ProductCard, { ProductGrid, CategoryHeader } from '@/components/ProductCa
 import MiniCart from '@/components/MiniCart'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
-import WelcomeBanner from '@/components/WelcomeBanner'
 import ShopStatusBanner from '@/components/ShopStatusBanner'
 import { supabase } from '@/lib/supabase'
 
@@ -112,6 +111,7 @@ export default function Home() {
     ))
   }
 
+  // FIX: Anmerkungen updaten ohne den Cart neu zu mounten
   const updateCartNotes = (cartId: string, notes: string) => {
     setCart(prev => {
       const updated = prev.map(item =>
@@ -131,7 +131,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <WelcomeBanner />
       <ShopStatusBanner />
       <Navbar session={session} cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
       <HeroSection />
@@ -188,7 +187,15 @@ export default function Home() {
                 <ProductCard
                   key={product.id}
                   product={product}
-                  extras={extras}
+                  extras={extras.filter(e => {
+                    // global: für alle Produkte
+                    if (!e.scope || e.scope === 'global') return true
+                    // category: nur für bestimmte Kategorien
+                    if (e.scope === 'category') return (e.category_names || []).includes(product.category)
+                    // product: nur für bestimmte Produkte
+                    if (e.scope === 'product') return (e.product_ids || []).includes(product.id)
+                    return false
+                  })}
                   flavors={flavors}
                   onAddToCart={handleAddToCart}
                 />
