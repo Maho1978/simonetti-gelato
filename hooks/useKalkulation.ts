@@ -1,12 +1,12 @@
-// hooks/useKalkulation.ts
-'use client'
+﻿// hooks/useKalkulation.ts
+
 import { useState, useEffect, useCallback } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 import type { Zutat, Betriebskosten, Produkt, RezeptPosition, KalkEinstellungen } from '@/types/kalkulation'
-import type { Kategorie } from '@/app/admin/kalkulation/KategorienManager'
+import type { Kategorie } from '@/pages/admin/kalkulation/KategorienManager'
 
 export function useKalkulation() {
-  const supabase = createClientComponentClient()
+  
   const [zutaten,        setZutaten]        = useState<Zutat[]>([])
   const [betriebskosten, setBetriebskosten] = useState<Betriebskosten[]>([])
   const [produkte,       setProdukte]       = useState<Produkt[]>([])
@@ -15,7 +15,7 @@ export function useKalkulation() {
   const [loading,        setLoading]        = useState(true)
   const [error,          setError]          = useState<string | null>(null)
 
-  // ── Alle Daten laden ──────────────────────────────────────────────────────
+  // â”€â”€ Alle Daten laden â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -46,7 +46,7 @@ export function useKalkulation() {
 
   useEffect(() => { load() }, [load])
 
-  // ── Realtime Subscriptions ────────────────────────────────────────────────
+  // â”€â”€ Realtime Subscriptions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const channel = supabase
       .channel('kalk_changes')
@@ -60,7 +60,7 @@ export function useKalkulation() {
     return () => { supabase.removeChannel(channel) }
   }, [supabase, load])
 
-  // ── CRUD: Einstellungen ───────────────────────────────────────────────────
+  // â”€â”€ CRUD: Einstellungen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const saveEinstellungen = async (data: Partial<KalkEinstellungen>) => {
     if (!einstellungen) return
     const { error } = await supabase
@@ -71,7 +71,7 @@ export function useKalkulation() {
     setEinstellungen(prev => prev ? {...prev, ...data} : prev)
   }
 
-  // ── CRUD: Betriebskosten ──────────────────────────────────────────────────
+  // â”€â”€ CRUD: Betriebskosten â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const saveBetriebskosten = async (item: Partial<Betriebskosten> & { id?: string }) => {
     if (item.id) {
       const { error } = await supabase.from('betriebskosten').update(item).eq('id', item.id)
@@ -89,7 +89,7 @@ export function useKalkulation() {
     setBetriebskosten(prev => prev.filter(b => b.id !== id))
   }
 
-  // ── CRUD: Zutaten ─────────────────────────────────────────────────────────
+  // â”€â”€ CRUD: Zutaten â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const saveZutat = async (item: Partial<Zutat> & { id?: string }) => {
     if (item.id) {
       const { error } = await supabase.from('zutaten').update(item).eq('id', item.id)
@@ -107,7 +107,7 @@ export function useKalkulation() {
     setZutaten(prev => prev.filter(z => z.id !== id))
   }
 
-  // ── CRUD: Produkte ────────────────────────────────────────────────────────
+  // â”€â”€ CRUD: Produkte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const saveProdukt = async (item: Partial<Produkt> & { id?: string }) => {
     const { rezept_positionen, ...data } = item as any
     if (data.id) {
@@ -126,7 +126,7 @@ export function useKalkulation() {
     setProdukte(prev => prev.filter(p => p.id !== id))
   }
 
-  // ── CRUD: Rezept-Positionen ───────────────────────────────────────────────
+  // â”€â”€ CRUD: Rezept-Positionen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const saveRezeptPosition = async (pos: Partial<RezeptPosition> & { id?: string }) => {
     if (pos.id) {
       const { error } = await supabase.from('rezept_positionen').update(pos).eq('id', pos.id)
@@ -144,11 +144,11 @@ export function useKalkulation() {
     await load()
   }
 
-  // ── Hilfswerte ────────────────────────────────────────────────────────────
+  // â”€â”€ Hilfswerte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const betriebGesamt   = betriebskosten.reduce((s, b) => s + b.betrag, 0)
   const gesamtPortionen = produkte.reduce((s, p) => s + (p.verkauf_monat ?? 0), 0)
 
-  // ── Kategorien-Helfer ─────────────────────────────────────────────────────
+  // â”€â”€ Kategorien-Helfer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const zutatenKats   = kategorien.filter(k => k.bereich === 'zutat')
   const produktKats   = kategorien.filter(k => k.bereich === 'produkt')
   const betriebKats   = kategorien.filter(k => k.bereich === 'betrieb')
