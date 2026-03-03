@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useMemo, useRef } from 'react'
 import { useKalkulation } from '@/hooks/useKalkulation'
 import {
@@ -10,14 +10,14 @@ import type {
   KalkEinstellungen, ProdKat, PortKey, UmlageModus,
 } from '@/types/kalkulation'
 
-/* ── Farben ─────────────────────────────────────────────────── */
+/* â”€â”€ Farben â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const C = {
   cream:'#FBF6EE', vanilla:'#F2E6CC', caramel:'#C4873A', espresso:'#2C1708',
   coffee:'#5C3317', muted:'#9E7B5A', border:'#DFD0B8', white:'#FFFFFF',
   red:'#C0392B', green:'#2E7D54', amber:'#D4860A', blue:'#2563EB', sand:'#E8D5B0',
 }
 
-/* ── kleine UI-Helfer ───────────────────────────────────────── */
+/* â”€â”€ kleine UI-Helfer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const Bdg = ({ color, children }: { color: 'green'|'red'|'amber'|'blue'|'gray', children: React.ReactNode }) => {
   const m = { green:{bg:'#D1FAE5',c:C.green}, red:{bg:'#FEE2E2',c:C.red}, amber:{bg:'#FEF3C7',c:C.amber}, blue:{bg:'#DBEAFE',c:C.blue}, gray:{bg:'#F3F4F6',c:'#374151'} }
   const t = m[color]
@@ -38,7 +38,7 @@ const SaveBtn = ({ onClick, saving, children }: { onClick: ()=>void; saving: boo
   </button>
 )
 
-/* ── Inline-Edit-Input ──────────────────────────────────────── */
+/* â”€â”€ Inline-Edit-Input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function TdInput({ value, onChange, type='text', width=100, align='left', step }:
   { value: string|number; onChange:(v:string)=>void; type?:string; width?:number; align?:string; step?:string }) {
   const style: React.CSSProperties = {
@@ -49,9 +49,9 @@ function TdInput({ value, onChange, type='text', width=100, align='left', step }
   return <input type={type} value={value} step={step} onChange={e=>onChange(e.target.value)} style={style}/>
 }
 
-/* ════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    HAUPTKOMPONENTE
-════════════════════════════════════════════════════════════ */
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 export default function KalkulationClient() {
   const {
     zutaten, betriebskosten, produkte, einstellungen,
@@ -68,7 +68,7 @@ export default function KalkulationClient() {
   const [toast,      setToast]      = useState<string|null>(null)
   const toastTimer = useRef<any>(null)
 
-  /* ── Einstellungen lokal (sofort im UI, debounced save) ── */
+  /* â”€â”€ Einstellungen lokal (sofort im UI, debounced save) â”€â”€ */
   const [localEinst, setLocalEinst] = useState<Partial<KalkEinstellungen>>({})
   const einst = { ...einstellungen, ...localEinst } as KalkEinstellungen
 
@@ -85,10 +85,10 @@ export default function KalkulationClient() {
     finally { setSaving(false) }
   }
 
-  /* ── Aktives Produkt ─────────────────────────────────────── */
+  /* â”€â”€ Aktives Produkt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const prod = produkte.find(p => p.id === aktivProd) ?? produkte[0] ?? null
 
-  /* ── Fixkosten-Umlage je Produkt ─────────────────────────── */
+  /* â”€â”€ Fixkosten-Umlage je Produkt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const fixMap = useMemo(() => {
     if (!einst) return {}
     return Object.fromEntries(produkte.map(p => [
@@ -97,13 +97,13 @@ export default function KalkulationClient() {
     ]))
   }, [produkte, betriebGesamt, einst?.umlage_modus])
 
-  /* ── Kalkulation für aktives Produkt ─────────────────────── */
+  /* â”€â”€ Kalkulation fÃ¼r aktives Produkt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const kalk = useMemo(() => {
     if (!prod || !einst) return null
     return calcProdukt({ produkt: prod, fixProPortion: fixMap[prod.id] ?? 0, einstellungen: einst })
   }, [prod, fixMap, einst])
 
-  /* ── Übersicht alle Produkte ─────────────────────────────── */
+  /* â”€â”€ Ãœbersicht alle Produkte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const overview = useMemo(() => {
     if (!einst) return []
     return produkte.map(p => ({
@@ -117,7 +117,7 @@ export default function KalkulationClient() {
   const monatDB    = overview.reduce((s,u)=>s+u.k.db_monat,0)
   const portion    = PORTIONEN.find(p => p.key === prod?.port_key)
 
-  /* ── Neue Rezept-Position ─────────────────────────────────── */
+  /* â”€â”€ Neue Rezept-Position â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const addPosition = async (produktId: string) => {
     const firstZutat = zutaten[0]
     if (!firstZutat) { showToast('Zuerst Zutaten anlegen'); return }
@@ -129,10 +129,10 @@ export default function KalkulationClient() {
       menge: 0.1,
       schwund_pct: 0,
       sort_order: (prod?.rezept_positionen?.length ?? 0) + 1,
-    }), 'Zutat hinzugefügt')
+    }), 'Zutat hinzugefÃ¼gt')
   }
 
-  /* ── Neues Produkt ───────────────────────────────────────── */
+  /* â”€â”€ Neues Produkt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const addProdukt = async (kat: ProdKat) => {
     setSaving(true)
     try {
@@ -154,7 +154,7 @@ export default function KalkulationClient() {
     }
   }
 
-  /* ── Styles ──────────────────────────────────────────────── */
+  /* â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const inp: React.CSSProperties = {
     width:'100%', padding:'8px 11px', border:`1.5px solid ${C.border}`, borderRadius:7,
     fontSize:13, color:C.espresso, background:C.cream, outline:'none',
@@ -215,7 +215,7 @@ export default function KalkulationClient() {
 
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'60vh',gap:14,fontFamily:"'DM Sans',sans-serif",color:C.muted}}>
-      <Spinner/> Daten werden geladen…
+      <Spinner/> Daten werden geladenâ€¦
     </div>
   )
   if (error) return (
@@ -224,7 +224,7 @@ export default function KalkulationClient() {
     </div>
   )
 
-  /* ── CSS ─────────────────────────────────────────────────── */
+  /* â”€â”€ CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
 *{box-sizing:border-box}
@@ -248,7 +248,7 @@ tr:hover td{background:#FFFBF5!important}
 .toast{position:fixed;top:20px;right:24px;padding:11px 20px;background:${C.espresso};color:${C.vanilla};border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;z-index:9999;animation:slideIn 0.25s ease;box-shadow:0 4px 16px rgba(0,0,0,0.25)}
 `
 
-  /* ── RENDER ──────────────────────────────────────────────── */
+  /* â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   return (
     <div style={{minHeight:'100vh',background:C.cream,fontFamily:"'DM Sans',sans-serif"}}>
       <style>{CSS}</style>
@@ -259,7 +259,7 @@ tr:hover td{background:#FFFBF5!important}
       {/* HEADER */}
       <div style={{background:C.espresso,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`3px solid ${C.caramel}`,flexWrap:'wrap',gap:10}}>
         <div>
-          <div style={{fontFamily:"'Playfair Display',serif",color:C.vanilla,fontSize:20,fontWeight:700}}>Eiscafé Simonetti</div>
+          <div style={{fontFamily:"'Playfair Display',serif",color:C.vanilla,fontSize:20,fontWeight:700}}>EiscafÃ© Simonetti</div>
           <div style={{color:C.caramel,fontSize:11,letterSpacing:'2px',textTransform:'uppercase',marginTop:1}}>Produktdeckungskalkulation</div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
@@ -308,17 +308,17 @@ tr:hover td{background:#FFFBF5!important}
 
       {/* MAIN TABS */}
       <div style={{background:C.vanilla,borderBottom:`1px solid ${C.border}`,padding:'8px 28px',display:'flex',gap:5,flexWrap:'wrap'}}>
-        {([['produkte','Produkte & Kalkulation'],['zutaten','Zutaten-Datenbank'],['betrieb','Betriebskosten'],['uebersicht','Gesamtübersicht']] as const).map(([k,l])=>(
+        {([['produkte','Produkte & Kalkulation'],['zutaten','Zutaten-Datenbank'],['betrieb','Betriebskosten'],['uebersicht','GesamtÃ¼bersicht']] as const).map(([k,l])=>(
           <button key={k} style={mTabBtn(mainTab===k)} onClick={()=>setMainTab(k as any)}>{l}</button>
         ))}
         <div style={{marginLeft:'auto',fontSize:12,color:C.muted,alignSelf:'center'}}>
-          {zutaten.length} Zutaten · {produkte.length} Produkte · {EUR(betriebGesamt)}/Mo.
+          {zutaten.length} Zutaten Â· {produkte.length} Produkte Â· {EUR(betriebGesamt)}/Mo.
         </div>
       </div>
 
       <div style={{maxWidth:1300,margin:'0 auto',padding:'20px 16px'}}>
 
-        {/* ═══ TAB: PRODUKTE ══════════════════════════════════════════════ */}
+        {/* â•â•â• TAB: PRODUKTE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         {mainTab==='produkte' && prod && kalk && (
           <div style={{display:'grid',gridTemplateColumns:'220px 1fr 285px',gap:17}} className="fade">
 
@@ -347,7 +347,7 @@ tr:hover td{background:#FFFBF5!important}
                       {!items.length && (
                         <div onClick={()=>addProdukt(kat.key as ProdKat)}
                           style={{border:`1.5px dashed ${C.border}`,borderRadius:9,padding:8,textAlign:'center',cursor:'pointer',fontSize:11,color:C.muted}}>
-                          + hinzufügen
+                          + hinzufÃ¼gen
                         </div>
                       )}
                     </div>
@@ -365,9 +365,9 @@ tr:hover td{background:#FFFBF5!important}
                   <span style={cT}>{prod.name}</span>
                   <div style={{display:'flex',gap:8}}>
                     {saving && <Spinner/>}
-                    <button onClick={()=>run(()=>deleteProdukt(prod.id),'Produkt gelöscht')}
+                    <button onClick={()=>run(()=>deleteProdukt(prod.id),'Produkt gelÃ¶scht')}
                       style={{background:'#FEE2E2',border:'none',borderRadius:6,padding:'4px 12px',color:C.red,cursor:'pointer',fontSize:11,fontWeight:600}}>
-                      Löschen
+                      LÃ¶schen
                     </button>
                   </div>
                 </div>
@@ -391,7 +391,7 @@ tr:hover td{background:#FFFBF5!important}
                   </div>
                   {prod.prod_kategorie==='eis' && (
                     <div style={{flex:2,minWidth:230}}>
-                      <label style={lbl}>Portionsgröße</label>
+                      <label style={lbl}>PortionsgrÃ¶ÃŸe</label>
                       <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
                         {PORTIONEN.filter(p=>p.key!=='1').map(p=>(
                           <button key={p.key} style={pillBtn(prod.port_key===p.key)}
@@ -417,7 +417,7 @@ tr:hover td{background:#FFFBF5!important}
                 <div style={card} className="fade">
                   <div style={cH}>
                     <span style={cT}>Zutaten & Wareneinsatz</span>
-                    <span style={{fontSize:11,color:C.muted}}>Preise aus zentraler Datenbank — Änderung wirkt auf alle Rezepte</span>
+                    <span style={{fontSize:11,color:C.muted}}>Preise aus zentraler Datenbank â€” Ã„nderung wirkt auf alle Rezepte</span>
                   </div>
                   <div style={{overflowX:'auto'}}>
                     <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
@@ -461,7 +461,7 @@ tr:hover td{background:#FFFBF5!important}
                                   onChange={v=>saveRezeptPosition({id:pos.id,schwund_pct:parseFloat(v)||0})}/>
                               </td>
                               <td style={{...td,textAlign:'right',fontWeight:600,color:C.caramel}}>{EUR(kosten)}</td>
-                              <td style={td}><button className="dbt" onClick={()=>run(()=>deleteRezeptPosition(pos.id),'Zutat entfernt')}>×</button></td>
+                              <td style={td}><button className="dbt" onClick={()=>run(()=>deleteRezeptPosition(pos.id),'Zutat entfernt')}>Ã—</button></td>
                             </tr>
                           )
                         })}
@@ -474,7 +474,7 @@ tr:hover td{background:#FFFBF5!important}
                     </table>
                   </div>
                   <div style={{padding:'5px 13px 12px'}}>
-                    <button className="abt" onClick={()=>addPosition(prod.id)}>+ Zutat hinzufügen</button>
+                    <button className="abt" onClick={()=>addPosition(prod.id)}>+ Zutat hinzufÃ¼gen</button>
                   </div>
                 </div>
               )}
@@ -482,7 +482,7 @@ tr:hover td{background:#FFFBF5!important}
               {/* Detail-Tab */}
               {prodTab==='detail' && (
                 <div style={card} className="fade">
-                  <div style={cH}><span style={cT}>Schritt-für-Schritt Kalkulation</span></div>
+                  <div style={cH}><span style={cT}>Schritt-fÃ¼r-Schritt Kalkulation</span></div>
                   <div style={{padding:'14px 17px'}}>
                     <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                       <tbody>
@@ -491,8 +491,8 @@ tr:hover td{background:#FFFBF5!important}
                           ['+ Betriebskosten / Portion',        EUR(kalk.fix_pro_portion),   einst?.umlage_modus==='portion'?'Nach Menge':'Pauschal je Produkt', ''],
                           ['= Selbstkosten gesamt',             EUR(kalk.selbstkosten),       '', 'bold'],
                           ['Ziel-Deckungsbeitrag',              PCT(einst?.ziel_marge??62),  '', ''],
-                          ['→ Mindest-Netto-VK',                EUR(kalk.netto_min_vk),      '', ''],
-                          [`+ MwSt. ${einst?.mwst_ausser??7}% (Außer-Haus)`, EUR(kalk.brutto_ausser - kalk.netto_min_vk), '', ''],
+                          ['â†’ Mindest-Netto-VK',                EUR(kalk.netto_min_vk),      '', ''],
+                          [`+ MwSt. ${einst?.mwst_ausser??7}% (AuÃŸer-Haus)`, EUR(kalk.brutto_ausser - kalk.netto_min_vk), '', ''],
                           ['Empfohlener VK (auf 10ct)',         EUR(kalk.empf_vk),           'Preisempfehlung', 'highlight'],
                           [`Vor-Ort-Preis (${einst?.mwst_vor_ort??19}% MwSt.)`, EUR(kalk.empf_vk_vor_ort), '', ''],
                         ].map(([l,v,hint,st])=>(
@@ -508,7 +508,7 @@ tr:hover td{background:#FFFBF5!important}
                       </tbody>
                     </table>
                     <div style={{marginTop:12,padding:'10px 12px',background:'#D1FAE5',borderRadius:8,fontSize:12,color:C.green}}>
-                      DB pro Portion: <strong>{EUR(kalk.db_pro_portion)}</strong> · Bei {(prod.verkauf_monat??0).toLocaleString('de-DE')} Portionen/Monat = <strong>{EUR(kalk.db_monat)}</strong>
+                      DB pro Portion: <strong>{EUR(kalk.db_pro_portion)}</strong> Â· Bei {(prod.verkauf_monat??0).toLocaleString('de-DE')} Portionen/Monat = <strong>{EUR(kalk.db_monat)}</strong>
                     </div>
                   </div>
                 </div>
@@ -521,12 +521,12 @@ tr:hover td{background:#FFFBF5!important}
               <div style={{background:C.espresso,borderRadius:12,overflow:'hidden'}}>
                 <div style={{padding:'18px 18px 14px'}}>
                   <div style={{fontSize:10,color:C.caramel,letterSpacing:'1.5px',textTransform:'uppercase',fontWeight:600,marginBottom:7}}>
-                    Mindest-VK · {prod.name}
+                    Mindest-VK Â· {prod.name}
                   </div>
                   <div style={{fontFamily:"'Playfair Display',serif",fontSize:48,fontWeight:700,color:C.vanilla,lineHeight:1}}>
                     {EUR(kalk.empf_vk)}
                   </div>
-                  <div style={{fontSize:12,color:C.sand,marginTop:4}}>{portion?.label??'1 Portion'} · {einst?.mwst_ausser??7}% MwSt.</div>
+                  <div style={{fontSize:12,color:C.sand,marginTop:4}}>{portion?.label??'1 Portion'} Â· {einst?.mwst_ausser??7}% MwSt.</div>
                   <div style={{fontSize:11,color:'#6B4C35',marginTop:2}}>Vor-Ort: {EUR(kalk.empf_vk_vor_ort)} ({einst?.mwst_vor_ort??19}% MwSt.)</div>
                   <div style={{marginTop:13,paddingTop:13,borderTop:'1px solid #3B2010'}}>
                     <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
@@ -568,14 +568,14 @@ tr:hover td{background:#FFFBF5!important}
                 </div>
                 {einst?.umlage_modus==='portion' ? (
                   <div style={{fontSize:12,color:C.coffee,lineHeight:1.7}}>
-                    {EUR(betriebGesamt)} ÷ {gesamtPortionen.toLocaleString('de-DE')} Port.<br/>
+                    {EUR(betriebGesamt)} Ã· {gesamtPortionen.toLocaleString('de-DE')} Port.<br/>
                     = <strong>{EUR(kalk.fix_pro_portion)}</strong> pro Portion
                   </div>
                 ) : (
                   <div style={{fontSize:12,color:C.coffee,lineHeight:1.7}}>
-                    {EUR(betriebGesamt)} ÷ {produkte.length} Produkte<br/>
+                    {EUR(betriebGesamt)} Ã· {produkte.length} Produkte<br/>
                     = {EUR(betriebGesamt/Math.max(produkte.length,1))}/Produkt<br/>
-                    ÷ {prod.verkauf_monat??0} Port. = <strong>{EUR(kalk.fix_pro_portion)}</strong>/Port.
+                    Ã· {prod.verkauf_monat??0} Port. = <strong>{EUR(kalk.fix_pro_portion)}</strong>/Port.
                   </div>
                 )}
               </div>
@@ -585,7 +585,7 @@ tr:hover td{background:#FFFBF5!important}
                 <div style={cH}><span style={cT}>Monatliche Hochrechnung</span></div>
                 <div style={{padding:'11px 14px'}}>
                   {[
-                    ['Portionen/Monat', `${(prod.verkauf_monat??0).toLocaleString('de-DE')}×`],
+                    ['Portionen/Monat', `${(prod.verkauf_monat??0).toLocaleString('de-DE')}Ã—`],
                     ['Brutto-Umsatz',   EUR(kalk.empf_vk*(prod.verkauf_monat??0))],
                     ['DB gesamt',       EUR(kalk.db_monat)],
                     ['Fixkostendeckung',EUR(kalk.fix_pro_portion*(prod.verkauf_monat??0))],
@@ -601,14 +601,14 @@ tr:hover td{background:#FFFBF5!important}
           </div>
         )}
 
-        {/* ═══ TAB: ZUTATEN-DATENBANK ═════════════════════════════════════ */}
+        {/* â•â•â• TAB: ZUTATEN-DATENBANK â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         {mainTab==='zutaten' && (
           <div className="fade">
             <div style={card}>
               <div style={cH}>
                 <span style={cT}>Zentrale Zutaten-Datenbank</span>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
-                  <span style={{fontSize:12,color:C.muted}}>Preisänderung wirkt sofort auf alle Rezepte</span>
+                  <span style={{fontSize:12,color:C.muted}}>PreisÃ¤nderung wirkt sofort auf alle Rezepte</span>
                   <SaveBtn onClick={()=>saveZutat({name:'Neue Zutat',einheit:'kg',kategorie:'Rohstoffe',preis_netto:0})} saving={saving}>
                     + Zutat anlegen
                   </SaveBtn>
@@ -647,7 +647,7 @@ tr:hover td{background:#FFFBF5!important}
                         <td style={{...td,textAlign:'right'}}>
                           <TdInput type="number" step="0.01" value={z.preis_netto} width={75} align="right"
                             onChange={v=>saveZutat({id:z.id,preis_netto:parseFloat(v)||0})}/>
-                          <span style={{fontSize:11,color:C.muted,marginLeft:4}}>€</span>
+                          <span style={{fontSize:11,color:C.muted,marginLeft:4}}>â‚¬</span>
                         </td>
                         <td style={td}>
                           <TdInput value={z.lieferant??''} width={100}
@@ -657,27 +657,27 @@ tr:hover td{background:#FFFBF5!important}
                           <TdInput value={z.artikelnr??''} width={80}
                             onChange={v=>saveZutat({id:z.id,artikelnr:v})}/>
                         </td>
-                        <td style={td}><button className="dbt" onClick={()=>run(()=>deleteZutat(z.id),'Zutat deaktiviert')}>×</button></td>
+                        <td style={td}><button className="dbt" onClick={()=>run(()=>deleteZutat(z.id),'Zutat deaktiviert')}>Ã—</button></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               <div style={{padding:'10px 16px',background:'#FFFEF5',borderTop:`1px solid ${C.border}`,fontSize:12,color:C.muted}}>
-                💡 Wenn du den Preis einer Zutat änderst, wird die Kalkulation aller Produkte die diese Zutat nutzen sofort aktualisiert.
+                ðŸ’¡ Wenn du den Preis einer Zutat Ã¤nderst, wird die Kalkulation aller Produkte die diese Zutat nutzen sofort aktualisiert.
               </div>
             </div>
           </div>
         )}
 
-        {/* ═══ TAB: BETRIEBSKOSTEN ════════════════════════════════════════ */}
+        {/* â•â•â• TAB: BETRIEBSKOSTEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         {mainTab==='betrieb' && (
           <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:17}} className="fade">
             <div style={card}>
               <div style={cH}>
                 <span style={cT}>Monatliche Betriebskosten</span>
-                <SaveBtn onClick={()=>run(()=>saveBetriebskosten({name:'Neuer Posten',betrag:100,kategorie:'Sonstiges',aktiv:true}),'Hinzugefügt')} saving={saving}>
-                  + Hinzufügen
+                <SaveBtn onClick={()=>run(()=>saveBetriebskosten({name:'Neuer Posten',betrag:100,kategorie:'Sonstiges',aktiv:true}),'HinzugefÃ¼gt')} saving={saving}>
+                  + HinzufÃ¼gen
                 </SaveBtn>
               </div>
               <div style={{overflowX:'auto'}}>
@@ -685,7 +685,7 @@ tr:hover td{background:#FFFBF5!important}
                   <thead><tr>
                     <th style={th}>Kostenart</th>
                     <th style={th}>Kategorie</th>
-                    <th style={{...th,textAlign:'right'}}>€ / Monat</th>
+                    <th style={{...th,textAlign:'right'}}>â‚¬ / Monat</th>
                     <th style={{...th,textAlign:'right'}}>Anteil</th>
                     <th style={th}/>
                   </tr></thead>
@@ -704,9 +704,9 @@ tr:hover td{background:#FFFBF5!important}
                             onChange={v=>saveBetriebskosten({id:b.id,betrag:parseFloat(v)||0})}/>
                         </td>
                         <td style={{...td,textAlign:'right',color:C.muted,fontSize:12}}>
-                          {betriebGesamt>0 ? PCT((b.betrag/betriebGesamt)*100) : '—'}
+                          {betriebGesamt>0 ? PCT((b.betrag/betriebGesamt)*100) : 'â€”'}
                         </td>
-                        <td style={td}><button className="dbt" onClick={()=>run(()=>deleteBetriebskosten(b.id),'Gelöscht')}>×</button></td>
+                        <td style={td}><button className="dbt" onClick={()=>run(()=>deleteBetriebskosten(b.id),'GelÃ¶scht')}>Ã—</button></td>
                       </tr>
                     ))}
                     <tr style={{background:C.vanilla}}>
@@ -718,7 +718,7 @@ tr:hover td{background:#FFFBF5!important}
                 </table>
               </div>
               <div style={{padding:'10px 16px 12px',background:'#FFFEF5',borderTop:`1px solid ${C.border}`,fontSize:12,color:C.muted}}>
-                💡 Personal ist in der Gastronomie meist der größte Fixkostenpunkt — und der Unternehmerlohn muss immer eingeplant sein!
+                ðŸ’¡ Personal ist in der Gastronomie meist der grÃ¶ÃŸte Fixkostenpunkt â€” und der Unternehmerlohn muss immer eingeplant sein!
               </div>
             </div>
 
@@ -750,8 +750,8 @@ tr:hover td{background:#FFFBF5!important}
                 <div style={{fontSize:11,color:C.sand,marginTop:3}}>Portionen/Monat um alle Kosten zu decken</div>
                 <div style={{marginTop:8,fontSize:12,color:gesamtPortionen>=betriebGesamt/Math.max(avgDB,0.01)?'#4ADE80':'#F87171'}}>
                   {gesamtPortionen>=betriebGesamt/Math.max(avgDB,0.01)
-                    ? `✓ Geplant: ${gesamtPortionen.toLocaleString('de-DE')} — Break-Even erreicht`
-                    : `✗ Geplant: ${gesamtPortionen.toLocaleString('de-DE')} — noch ${Math.ceil(betriebGesamt/Math.max(avgDB,0.01)-gesamtPortionen).toLocaleString('de-DE')} fehlen`
+                    ? `âœ“ Geplant: ${gesamtPortionen.toLocaleString('de-DE')} â€” Break-Even erreicht`
+                    : `âœ— Geplant: ${gesamtPortionen.toLocaleString('de-DE')} â€” noch ${Math.ceil(betriebGesamt/Math.max(avgDB,0.01)-gesamtPortionen).toLocaleString('de-DE')} fehlen`
                   }
                 </div>
               </div>
@@ -759,7 +759,7 @@ tr:hover td{background:#FFFBF5!important}
           </div>
         )}
 
-        {/* ═══ TAB: GESAMTÜBERSICHT ════════════════════════════════════════ */}
+        {/* â•â•â• TAB: GESAMTÃœBERSICHT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
         {mainTab==='uebersicht' && (
           <div className="fade">
             {/* KPI */}
@@ -781,8 +781,8 @@ tr:hover td{background:#FFFBF5!important}
             {/* Tabelle */}
             <div style={card}>
               <div style={cH}>
-                <span style={cT}>Alle Produkte — Deckungsbeitrags-Analyse</span>
-                <span style={{fontSize:12,color:C.muted}}>Ø DB: {EUR(avgDB)}/Portion · Klick → Produkt öffnen</span>
+                <span style={cT}>Alle Produkte â€” Deckungsbeitrags-Analyse</span>
+                <span style={{fontSize:12,color:C.muted}}>Ã˜ DB: {EUR(avgDB)}/Portion Â· Klick â†’ Produkt Ã¶ffnen</span>
               </div>
               <div style={{overflowX:'auto'}}>
                 <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
@@ -822,7 +822,7 @@ tr:hover td{background:#FFFBF5!important}
                     })}
                     <tr style={{background:C.vanilla,fontWeight:700}}>
                       <td colSpan={6} style={{...td,paddingTop:12}}>GESAMT</td>
-                      <td style={{...td,textAlign:'right',paddingTop:12}}>{EUR(avgDB)} <span style={{fontSize:10,fontWeight:400,color:C.muted}}>(Ø)</span></td>
+                      <td style={{...td,textAlign:'right',paddingTop:12}}>{EUR(avgDB)} <span style={{fontSize:10,fontWeight:400,color:C.muted}}>(Ã˜)</span></td>
                       <td style={{...td,textAlign:'right',paddingTop:12}}>{gesamtPortionen.toLocaleString('de-DE')}</td>
                       <td style={{...td,textAlign:'right',fontSize:15,color:monatDB>betriebGesamt?C.green:C.red,fontFamily:"'Playfair Display',serif",paddingTop:12}}>{EUR(monatDB)}</td>
                       <td colSpan={2}/>
@@ -837,8 +837,8 @@ tr:hover td{background:#FFFBF5!important}
               border:`1px solid ${monatDB>betriebGesamt?'#6EE7B7':'#FCA5A5'}`,
               fontSize:13,fontWeight:600,color:monatDB>betriebGesamt?C.green:C.red}}>
               {monatDB>betriebGesamt
-                ? `✓ Planung positiv: DB ${EUR(monatDB)} deckt Betriebskosten ${EUR(betriebGesamt)} — Überschuss: ${EUR(monatDB-betriebGesamt)}`
-                : `⚠ Achtung: DB ${EUR(monatDB)} reicht nicht für Betriebskosten ${EUR(betriebGesamt)} — Lücke: ${EUR(betriebGesamt-monatDB)}`
+                ? `âœ“ Planung positiv: DB ${EUR(monatDB)} deckt Betriebskosten ${EUR(betriebGesamt)} â€” Ãœberschuss: ${EUR(monatDB-betriebGesamt)}`
+                : `âš  Achtung: DB ${EUR(monatDB)} reicht nicht fÃ¼r Betriebskosten ${EUR(betriebGesamt)} â€” LÃ¼cke: ${EUR(betriebGesamt-monatDB)}`
               }
             </div>
           </div>

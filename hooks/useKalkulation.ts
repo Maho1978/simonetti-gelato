@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Zutat, Betriebskosten, Produkt, RezeptPosition, KalkEinstellungen } from '@/types/kalkulation'
-import type { Kategorie } from '@/pages/admin/kalkulation/KategorienManager'
+import type { Kategorie } from '@/components/kalkulation/KategorienManager'
 
 export function useKalkulation() {
   
