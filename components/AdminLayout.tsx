@@ -3,27 +3,26 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { LogOut, Menu, X } from 'lucide-react'
-import { Calculator } from 'lucide-react'
 
 interface AdminLayoutProps {
   children: ReactNode
 }
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',   href: '/admin',            icon: '📊' },
-  { label: 'Kanban',      href: '/admin/kanban',     icon: '🗂️' },
-  { label: 'Produkte',    href: '/admin/products',   icon: '🍦' },
-  { label: 'Extras',      href: '/admin/extras',     icon: '➕' },
-  { label: 'Kategorien',  href: '/admin/categories', icon: '📂' },
-  { label: 'Fahrer',      href: '/admin/drivers',    icon: '🚗' },
-  { label: 'Reports',     href: '/admin/reports',    icon: '📈' },
-  { label: 'Kampagnen',   href: '/admin/campaigns',  icon: '📣' },
-  { label: 'Gutscheine',  href: '/admin/vouchers',   icon: '🎟️' },
-  { label: 'Kunden',      href: '/admin/customers',  icon: '👥' },
-  { label: 'Bewertungen', href: '/admin/reviews',    icon: '⭐' },
-  { label: 'Features',    href: '/admin/features',   icon: '⚡' },
-  { label: 'Kalkulation', href: '/admin/kalkulation' icon: Calculator, },
-  { label: 'Setup',       href: '/admin/settings',   icon: '⚙️' },
+  { label: 'Dashboard',   href: '/admin',             icon: '📊' },
+  { label: 'Kanban',      href: '/admin/kanban',      icon: '🗂️' },
+  { label: 'Produkte',    href: '/admin/products',    icon: '🍦' },
+  { label: 'Extras',      href: '/admin/extras',      icon: '➕' },
+  { label: 'Kategorien',  href: '/admin/categories',  icon: '📂' },
+  { label: 'Fahrer',      href: '/admin/drivers',     icon: '🚗' },
+  { label: 'Reports',     href: '/admin/reports',     icon: '📈' },
+  { label: 'Kampagnen',   href: '/admin/campaigns',   icon: '📣' },
+  { label: 'Gutscheine',  href: '/admin/vouchers',    icon: '🎟️' },
+  { label: 'Kunden',      href: '/admin/customers',   icon: '👥' },
+  { label: 'Bewertungen', href: '/admin/reviews',     icon: '⭐' },
+  { label: 'Features',    href: '/admin/features',    icon: '⚡' },
+  { label: 'Kalkulation', href: '/admin/kalkulation', icon: '🧮' },
+  { label: 'Setup',       href: '/admin/settings',    icon: '⚙️' },
 ]
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
