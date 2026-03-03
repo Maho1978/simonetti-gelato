@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from "@/lib/supabase"
 
 const C = {
   cream:'#FBF6EE', vanilla:'#F2E6CC', caramel:'#C4873A', espresso:'#2C1708',
@@ -32,7 +32,7 @@ interface Props {
 }
 
 export default function KategorienManager({ kategorien, bereich, onClose, onReload }: Props) {
-  const supabase = createClientComponentClient()
+  
   const [saving, setSaving] = useState(false)
   const [newName, setNewName] = useState('')
   const [newFarbe, setNewFarbe] = useState(FARBEN[0])
