@@ -12,6 +12,7 @@ interface Extra {
   scope: 'global' | 'category' | 'product'
   category_names: string[]
   product_ids: string[]
+  selection_type: 'multiple' | 'single'
 }
 
 const SCOPE_OPTIONS = [
@@ -28,7 +29,7 @@ function ExtrasContent() {
   const [loading,     setLoading]     = useState(true)
   const [editingId,   setEditingId]   = useState<string | null>(null)
 
-  const emptyForm = { name: '', price: 0, category: '', active: true, scope: 'global' as Extra['scope'], category_names: [] as string[], product_ids: [] as string[] }
+  const emptyForm = { name: '', price: 0, category: '', active: true, scope: 'global' as Extra['scope'], category_names: [] as string[], product_ids: [] as string[], selection_type: 'multiple' as Extra['selection_type'] }
   const [newExtra,  setNewExtra]  = useState({ ...emptyForm })
   const [editForm,  setEditForm]  = useState({ ...emptyForm })
 
@@ -65,6 +66,7 @@ function ExtrasContent() {
     scope:          form.scope,
     category_names: form.scope === 'category' ? form.category_names : [],
     product_ids:    form.scope === 'product'  ? form.product_ids   : [],
+    selection_type: form.selection_type || 'multiple',
   })
 
   const handleCreate = async () => {
@@ -127,6 +129,19 @@ function ExtrasContent() {
             </button>
           )
         })}
+      </div>
+
+      {/* Auswahl-Typ */}
+      <div className="flex items-center gap-4 mt-2 p-3 bg-gray-50 rounded-xl">
+        <span className="text-sm font-semibold text-gray-600">Auswahl:</span>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="radio" checked={form.selection_type === 'multiple'} onChange={() => setForm({...form, selection_type: 'multiple'})} className="w-4 h-4" />
+          <span className="text-sm">Mehrfach (Checkbox)</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="radio" checked={form.selection_type === 'single'} onChange={() => setForm({...form, selection_type: 'single'})} className="w-4 h-4" />
+          <span className="text-sm">Nur eine (Radio)</span>
+        </label>
       </div>
 
       {form.scope === 'category' && (
@@ -268,6 +283,7 @@ function ExtrasContent() {
                               <p className="text-sm text-gray-600">
                                 {extra.price > 0 ? `${extra.price.toFixed(2)} €` : 'kostenlos'}
                                 <span className="ml-2 text-xs text-gray-400">{getScopeLabel(extra)}</span>
+                                {extra.selection_type === 'single' && <span className="ml-1 text-xs text-orange-500">· nur eine wählbar</span>}
                               </p>
                             </div>
                             {!extra.active && <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded">Inaktiv</span>}

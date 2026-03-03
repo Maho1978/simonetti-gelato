@@ -7,6 +7,7 @@ interface Extra {
   id: string
   name: string
   price: number
+  selection_type?: 'multiple' | 'single'
 }
 
 interface ProductCardProps {
@@ -28,14 +29,13 @@ interface ProductCardProps {
     is_lactosefree?: boolean
   }
   extras: Extra[]
-  flavors?: string[]   // dynamische Eissorten aus DB
+  flavors?: string[]
   onAddToCart: (product: any, portions: number, selectedFlavors: string[], selectedExtras: Extra[]) => void
 }
 
 export default function ProductCard({ product, extras, flavors = [], onAddToCart }: ProductCardProps) {
   const [showModal, setShowModal] = useState(false)
   const portionSize = product.portion_size || 1
-  // Dynamische Sorten aus DB, fallback auf statisches available_flavors
   const availableFlavors = flavors.length > 0 ? flavors : (product.available_flavors || [])
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>([])
   const [selectedExtras, setSelectedExtras] = useState<Extra[]>([])
@@ -64,7 +64,6 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
       setSelectedFlavors(selectedFlavors.filter(f => f !== flavor))
     } else {
       if (selectedFlavors.length >= portionSize) {
-        // Älteste Sorte ersetzen statt Fehler
         setSelectedFlavors([...selectedFlavors.slice(1), flavor])
         return
       }
@@ -80,7 +79,22 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
     }
   }
 
+  const selectSingleExtra = (extra: Extra) => {
+    const singleIds = extras.filter(e => e.selection_type === 'single').map(e => e.id)
+    const alreadySelected = selectedExtras.find(e => e.id === extra.id)
+    if (alreadySelected) {
+      // Deselect
+      setSelectedExtras(selectedExtras.filter(e => e.id !== extra.id))
+    } else {
+      // Remove all other singles, add this one
+      setSelectedExtras([...selectedExtras.filter(e => !singleIds.includes(e.id)), extra])
+    }
+  }
+
   const totalPrice = product.price + selectedExtras.reduce((sum, e) => sum + e.price, 0)
+
+  const singleExtras   = extras.filter(e => e.selection_type === 'single')
+  const multipleExtras = extras.filter(e => e.selection_type !== 'single')
 
   const DiaetBadges = ({ small = false }: { small?: boolean }) => (
     <div className="flex flex-wrap gap-1">
@@ -101,7 +115,7 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
 
   return (
     <>
-      {/* KARTE: Horizontales Layout - Text links, Bild rechts */}
+      {/* KARTE */}
       <div className="group relative bg-white border border-gray-100 hover:border-gray-300 transition-all duration-300 hover:shadow-md rounded-lg overflow-hidden">
         <div className="flex items-center gap-3 p-3">
 
@@ -123,20 +137,13 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
             <DiaetBadges small />
 
             {product.allergens && product.allergens.length > 0 && (
-              <p className="text-xs text-gray-400 mt-1 truncate">
-                ⚠️ {product.allergens.join(', ')}
-              </p>
+              <p className="text-xs text-gray-400 mt-1 truncate">⚠️ {product.allergens.join(', ')}</p>
             )}
 
-            {/* Preis + Button */}
             <div className="flex items-center justify-between mt-2">
-              <span className="font-display font-bold text-lg text-black">
-                {product.price.toFixed(2)} €
-              </span>
-              <button
-                onClick={handleQuickAdd}
-                className="flex items-center gap-1 px-3 py-1.5 bg-black text-white text-xs font-medium uppercase tracking-wide transition hover:bg-gray-800 rounded"
-              >
+              <span className="font-display font-bold text-lg text-black">{product.price.toFixed(2)} €</span>
+              <button onClick={handleQuickAdd}
+                className="flex items-center gap-1 px-3 py-1.5 bg-black text-white text-xs font-medium uppercase tracking-wide transition hover:bg-gray-800 rounded">
                 <ShoppingCart size={12} />
                 <span>Bestellen</span>
               </button>
@@ -146,26 +153,20 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
           {/* BILD RECHTS */}
           <div className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-gray-100 relative">
             {product.image_url ? (
-              <Image
-                src={product.image_url}
-                alt={product.name}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
+              <Image src={product.image_url} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-4xl">🍦</div>
             )}
           </div>
-
         </div>
       </div>
 
       {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
 
-            {/* Header mit Bild */}
+            {/* Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 {product.image_url && (
@@ -200,23 +201,14 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
                   {selectedFlavors.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {selectedFlavors.map((f, i) => (
-                        <span key={i} className="px-2 py-1 bg-black text-white text-xs rounded-full">
-                          {f}
-                        </span>
+                        <span key={i} className="px-2 py-1 bg-black text-white text-xs rounded-full">{f}</span>
                       ))}
                     </div>
                   )}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {availableFlavors.map(flavor => (
-                      <button
-                        key={flavor}
-                        onClick={() => toggleFlavor(flavor)}
-                        className={`p-3 rounded-lg border-2 text-sm font-medium transition ${
-                          selectedFlavors.includes(flavor)
-                            ? 'border-black bg-black text-white'
-                            : 'border-gray-200 hover:border-black'
-                        }`}
-                      >
+                      <button key={flavor} onClick={() => toggleFlavor(flavor)}
+                        className={`p-3 rounded-lg border-2 text-sm font-medium transition ${selectedFlavors.includes(flavor) ? 'border-black bg-black text-white' : 'border-gray-200 hover:border-black'}`}>
                         🍦 {flavor}
                       </button>
                     ))}
@@ -229,27 +221,56 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
                 <div>
                   <h3 className="font-bold text-lg mb-3">Extras (optional)</h3>
                   <div className="space-y-2">
-                    {extras.map(extra => (
-                      <label
-                        key={extra.id}
-                        className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition ${
-                          selectedExtras.find(e => e.id === extra.id)
-                            ? 'border-black bg-gray-50'
-                            : 'border-gray-200 hover:border-black'
-                        }`}
-                      >
+
+                    {/* SINGLE: Radio — nur eine wählbar */}
+                    {singleExtras.length > 0 && (
+                      <div className="mb-1">
+                        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">
+                          Soße nach Wahl <span className="text-orange-400">(nur eine)</span>
+                        </p>
+                        {singleExtras.map(extra => {
+                          const isSelected = !!selectedExtras.find(e => e.id === extra.id)
+                          return (
+                            <label key={extra.id}
+                              className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition mb-2 ${isSelected ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-black'}`}>
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="radio"
+                                  name={`single-extra-${product.id}`}
+                                  checked={isSelected}
+                                  onChange={() => selectSingleExtra(extra)}
+                                  className="w-4 h-4"
+                                />
+                                <span className="font-medium">{extra.name}</span>
+                              </div>
+                              <span className="font-bold text-green-600">
+                                {extra.price > 0 ? `+${extra.price.toFixed(2)} €` : 'kostenlos'}
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* MULTIPLE: Checkbox — mehrere wählbar */}
+                    {multipleExtras.map(extra => (
+                      <label key={extra.id}
+                        className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition ${selectedExtras.find(e => e.id === extra.id) ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-black'}`}>
                         <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
-                            checked={selectedExtras.find(e => e.id === extra.id) !== undefined}
+                            checked={!!selectedExtras.find(e => e.id === extra.id)}
                             onChange={() => toggleExtra(extra)}
                             className="w-5 h-5"
                           />
                           <span className="font-medium">{extra.name}</span>
                         </div>
-                        <span className="font-bold text-green-600">+{extra.price.toFixed(2)} €</span>
+                        <span className="font-bold text-green-600">
+                          {extra.price > 0 ? `+${extra.price.toFixed(2)} €` : 'kostenlos'}
+                        </span>
                       </label>
                     ))}
+
                   </div>
                 </div>
               )}
@@ -285,11 +306,9 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
                   <span className="text-lg font-bold">Gesamt:</span>
                   <span className="text-3xl font-display font-bold">{totalPrice.toFixed(2)} €</span>
                 </div>
-                <button
-                  onClick={handleAddToCart}
+                <button onClick={handleAddToCart}
                   disabled={product.has_portions && selectedFlavors.length === 0}
-                  className="w-full py-4 bg-black text-white font-bold text-lg uppercase tracking-wider hover:bg-gray-900 transition rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                >
+                  className="w-full py-4 bg-black text-white font-bold text-lg uppercase tracking-wider hover:bg-gray-900 transition rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">
                   {product.has_portions && selectedFlavors.length === 0
                     ? `Bitte ${portionSize} Sorte${portionSize > 1 ? 'n' : ''} wählen`
                     : 'In den Warenkorb'
