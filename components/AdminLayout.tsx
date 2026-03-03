@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { LogOut, Menu, X } from 'lucide-react'
+import { Calculator } from 'lucide-react'
 
 interface AdminLayoutProps {
   children: ReactNode
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { label: 'Kunden',      href: '/admin/customers',  icon: '👥' },
   { label: 'Bewertungen', href: '/admin/reviews',    icon: '⭐' },
   { label: 'Features',    href: '/admin/features',   icon: '⚡' },
+  { label: 'Kalkulation', href: '/admin/kalkulation' icon: Calculator, },
   { label: 'Setup',       href: '/admin/settings',   icon: '⚙️' },
 ]
 
