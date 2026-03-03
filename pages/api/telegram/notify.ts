@@ -1,9 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8692030046:AAFq19cayRGK8T_9AdR9NvvERnlPsMaVUk4'
-const TELEGRAM_CHAT_ID   = process.env.TELEGRAM_CHAT_ID   || '8600937467'
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -51,12 +48,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!order) return res.status(400).json({ error: 'Missing order' })
 
   try {
-    // Toggle prüfen
-    const { data: toggle } = await supabase
-      .from('feature_toggles').select('enabled').eq('id', 'telegram_notify').single()
+    // Toggle + Credentials aus shop_settings laden
+    const [toggleRes, settingsRes] = await Promise.all([
+      supabase.from('feature_toggles').select('enabled').eq('id', 'telegram_notify').single(),
+      supabase.from('shop_settings').select('notify_settings').eq('id', 'main').single(),
+    ])
 
-    if (!toggle?.enabled) {
+    if (!toggleRes.data?.enabled) {
       return res.status(200).json({ success: true, skipped: true, reason: 'disabled' })
+    }
+
+    const notify = settingsRes.data?.notify_settings || {}
+    const TELEGRAM_BOT_TOKEN = notify.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || ''
+    const TELEGRAM_CHAT_ID   = notify.telegram_chat_id   || process.env.TELEGRAM_CHAT_ID   || ''
+
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+      return res.status(500).json({ success: false, error: 'Telegram credentials not configured' })
     }
 
     const text = buildMessage(order)

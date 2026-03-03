@@ -56,6 +56,12 @@ const DEFAULT_PAYMENT_KEYS = {
   wero:   { api_key: '', merchant_id: '', note: 'Wero-Integration kommt sobald die offizielle API verfügbar ist.' }
 }
 
+const DEFAULT_NOTIFY_SETTINGS = {
+  telegram_bot_token: '8692030046:AAFq19cayRGK8T_9AdR9NvvERnlPsMaVUk4',
+  telegram_chat_id:   '8600937467',
+  whatsapp_number:    '4921731622780',
+}
+
 const FEATURE_DEFINITIONS = [
   { id: 'reviews',          icon: '⭐', label: 'Bewertungssystem',          description: 'Kunden können bestellte Produkte mit 1–5 Sternen bewerten.',                           adminLink: '/admin/reviews', adminLabel: 'Bewertungen verwalten →', comingSoon: false },
   { id: 'telegram_notify',  icon: '✈️', label: 'Telegram Benachrichtigung', description: 'Sofort-Benachrichtigung auf dein Telegram bei neuer Bestellung – mit allen Details.', adminLink: null, adminLabel: null, comingSoon: false },
@@ -192,7 +198,9 @@ export default function SettingsPage() {
   const [testEmailAddress, setTestEmailAddress] = useState('bestellung@eiscafe-simonetti.de')
   const [socialLinks, setSocialLinks]           = useState<any>(DEFAULT_SOCIAL)
   const [socialSaving, setSocialSaving]         = useState(false)
-  const [paymentKeys, setPaymentKeys]           = useState<any>(DEFAULT_PAYMENT_KEYS)
+  const [paymentKeys,    setPaymentKeys]    = useState<any>(DEFAULT_PAYMENT_KEYS)
+  const [notifySettings, setNotifySettings] = useState<any>(DEFAULT_NOTIFY_SETTINGS)
+  const [notifySaving,   setNotifySaving]   = useState(false)
   const [paymentSaving, setPaymentSaving]       = useState(false)
   const [specialHours, setSpecialHours]         = useState<any[]>([])
   const [showModal, setShowModal]               = useState(false)
@@ -256,6 +264,7 @@ export default function SettingsPage() {
       if (data.daily_special) setDailySpecial(data.daily_special)
       if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
       if (data.payment_keys)        setPaymentKeys({ ...DEFAULT_PAYMENT_KEYS, ...data.payment_keys })
+      if (data.notify_settings)     setNotifySettings({ ...DEFAULT_NOTIFY_SETTINGS, ...data.notify_settings })
       setMarketing({
         welcome_banner_enabled:  data.welcome_banner_enabled  ?? false,
         welcome_banner_code:     data.welcome_banner_code     || 'WILLKOMMEN10',
@@ -321,6 +330,13 @@ export default function SettingsPage() {
     setPaymentSaving(true)
     const { error } = await supabase.from('shop_settings').update({ payment_keys: paymentKeys }).eq('id', 'main')
     if (!error) showToast('✅ Zahlungs-Keys gespeichert!')
+  }
+
+  const saveNotifySettings = async () => {
+    setNotifySaving(true)
+    const { error } = await supabase.from('shop_settings').update({ notify_settings: notifySettings }).eq('id', 'main')
+    setNotifySaving(false)
+    if (!error) showToast('✅ Benachrichtigungs-Einstellungen gespeichert!')
     else showToast('❌ Fehler: ' + error.message)
     setPaymentSaving(false)
   }
@@ -487,6 +503,7 @@ export default function SettingsPage() {
     { key: 'emails',    label: '📧 Emails'          },
     { key: 'social',    label: `📱 Social Media${activeSocialCount > 0 ? ` (${activeSocialCount})` : ''}` },
     { key: 'features',  label: `⚡ Features${activeFeatureCount > 0 ? ` (${activeFeatureCount})` : ''}` },
+    { key: 'notify',    label: '📲 Benachrichtigungen' },
   ]
 
   if (loading) return <AdminLayout><div className="p-8 text-gray-400">Lädt...</div></AdminLayout>
@@ -1193,6 +1210,82 @@ export default function SettingsPage() {
               </button>
             </div>
           )}
+
+        {activeTab === 'notify' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold flex items-center gap-2">📲 Benachrichtigungen</h2>
+              <p className="text-gray-500 text-sm mt-1">Telegram und WhatsApp Zugangsdaten – hier zentral verwalten.</p>
+            </div>
+
+            {/* Telegram */}
+            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 space-y-4">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-3xl">✈️</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">Telegram Bot</h3>
+                  <p className="text-xs text-gray-400">Bot Token und Chat-ID für Bestellbenachrichtigungen</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Bot Token</label>
+                  <input
+                    type="text"
+                    value={notifySettings.telegram_bot_token || ''}
+                    onChange={e => setNotifySettings({ ...notifySettings, telegram_bot_token: e.target.value })}
+                    placeholder="1234567890:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:outline-none font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Erstellen via @BotFather in Telegram</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Chat-ID</label>
+                  <input
+                    type="text"
+                    value={notifySettings.telegram_chat_id || ''}
+                    onChange={e => setNotifySettings({ ...notifySettings, telegram_chat_id: e.target.value })}
+                    placeholder="123456789"
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:outline-none font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Deine persönliche ID via @userinfobot</p>
+                </div>
+              </div>
+            </div>
+
+            {/* WhatsApp */}
+            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 space-y-4">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-3xl">💬</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">WhatsApp</h3>
+                  <p className="text-xs text-gray-400">Telefonnummer für WhatsApp-Links im Kanban</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Telefonnummer (international, ohne +)</label>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-2.5 bg-gray-100 border-2 border-gray-200 rounded-xl text-sm font-mono text-gray-500">+</span>
+                  <input
+                    type="text"
+                    value={notifySettings.whatsapp_number || ''}
+                    onChange={e => setNotifySettings({ ...notifySettings, whatsapp_number: e.target.value.replace(/\D/g, '') })}
+                    placeholder="4921731622780"
+                    className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:outline-none font-mono text-sm"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Vorschau: <span className="font-mono text-gray-600">https://wa.me/{notifySettings.whatsapp_number || '4921731622780'}</span>
+                </p>
+              </div>
+            </div>
+
+            <button onClick={saveNotifySettings} disabled={notifySaving}
+              className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
+              <Save size={22} />{notifySaving ? 'Speichert...' : 'Einstellungen speichern'}
+            </button>
+          </div>
+        )}
 
         </div>
       </div>
