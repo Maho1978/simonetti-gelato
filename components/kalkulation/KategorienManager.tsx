@@ -1,6 +1,6 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin as supabase } from "@/lib/supabase"
 
 const C = {
   cream:'#FBF6EE', vanilla:'#F2E6CC', caramel:'#C4873A', espresso:'#2C1708',
@@ -22,7 +22,7 @@ const FARBEN = [
   '#C4873A','#2E7D54','#C0392B','#6B4C35','#9E7B5A',
 ]
 
-const ICONS = ['🌾','🥛','🍓','🌿','📦','🍦','🍞','☕','🥐','🏠','⚡','👥','🛡️','📋','👤','💊','🧴','🥩','🧀','🫙']
+const ICONS = ['ðŸŒ¾','ðŸ¥›','ðŸ“','ðŸŒ¿','ðŸ“¦','ðŸ¦','ðŸž','â˜•','ðŸ¥','ðŸ ','âš¡','ðŸ‘¥','ðŸ›¡ï¸','ðŸ“‹','ðŸ‘¤','ðŸ’Š','ðŸ§´','ðŸ¥©','ðŸ§€','ðŸ«™']
 
 interface Props {
   kategorien: Kategorie[]
@@ -36,7 +36,7 @@ export default function KategorienManager({ kategorien, bereich, onClose, onRelo
   const [saving, setSaving] = useState(false)
   const [newName, setNewName] = useState('')
   const [newFarbe, setNewFarbe] = useState(FARBEN[0])
-  const [newIcon, setNewIcon] = useState('📦')
+  const [newIcon, setNewIcon] = useState('ðŸ“¦')
   const [error, setError] = useState('')
 
   const items = kategorien.filter(k => k.bereich === bereich && k.aktiv).sort((a,b) => a.sort_order - b.sort_order)
@@ -92,9 +92,9 @@ export default function KategorienManager({ kategorien, bereich, onClose, onRelo
             <div style={{fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:C.espresso}}>
               {bereichLabel}-Kategorien
             </div>
-            <div style={{fontSize:11, color:C.muted, marginTop:2}}>{items.length} Kategorien · Klick zum Umbenennen</div>
+            <div style={{fontSize:11, color:C.muted, marginTop:2}}>{items.length} Kategorien Â· Klick zum Umbenennen</div>
           </div>
-          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:20,color:C.muted}}>×</button>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',fontSize:20,color:C.muted}}>Ã—</button>
         </div>
 
         {/* Liste */}
@@ -121,7 +121,7 @@ export default function KategorienManager({ kategorien, bereich, onClose, onRelo
               }}/>
               <button onClick={() => del(k.id)}
                 style={{background:'none',border:'none',cursor:'pointer',color:C.muted,fontSize:16,padding:'0 4px',flexShrink:0}}
-                title="Löschen">×</button>
+                title="LÃ¶schen">Ã—</button>
             </div>
           ))}
         </div>
@@ -134,7 +134,7 @@ export default function KategorienManager({ kategorien, bereich, onClose, onRelo
           <div style={{display:'flex', gap:8, marginBottom:8}}>
             <input
               style={inp}
-              placeholder="Name eingeben…"
+              placeholder="Name eingebenâ€¦"
               value={newName}
               onChange={e => { setNewName(e.target.value); setError('') }}
               onKeyDown={e => { if(e.key==='Enter') add() }}
@@ -145,7 +145,7 @@ export default function KategorienManager({ kategorien, bereich, onClose, onRelo
                 borderRadius:7, fontWeight:600, fontSize:12, cursor:'pointer',
                 fontFamily:"'DM Sans',sans-serif", opacity:saving||!newName.trim()?0.5:1,
               }}>
-              + Hinzufügen
+              + HinzufÃ¼gen
             </button>
           </div>
 
