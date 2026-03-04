@@ -1,6 +1,5 @@
 // pages/admin/customers.tsx
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/AdminLayout'
 import {
   User, Phone, Mail, ShoppingBag,
@@ -33,13 +32,19 @@ interface Customer {
   lastOrder: string | null
 }
 
+const apiPost = (body: object) => fetch('/api/customers', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+})
+
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; color: string }> = {
     OFFEN:          { label: 'Offen',     color: 'bg-red-100 text-red-700' },
     IN_BEARBEITUNG: { label: 'In Arbeit', color: 'bg-blue-100 text-blue-700' },
     AN_FAHRER:      { label: 'Unterwegs', color: 'bg-orange-100 text-orange-700' },
     GELIEFERT:      { label: 'Geliefert', color: 'bg-green-100 text-green-700' },
-    ABGELEHNT:      { label: 'Abgelehnt',  color: 'bg-gray-100 text-gray-500' },
+    ABGELEHNT:      { label: 'Abgelehnt', color: 'bg-gray-100 text-gray-500' },
   }
   const s = map[status] || { label: status, color: 'bg-gray-100 text-gray-500' }
   return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${s.color}`}>{s.label}</span>
@@ -86,13 +91,13 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete, onDelete, 
   onDelete: (email: string) => Promise<void>
   onReload: () => void
 }) {
-  const [newNote, setNewNote]         = useState('')
-  const [savingNote, setSavingNote]   = useState(false)
-  const [editing, setEditing]         = useState(false)
-  const [editName, setEditName]       = useState(customer.name)
-  const [editPhone, setEditPhone]     = useState(customer.phone)
-  const [saving, setSaving]           = useState(false)
-  const [deleting, setDeleting]       = useState(false)
+  const [newNote, setNewNote]       = useState('')
+  const [savingNote, setSavingNote] = useState(false)
+  const [editing, setEditing]       = useState(false)
+  const [editName, setEditName]     = useState(customer.name)
+  const [editPhone, setEditPhone]   = useState(customer.phone)
+  const [saving, setSaving]         = useState(false)
+  const [deleting, setDeleting]     = useState(false)
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return
@@ -104,11 +109,7 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete, onDelete, 
 
   const handleSaveEdit = async () => {
     setSaving(true)
-    // Alle Bestellungen dieses Kunden aktualisieren
-    await supabase
-      .from('orders')
-      .update({ customer_name: editName, customer_phone: editPhone })
-      .eq('customer_email', customer.email)
+    await apiPost({ action: 'update_customer', email: customer.email, name: editName, phone: editPhone })
     setSaving(false)
     setEditing(false)
     onReload()
@@ -136,17 +137,10 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete, onDelete, 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setEditing(!editing)}
-            className="p-2 hover:bg-white/10 rounded-xl transition"
-            title="Bearbeiten">
+          <button onClick={() => setEditing(!editing)} className="p-2 hover:bg-white/10 rounded-xl transition" title="Bearbeiten">
             <Edit2 size={16} />
           </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="p-2 hover:bg-red-500/30 rounded-xl transition text-red-300"
-            title="Kunden löschen">
+          <button onClick={handleDelete} disabled={deleting} className="p-2 hover:bg-red-500/30 rounded-xl transition text-red-300" title="Kunden löschen">
             <Trash2 size={16} />
           </button>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition">
@@ -163,30 +157,21 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete, onDelete, 
             <div className="font-bold text-sm text-blue-800 mb-2">✏️ Daten bearbeiten</div>
             <div>
               <label className="text-xs text-gray-500 font-semibold block mb-1">Name</label>
-              <input
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-black focus:outline-none"
-              />
+              <input value={editName} onChange={e => setEditName(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-black focus:outline-none" />
             </div>
             <div>
               <label className="text-xs text-gray-500 font-semibold block mb-1">Telefon</label>
-              <input
-                value={editPhone}
-                onChange={e => setEditPhone(e.target.value)}
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-black focus:outline-none"
-              />
+              <input value={editPhone} onChange={e => setEditPhone(e.target.value)}
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm focus:border-black focus:outline-none" />
             </div>
             <div className="text-xs text-gray-400">Email kann nicht geändert werden (Login-Daten)</div>
             <div className="flex gap-2">
-              <button
-                onClick={handleSaveEdit}
-                disabled={saving}
+              <button onClick={handleSaveEdit} disabled={saving}
                 className="flex-1 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 disabled:opacity-40 transition flex items-center justify-center gap-1">
                 <Check size={14} /> {saving ? 'Speichert...' : 'Speichern'}
               </button>
-              <button
-                onClick={() => { setEditing(false); setEditName(customer.name); setEditPhone(customer.phone) }}
+              <button onClick={() => { setEditing(false); setEditName(customer.name); setEditPhone(customer.phone) }}
                 className="px-4 py-2 border-2 border-gray-200 rounded-xl text-sm font-semibold hover:border-gray-400 transition">
                 Abbrechen
               </button>
@@ -276,25 +261,18 @@ function CustomerDetail({ customer, onClose, onNoteAdd, onNoteDelete, onDelete, 
                     {new Date(note.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
-                <button
-                  onClick={() => onNoteDelete(customer.email, note.id)}
-                  className="text-gray-300 hover:text-red-500 transition flex-shrink-0">
+                <button onClick={() => onNoteDelete(customer.email, note.id)} className="text-gray-300 hover:text-red-500 transition flex-shrink-0">
                   <Trash2 size={14} />
                 </button>
               </div>
             ))}
           </div>
           <div className="flex gap-2">
-            <input
-              value={newNote}
-              onChange={e => setNewNote(e.target.value)}
+            <input value={newNote} onChange={e => setNewNote(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddNote()}
               placeholder="Neue Notiz..."
-              className="flex-1 text-sm border-2 border-gray-200 rounded-xl px-3 py-2 focus:border-black focus:outline-none"
-            />
-            <button
-              onClick={handleAddNote}
-              disabled={savingNote || !newNote.trim()}
+              className="flex-1 text-sm border-2 border-gray-200 rounded-xl px-3 py-2 focus:border-black focus:outline-none" />
+            <button onClick={handleAddNote} disabled={savingNote || !newNote.trim()}
               className="px-4 py-2 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-900 disabled:opacity-40 transition flex items-center gap-1">
               <Plus size={14} /> Speichern
             </button>
@@ -315,91 +293,29 @@ export default function CustomersPage() {
 
   const loadCustomers = useCallback(async () => {
     setLoading(true)
-
-    const { data: orders } = await supabase
-      .from('orders')
-      .select('*')
-      .not('customer_email', 'is', null)
-      .order('created_at', { ascending: false })
-
-    const { data: notesData } = await supabase
-      .from('customer_notes')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (!orders) { setLoading(false); return }
-
-    const customerMap: Record<string, Customer> = {}
-
-    for (const order of orders) {
-      const email = order.customer_email
-      if (!email) continue
-
-      if (!customerMap[email]) {
-        customerMap[email] = {
-          email,
-          name:       order.customer_name || '–',
-          phone:      order.customer_phone || '',
-          orders:     [],
-          notes:      [],
-          totalSpent: 0,
-          orderCount: 0,
-          lastOrder:  null,
-        }
-      }
-
-      const c = customerMap[email]
-      c.orders.push(order)
-
-      if (order.status === 'GELIEFERT') {
-        c.totalSpent += order.total || 0
-        c.orderCount++
-      }
-
-      if (!c.lastOrder || new Date(order.created_at) > new Date(c.lastOrder)) {
-        c.lastOrder = order.created_at
-      }
-
-      if (order.customer_name && order.customer_name !== '–') c.name  = order.customer_name
-      if (order.customer_phone)                                c.phone = order.customer_phone
-    }
-
-    if (notesData) {
-      for (const note of notesData) {
-        if (customerMap[note.customer_email]) {
-          customerMap[note.customer_email].notes.push({
-            id:         note.id,
-            text:       note.note,
-            created_at: note.created_at,
-          })
-        }
-      }
-    }
-
-    setCustomers(Object.values(customerMap))
+    try {
+      const res  = await fetch('/api/customers')
+      const data = await res.json()
+      if (data.customers) setCustomers(data.customers)
+    } catch (e) {}
     setLoading(false)
   }, [])
 
   useEffect(() => { loadCustomers() }, [loadCustomers])
 
   const handleAddNote = async (email: string, text: string) => {
-    await supabase.from('customer_notes').insert({ customer_email: email, note: text })
+    await apiPost({ action: 'add_note', email, note: text })
     await loadCustomers()
   }
 
   const handleDeleteNote = async (email: string, noteId: string) => {
     if (!confirm('Notiz löschen?')) return
-    await supabase.from('customer_notes').delete().eq('id', noteId)
+    await apiPost({ action: 'delete_note', email, noteId })
     await loadCustomers()
   }
 
   const handleDeleteCustomer = async (email: string) => {
-    // Nur Notizen löschen — Bestellungen bleiben erhalten
-    await supabase.from('customer_notes').delete().eq('customer_email', email)
-    await supabase.from('customer_favorites').delete().eq('user_id',
-      // customer_favorites nutzt user_id, nicht email — nur Notizen löschen reicht
-      email
-    )
+    await apiPost({ action: 'delete_customer', email })
     setSelectedEmail(null)
     await loadCustomers()
   }
@@ -455,16 +371,11 @@ export default function CustomersPage() {
             <div className="flex gap-3 mb-4 flex-wrap">
               <div className="relative flex-1 min-w-48">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
+                <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Name, Email oder Telefon..."
-                  className="w-full pl-9 pr-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-black focus:outline-none"
-                />
+                  className="w-full pl-9 pr-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-black focus:outline-none" />
               </div>
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value as any)}
+              <select value={sortBy} onChange={e => setSortBy(e.target.value as any)}
                 className="px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-black focus:outline-none">
                 <option value="spent">Nach Umsatz</option>
                 <option value="orders">Nach Bestellungen</option>
@@ -480,12 +391,8 @@ export default function CustomersPage() {
             ) : (
               <div className="space-y-2">
                 {filtered.map(c => (
-                  <CustomerRow
-                    key={c.email}
-                    customer={c}
-                    isSelected={c.email === selectedEmail}
-                    onSelect={() => setSelectedEmail(c.email === selectedEmail ? null : c.email)}
-                  />
+                  <CustomerRow key={c.email} customer={c} isSelected={c.email === selectedEmail}
+                    onSelect={() => setSelectedEmail(c.email === selectedEmail ? null : c.email)} />
                 ))}
               </div>
             )}
