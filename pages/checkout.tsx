@@ -30,7 +30,6 @@ interface AppliedVoucher {
   discountAmount: number
 }
 
-// ── NEU: Getrennte Zeiten für Lieferung / Abholung ──────────────────────────
 interface ShopTimes { isOpen: boolean; openFrom: string; openUntil: string }
 interface ShopStatusData {
   isOpen: boolean
@@ -146,6 +145,32 @@ function TipSelector({ subtotal, onTipChange }: { subtotal: number; onTipChange:
   )
 }
 
+// ── AGB Checkbox ─────────────────────────────────────────────
+function AgbCheckbox({ accepted, onChange }: { accepted: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div
+      onClick={() => onChange(!accepted)}
+      className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all select-none
+        ${accepted ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400 bg-white'}`}>
+      <div className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center transition-all
+        ${accepted ? 'border-gray-900 bg-gray-900' : 'border-gray-300'}`}>
+        {accepted && <Check size={12} className="text-white" strokeWidth={3} />}
+      </div>
+      <p className="text-sm text-gray-700 leading-relaxed">
+        Ich habe die{' '}
+        <a href="/agb" target="_blank" onClick={e => e.stopPropagation()} className="font-semibold text-gray-900 underline hover:text-gray-600">
+          AGB
+        </a>
+        {' '}und die{' '}
+        <a href="/datenschutz" target="_blank" onClick={e => e.stopPropagation()} className="font-semibold text-gray-900 underline hover:text-gray-600">
+          Datenschutzerklärung
+        </a>
+        {' '}gelesen und akzeptiere diese. <span className="text-red-400">*</span>
+      </p>
+    </div>
+  )
+}
+
 export default function Checkout({ session }: { session: Session | null }) {
   const router    = useRouter()
   const { guest } = router.query
@@ -154,7 +179,6 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [cart, setCart]                 = useState<CartItem[]>([])
   const [clientSecret, setClientSecret] = useState('')
 
-  // ── NEU: Kompletter Shop-Status mit getrennten Zeiten ──
   const [shopStatus, setShopStatus]     = useState<ShopStatusData | null>(null)
   const [shopLoading, setShopLoading]   = useState(true)
 
@@ -175,6 +199,8 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [upsellToppings, setUpsellToppings] = useState<{ id: string; name: string; price: number; enabled: boolean }[]>([])
   const [dailySpecial, setDailySpecial] = useState<{ enabled: boolean; name: string; description: string; price: number } | null>(null)
 
+  // ── NEU: AGB akzeptiert ──
+  const [agbAccepted, setAgbAccepted]   = useState(false)
 
   const [name,   setName]   = useState('')
   const [email,  setEmail]  = useState(session?.user?.email || '')
@@ -187,14 +213,12 @@ export default function Checkout({ session }: { session: Session | null }) {
   const effectiveDeliveryFee  = orderType === 'pickup' ? 0 : deliveryFee
   const effectiveMinimumOrder = orderType === 'pickup' ? 0 : minimumOrder
 
-  // ── Prüft ob der gewählte Bestelltyp gerade offen ist ──
   const shopOpenForType: boolean | null = shopStatus === null ? null
     : shopStatus.isPreorder ? true
     : orderType === 'pickup'
       ? shopStatus.pickup.isOpen
       : shopStatus.delivery.isOpen
 
-  // ── Zeigt Hinweis wenn anderer Typ offen ist ──
   const alternativeTypeHint = (() => {
     if (!shopStatus || shopStatus.isPreorder) return null
     if (orderType === 'delivery' && !shopStatus.delivery.isOpen && shopStatus.pickup.isOpen) {
@@ -209,13 +233,11 @@ export default function Checkout({ session }: { session: Session | null }) {
   })()
 
   useEffect(() => {
-    // Shop-Status laden
     fetch('/api/shop-status')
       .then(r => r.json())
       .then((data: ShopStatusData) => {
         setShopStatus(data)
         setShopLoading(false)
-        // Wenn Lieferung zu, aber Abholung offen: automatisch auf Abholung wechseln
         if (!data.delivery.isOpen && data.pickup.isOpen && !data.isPreorder) {
           setOrderType('pickup')
         }
@@ -265,7 +287,6 @@ export default function Checkout({ session }: { session: Session | null }) {
     }
   }, [])
 
-  // PaymentIntent neu wenn Bestelltyp wechselt
   useEffect(() => {
     if (cart.length > 0) { setClientSecret(''); createPaymentIntent(cart, voucher, tip, effectiveDeliveryFee) }
   }, [orderType])
@@ -296,7 +317,6 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const subtotal   = cart.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity), 0)
   const discount   = voucher?.discountAmount || 0
-  const upsellTotal = cart.filter(i => i._isUpsell).reduce((s, i) => s + i.price * i.quantity, 0)
   const grandTotal = parseFloat(Math.max(0, subtotal - discount + effectiveDeliveryFee + tip).toFixed(2))
 
   const createPaymentIntent = async (cartItems: CartItem[], appliedVoucher: AppliedVoucher | null, tipAmount: number, fee?: number) => {
@@ -344,8 +364,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   }
 
   const handleCashOrder = async () => {
-    if (!isFormValid) return
-    // Live-Check ob gewählter Typ noch offen
+    if (!isFormValid || !agbAccepted) return
     try {
       const statusData: ShopStatusData = await fetch('/api/shop-status').then(r => r.json())
       const typeOpen = orderType === 'pickup' ? statusData.pickup?.isOpen : statusData.delivery?.isOpen
@@ -367,7 +386,6 @@ export default function Checkout({ session }: { session: Session | null }) {
     { id: 'cash',   label: '💵 Barzahlung',    show: showCash },
   ].filter(o => o.always || o.show)
 
-  // Shop komplett geschlossen (beide Typen zu, kein Vorbestellung)
   const shopCompletelyClosed = shopStatus !== null && !shopStatus.isOpen && !shopStatus.isPreorder
 
   return (
@@ -380,7 +398,6 @@ export default function Checkout({ session }: { session: Session | null }) {
           <p className="text-gray-400 mt-1 text-sm">Nur noch wenige Schritte bis zu deinem Eis 🍦</p>
         </div>
 
-        {/* Vorbestellung Banner */}
         {shopStatus?.isPreorder && (
           <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
             <Clock size={20} className="text-blue-500 mt-0.5 flex-shrink-0" />
@@ -391,7 +408,6 @@ export default function Checkout({ session }: { session: Session | null }) {
           </div>
         )}
 
-        {/* Shop komplett geschlossen */}
         {shopCompletelyClosed && (
           <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-10 text-center mb-8">
             <div className="text-6xl mb-4">🔒</div>
@@ -402,17 +418,15 @@ export default function Checkout({ session }: { session: Session | null }) {
           </div>
         )}
 
-        {/* Laden */}
         {shopLoading && (
           <div className="text-center py-16"><div className="text-5xl mb-3 animate-pulse">🍦</div><p className="text-sm text-gray-400">Wird geladen...</p></div>
         )}
 
-        {/* Hauptinhalt */}
         {!shopLoading && !shopCompletelyClosed && (
           <div className="grid lg:grid-cols-11 gap-6">
             <div className="lg:col-span-6 space-y-5">
 
-              {/* ── Bestellübersicht ── */}
+              {/* Bestellübersicht */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-gray-900">🍦 Bestellübersicht</h2>
@@ -458,8 +472,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
               </div>
 
-
-              {/* ── Upselling: Dazu noch? ── */}
+              {/* Upselling */}
               {upsellEnabled && (upsellToppings.filter(t => t.enabled).length > 0 || dailySpecial?.enabled) && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                   <p className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">✨ Dazu noch?</p>
@@ -467,27 +480,24 @@ export default function Checkout({ session }: { session: Session | null }) {
                     {dailySpecial?.enabled && (
                       <button type="button"
                         onClick={() => {
-                          const already = cart.find(i => i._isUpsell && i.name === dailySpecial.name)
+                          const already = cart.find(i => (i as any)._isUpsell && i.name === dailySpecial.name)
                           if (already) return
-                          const item = { id: 'daily_special', name: '⭐ ' + dailySpecial.name, price: dailySpecial.price, quantity: 1, _isUpsell: true, image: null, flavors: [], portions: null }
+                          const item = { id: 'daily_special', name: '⭐ ' + dailySpecial.name, price: dailySpecial.price, quantity: 1, _isUpsell: true } as any
                           setCart([...cart, item])
                         }}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-semibold transition ${cart.find(i => i._isUpsell && i.name === dailySpecial.name) ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-gray-200 bg-gray-50 hover:border-amber-300 hover:bg-amber-50 text-gray-700'}`}>
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-semibold transition ${cart.find(i => (i as any)._isUpsell && i.name === dailySpecial.name) ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-gray-200 bg-gray-50 hover:border-amber-300 hover:bg-amber-50 text-gray-700'}`}>
                         <span>⭐ {dailySpecial.name}</span>
                         <span className="text-xs font-normal text-gray-400">+{dailySpecial.price.toFixed(2)} €</span>
-                        {cart.find(i => i._isUpsell && i.name === dailySpecial.name) ? <span className="text-amber-500">✓</span> : <span className="text-gray-400">+</span>}
+                        {cart.find(i => (i as any)._isUpsell && i.name === dailySpecial.name) ? <span className="text-amber-500">✓</span> : <span className="text-gray-400">+</span>}
                       </button>
                     )}
                     {upsellToppings.filter(t => t.enabled).map(t => {
-                      const inCart = cart.find(i => i._isUpsell && i.id === 'topping_' + t.id)
+                      const inCart = cart.find(i => (i as any)._isUpsell && i.id === 'topping_' + t.id)
                       return (
                         <button key={t.id} type="button"
                           onClick={() => {
-                            if (inCart) {
-                              setCart(cart.filter(i => !(i._isUpsell && i.id === 'topping_' + t.id)))
-                            } else {
-                              setCart([...cart, { id: 'topping_' + t.id, name: t.name, price: t.price, quantity: 1, _isUpsell: true, image: null, flavors: [], portions: null }])
-                            }
+                            if (inCart) { setCart(cart.filter(i => !((i as any)._isUpsell && i.id === 'topping_' + t.id))) }
+                            else { setCart([...cart, { id: 'topping_' + t.id, name: t.name, price: t.price, quantity: 1, _isUpsell: true } as any]) }
                           }}
                           className={`flex items-center gap-2 px-3 py-2 rounded-xl border-2 text-sm font-semibold transition ${inCart ? 'border-green-400 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 hover:border-green-300 hover:bg-green-50 text-gray-700'}`}>
                           <span>{t.name}</span>
@@ -499,6 +509,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                   </div>
                 </div>
               )}
+
               {(showVoucher || showTip) && (
                 <div className={`grid grid-cols-1 ${showVoucher && showTip ? 'sm:grid-cols-2' : ''} gap-4`}>
                   {showVoucher && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5"><h3 className="font-bold text-sm mb-3 text-gray-700">🎟️ Gutscheincode</h3><VoucherInput subtotal={subtotal} onApply={handleVoucherApply} /></div>}
@@ -510,7 +521,6 @@ export default function Checkout({ session }: { session: Session | null }) {
             <div className="lg:col-span-5">
               <div className="sticky top-6 space-y-4">
 
-                {/* ── Liefern / Abholen ── */}
                 {pickupEnabled && (
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
                     <span className="text-xl">🏪</span>
@@ -520,21 +530,18 @@ export default function Checkout({ session }: { session: Session | null }) {
                     </div>
                   </div>
                 )}
+
                 {pickupEnabled && (
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                     <h2 className="font-bold text-gray-900 mb-3">Wie möchtest du deine Bestellung erhalten?</h2>
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Lieferung */}
                       <button type="button" onClick={() => setOrderType('delivery')}
                         className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all font-semibold text-sm ${orderType === 'delivery' ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                         <span className="text-2xl">🚗</span>
                         <span>Lieferung</span>
-                        {/* Uhrzeiten anzeigen */}
                         {shopStatus?.delivery.openFrom && (
                           <span className={`text-xs ${orderType === 'delivery' ? 'opacity-70' : 'text-gray-400'}`}>
-                            {shopStatus.delivery.isOpen
-                              ? `${shopStatus.delivery.openFrom}–${shopStatus.delivery.openUntil} Uhr`
-                              : shopStatus.delivery.openFrom ? `ab ${shopStatus.delivery.openFrom} Uhr` : ''}
+                            {shopStatus.delivery.isOpen ? `${shopStatus.delivery.openFrom}–${shopStatus.delivery.openUntil} Uhr` : shopStatus.delivery.openFrom ? `ab ${shopStatus.delivery.openFrom} Uhr` : ''}
                           </span>
                         )}
                         <span className={`text-xs ${orderType === 'delivery' ? 'opacity-70' : 'text-gray-400'}`}>+{deliveryFee.toFixed(2)} €</span>
@@ -542,17 +549,13 @@ export default function Checkout({ session }: { session: Session | null }) {
                           <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-bold">Geschlossen</span>
                         )}
                       </button>
-
-                      {/* Abholung */}
                       <button type="button" onClick={() => setOrderType('pickup')}
                         className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all font-semibold text-sm ${orderType === 'pickup' ? 'border-purple-600 bg-purple-600 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                         <span className="text-2xl">🏪</span>
                         <span>Selbst abholen</span>
                         {shopStatus?.pickup.openFrom && (
                           <span className={`text-xs ${orderType === 'pickup' ? 'opacity-70' : 'text-gray-400'}`}>
-                            {shopStatus.pickup.isOpen
-                              ? `${shopStatus.pickup.openFrom}–${shopStatus.pickup.openUntil} Uhr`
-                              : shopStatus.pickup.openFrom ? `ab ${shopStatus.pickup.openFrom} Uhr` : ''}
+                            {shopStatus.pickup.isOpen ? `${shopStatus.pickup.openFrom}–${shopStatus.pickup.openUntil} Uhr` : shopStatus.pickup.openFrom ? `ab ${shopStatus.pickup.openFrom} Uhr` : ''}
                           </span>
                         )}
                         <span className={`text-xs ${orderType === 'pickup' ? 'opacity-70' : 'text-gray-400'}`}>Kostenlos</span>
@@ -561,24 +564,18 @@ export default function Checkout({ session }: { session: Session | null }) {
                         )}
                       </button>
                     </div>
-
-                    {/* Hinweis wenn der andere Typ offen ist */}
                     {alternativeTypeHint && (
                       <button type="button" onClick={() => setOrderType(alternativeTypeHint.type)}
                         className="mt-3 w-full bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-700 font-semibold hover:bg-green-100 transition text-left flex items-center justify-between">
-                        <span>{alternativeTypeHint.msg}</span>
-                        <span className="text-xs flex-shrink-0">→</span>
+                        <span>{alternativeTypeHint.msg}</span><span className="text-xs flex-shrink-0">→</span>
                       </button>
                     )}
-
-                    {/* Warnung wenn gewählter Typ gerade zu */}
                     {shopOpenForType === false && !shopStatus?.isPreorder && (
                       <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700 flex items-center gap-2">
                         <AlertCircle size={15} className="flex-shrink-0" />
                         <span><b>{orderType === 'delivery' ? '🚗 Lieferung' : '🏪 Abholung'}</b> ist gerade nicht möglich.</span>
                       </div>
                     )}
-
                     {orderType === 'pickup' && (
                       <div className="mt-3 bg-purple-50 border border-purple-200 rounded-xl p-3 text-sm text-purple-800">
                         <p className="font-bold mb-1">📍 Abholadresse</p>
@@ -589,7 +586,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                   </div>
                 )}
 
-                {/* ── Kundendaten ── */}
+                {/* Kundendaten */}
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-7 space-y-4">
                   <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
                     <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center text-white"><User size={18} /></div>
@@ -669,6 +666,14 @@ export default function Checkout({ session }: { session: Session | null }) {
                       ))}
                     </div>
 
+                    {/* ── AGB Checkbox ── */}
+                    <AgbCheckbox accepted={agbAccepted} onChange={setAgbAccepted} />
+                    {!agbAccepted && (
+                      <p className="text-xs text-red-500 flex items-center gap-1.5">
+                        <AlertCircle size={12} /> Bitte AGB und Datenschutzerklärung akzeptieren um fortzufahren.
+                      </p>
+                    )}
+
                     {paymentMethod === 'stripe' && clientSecret && (
                       <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#111827', borderRadius: '12px' } } }}>
                         <StripeForm
@@ -677,6 +682,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                           voucher={voucher} tip={tip} name={name} email={email} phone={phone}
                           street={street} zip={zip} city={city} notes={notes} orderType={orderType}
                           isPreorder={shopStatus?.isPreorder ?? false}
+                          agbAccepted={agbAccepted}
                         />
                       </Elements>
                     )}
@@ -687,9 +693,13 @@ export default function Checkout({ session }: { session: Session | null }) {
                     {paymentMethod === 'paypal' && showPayPal && paypalClientId && (
                       <PayPalScriptProvider options={{ clientId: paypalClientId, currency: 'EUR' }}>
                         <div className="space-y-3">
-                          {!isFormValid && <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">⚠️ Bitte zuerst alle Pflichtfelder ausfüllen</div>}
-                          <div className={!isFormValid ? 'opacity-40 pointer-events-none' : ''}>
-                            <PayPalButtons style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' }} disabled={!isFormValid}
+                          {(!isFormValid || !agbAccepted) && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                              {!isFormValid ? '⚠️ Bitte zuerst alle Pflichtfelder ausfüllen' : '⚠️ Bitte AGB akzeptieren'}
+                            </div>
+                          )}
+                          <div className={(!isFormValid || !agbAccepted) ? 'opacity-40 pointer-events-none' : ''}>
+                            <PayPalButtons style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' }} disabled={!isFormValid || !agbAccepted}
                               createOrder={(_data, actions) => actions.order.create({ intent: 'CAPTURE', purchase_units: [{ amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) }, description: 'Eiscafe Simonetti Bestellung' }] })}
                               onApprove={async (_data, actions) => { const order = await actions.order!.capture(); await saveOrder(order.id || 'paypal-' + Date.now(), 'paypal') }}
                               onError={err => console.error('PayPal error:', err)} />
@@ -707,9 +717,13 @@ export default function Checkout({ session }: { session: Session | null }) {
                             <p className="text-green-700">Bitte halte den Betrag von <b>{grandTotal.toFixed(2)} €</b> passend bereit.</p>
                           </div>
                         </div>
-                        {!isFormValid && <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">⚠️ Bitte zuerst alle Pflichtfelder ausfüllen</div>}
-                        <button type="button" onClick={handleCashOrder} disabled={!isFormValid || shopOpenForType === false}
-                          className={`w-full py-4 text-base font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${!isFormValid || shopOpenForType === false ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-sm'}`}>
+                        {(!isFormValid || !agbAccepted) && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                            {!isFormValid ? '⚠️ Bitte zuerst alle Pflichtfelder ausfüllen' : '⚠️ Bitte AGB akzeptieren'}
+                          </div>
+                        )}
+                        <button type="button" onClick={handleCashOrder} disabled={!isFormValid || !agbAccepted || shopOpenForType === false}
+                          className={`w-full py-4 text-base font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${!isFormValid || !agbAccepted || shopOpenForType === false ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-sm'}`}>
                           <Banknote size={20} />
                           {shopOpenForType === false ? 'Diese Option ist gerade geschlossen' : `Jetzt bestellen · ${grandTotal.toFixed(2)} € bar`}
                         </button>
@@ -752,11 +766,11 @@ function StreetInput({ street, setStreet, inputClass }: { street: string; setStr
   )
 }
 
-function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder }: {
+function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted }: {
   session: Session | null; isGuest: boolean; cart: CartItem[]; total: number; subtotal: number
   shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number; voucher: AppliedVoucher | null
   tip: number; name: string; email: string; phone: string; street: string; zip: string; city: string; notes: string
-  orderType: string; isPreorder: boolean
+  orderType: string; isPreorder: boolean; agbAccepted: boolean
 }) {
   const stripe   = useStripe()
   const elements = useElements()
@@ -768,11 +782,11 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
     ? !!(name.trim() && phone.trim() && (!isGuest || email.trim()))
     : !!(name.trim() && phone.trim() && street.trim() && (!isGuest || email.trim()))
 
-  const isBlocked = shopOpenForType === false || subtotal < minimumOrder || !isFormValid
+  const isBlocked = shopOpenForType === false || subtotal < minimumOrder || !isFormValid || !agbAccepted
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Live-Check beim Absenden
+    if (!agbAccepted) return
     try {
       const statusData = await fetch('/api/shop-status').then(r => r.json())
       const typeOpen = orderType === 'pickup' ? statusData.pickup?.isOpen : statusData.delivery?.isOpen
@@ -801,9 +815,10 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
   }
 
   const btnLabel = loading ? null
-    : shopOpenForType === false ? `🔒 ${orderType === 'pickup' ? 'Abholung' : 'Lieferung'} geschlossen`
-    : subtotal < minimumOrder   ? 'Mindestbestellwert nicht erreicht'
+    : shopOpenForType === false  ? `🔒 ${orderType === 'pickup' ? 'Abholung' : 'Lieferung'} geschlossen`
+    : subtotal < minimumOrder    ? 'Mindestbestellwert nicht erreicht'
     : !isFormValid               ? 'Bitte alle Felder ausfüllen'
+    : !agbAccepted               ? 'Bitte AGB akzeptieren'
     : `✅ Jetzt bezahlen · ${total.toFixed(2)} €`
 
   return (
