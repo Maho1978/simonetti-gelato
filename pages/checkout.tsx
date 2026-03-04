@@ -201,6 +201,7 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   // ── NEU: AGB akzeptiert ──
   const [agbAccepted, setAgbAccepted]   = useState(false)
+  const [cashNote, setCashNote]         = useState('')
 
   const [name,   setName]   = useState('')
   const [email,  setEmail]  = useState(session?.user?.email || '')
@@ -334,7 +335,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const handleVoucherApply = (applied: AppliedVoucher | null) => { setVoucher(applied); setClientSecret(''); createPaymentIntent(cart, applied, tip) }
   const handleTipChange    = (amount: number) => { setTip(amount); setClientSecret(''); createPaymentIntent(cart, voucher, amount) }
 
-  const saveOrder = async (paymentId: string, method: string) => {
+  const saveOrder = async (paymentId: string, method: string, cashChangeNote?: string) => {
     const orderData = {
       user_id:           session?.user?.id || null,
       guest_email:       isGuest ? email : null,
@@ -350,7 +351,7 @@ export default function Checkout({ session }: { session: Session | null }) {
       tip,
       total:             grandTotal,
       delivery_address:  orderType === 'pickup' ? null : { name, street, zip, city },
-      notes:             notes || null,
+      notes:             [notes, cashChangeNote ? `Wechselgeld für: ${cashChangeNote}` : ''].filter(Boolean).join(' | ') || null,
       payment_intent_id: paymentId,
       payment_method:    method,
       order_type:        orderType,
@@ -373,7 +374,7 @@ export default function Checkout({ session }: { session: Session | null }) {
         return
       }
     } catch {}
-    await saveOrder('cash-' + Date.now(), 'cash')
+    await saveOrder('cash-' + Date.now(), 'cash', cashNote)
   }
 
   const isFormValid = orderType === 'pickup'
@@ -716,6 +717,26 @@ export default function Checkout({ session }: { session: Session | null }) {
                             <p className="font-bold mb-1">{orderType === 'pickup' ? 'Barzahlung bei Abholung' : 'Barzahlung bei Lieferung'}</p>
                             <p className="text-green-700">Bitte halte den Betrag von <b>{grandTotal.toFixed(2)} €</b> passend bereit.</p>
                           </div>
+                        </div>
+                        {/* Wechselgeld-Feld */}
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 mb-2">💶 Mit welchem Schein zahlst du? <span className="font-normal text-gray-400">(optional)</span></p>
+                          <div className="flex gap-2 flex-wrap mb-2">
+                            {['Passend', '20 €', '50 €', '100 €'].map(opt => (
+                              <button key={opt} type="button"
+                                onClick={() => setCashNote(cashNote === opt ? '' : opt)}
+                                className={`px-3 py-1.5 rounded-xl text-sm font-semibold border-2 transition ${cashNote === opt ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                          <input
+                            type="text"
+                            value={cashNote}
+                            onChange={e => setCashNote(e.target.value)}
+                            placeholder="Oder freitext, z.B. 200 €..."
+                            className={inputClass}
+                          />
                         </div>
                         {(!isFormValid || !agbAccepted) && (
                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
