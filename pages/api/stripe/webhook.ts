@@ -30,7 +30,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let event: Stripe.Event
 
-  // Webhook Signatur prüfen – schützt vor gefälschten Anfragen
   try {
     event = stripe.webhooks.constructEvent(
       rawBody,
@@ -42,11 +41,101 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: `Webhook Error: ${err.message}` })
   }
 
-  // ── Events verarbeiten ──────────────────────────────────────
   try {
     switch (event.type) {
 
-      // ✅ Zahlung erfolgreich – Bestellung erstellen
+      // ✅ App-Zahlung: Checkout Session abgeschlossen (expo-web-browser)
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session
+
+        console.log('✅ Checkout Session abgeschlossen:', session.id)
+
+        const orderId = session.metadata?.order_id
+
+        if (!orderId) {
+          console.error('Keine order_id in Session Metadata')
+          break
+        }
+
+        // Bestellung auf OFFEN + bezahlt setzen
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({
+            status: 'OFFEN',
+            payment_status: 'paid',
+            payment_intent_id: session.payment_intent as string,
+            stripe_session_id: session.id,
+          })
+          .eq('id', orderId)
+
+        if (updateError) {
+          console.error('Order update fehlgeschlagen:', updateError)
+          break
+        }
+
+        console.log('✅ Bestellung aktiviert:', orderId)
+
+        // Bestätigungs-Email an Kunden
+        const customerEmail = session.customer_email
+        if (customerEmail) {
+          try {
+            const { data: order } = await supabase
+              .from('orders')
+              .select('*')
+              .eq('id', orderId)
+              .single()
+
+            await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/emails/send-order-notification`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'order_confirmed',
+                order,
+                recipientEmail: customerEmail,
+              })
+            })
+          } catch (e) {
+            console.error('Bestätigungs-Email fehlgeschlagen:', e)
+          }
+        }
+
+        // Telegram Benachrichtigung
+        try {
+          const { data: order } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('id', orderId)
+            .single()
+
+          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/telegram/notify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order })
+          })
+        } catch (e) {
+          console.error('Telegram Benachrichtigung fehlgeschlagen:', e)
+        }
+
+        break
+      }
+
+      // ❌ Checkout Session abgebrochen/abgelaufen
+      case 'checkout.session.expired': {
+        const session = event.data.object as Stripe.Checkout.Session
+        const orderId = session.metadata?.order_id
+
+        if (orderId) {
+          await supabase
+            .from('orders')
+            .update({ status: 'STORNIERT', payment_status: 'cancelled' })
+            .eq('id', orderId)
+
+          console.log('❌ Bestellung storniert (Session abgelaufen):', orderId)
+        }
+        break
+      }
+
+      // ✅ Website-Zahlung: PaymentIntent erfolgreich
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
         const meta = paymentIntent.metadata
@@ -65,7 +154,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           break
         }
 
-        // Items aus Metadata wiederherstellen
         let items = []
         try {
           items = JSON.parse(meta.items || '[]')
@@ -73,28 +161,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           console.error('Items parsen fehlgeschlagen:', e)
         }
 
-        // Bestellung in Supabase speichern
         const orderNumber = 'S' + Date.now().toString().slice(-6)
 
         const { data: order, error: orderError } = await supabase
           .from('orders')
           .insert({
-            order_number:        orderNumber,
-            status:              'OFFEN',
-            customer_name:       meta.customer_name  || '',
-            customer_email:      meta.customer_email || '',
-            customer_phone:      meta.customer_phone || '',
-            delivery_address:    meta.delivery_address || '',
-            items:               items,
-            subtotal:            parseFloat(meta.subtotal  || '0'),
-            delivery_fee:        parseFloat(meta.delivery_fee || '3'),
-            tip:                 parseFloat(meta.tip || '0'),
-            total:               paymentIntent.amount / 100, // Stripe speichert in Cent
-            payment_method:      'stripe',
-            payment_intent_id:   paymentIntent.id,
-            payment_status:      'paid',
-            notes:               meta.notes || '',
-            created_at:          new Date().toISOString(),
+            order_number:      orderNumber,
+            status:            'OFFEN',
+            customer_name:     meta.customer_name  || '',
+            customer_email:    meta.customer_email || '',
+            customer_phone:    meta.customer_phone || '',
+            delivery_address:  meta.delivery_address || '',
+            items:             items,
+            subtotal:          parseFloat(meta.subtotal  || '0'),
+            delivery_fee:      parseFloat(meta.delivery_fee || '3'),
+            tip:               parseFloat(meta.tip || '0'),
+            total:             paymentIntent.amount / 100,
+            payment_method:    'stripe',
+            payment_intent_id: paymentIntent.id,
+            payment_status:    'paid',
+            notes:             meta.notes || '',
+            created_at:        new Date().toISOString(),
           })
           .select()
           .single()
@@ -106,15 +193,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         console.log('✅ Bestellung erstellt:', order.order_number)
 
-        // Bestätigungs-Email an Kunden
         if (meta.customer_email) {
           try {
             await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/emails/send-order-notification`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                type:           'order_confirmed',
-                order:          order,
+                type: 'order_confirmed',
+                order,
                 recipientEmail: meta.customer_email,
               })
             })
@@ -123,15 +209,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
 
-        // Admin-Benachrichtigung
         const adminEmail = process.env.ADMIN_EMAIL || 'info@eiscafe-simonetti.de'
         try {
           await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/emails/send-order-notification`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              type:           'new_order_admin',
-              order:          order,
+              type: 'new_order_admin',
+              order,
               recipientEmail: adminEmail,
             })
           })
@@ -147,13 +232,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const paymentIntent = event.data.object as Stripe.PaymentIntent
         console.log('❌ Zahlung fehlgeschlagen:', paymentIntent.id)
 
-        // Optional: Fehlgeschlagene Zahlung loggen
         await supabase.from('payment_logs').insert({
           payment_intent_id: paymentIntent.id,
           status:            'failed',
           error:             paymentIntent.last_payment_error?.message || 'Unbekannter Fehler',
           created_at:        new Date().toISOString(),
-        }).select() // Kein Fehler wenn Tabelle nicht existiert
+        }).select()
 
         break
       }
@@ -163,7 +247,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const charge = event.data.object as Stripe.Charge
         console.log('🔄 Rückerstattung:', charge.payment_intent)
 
-        // Bestellung als erstattet markieren
         if (charge.payment_intent) {
           await supabase
             .from('orders')
