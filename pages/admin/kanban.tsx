@@ -139,12 +139,12 @@ function printOrder(order: any) {
   .shop-info { font-size: 13px; font-weight: normal; line-height: 1.7; }
   .sep-solid { border-top: 3px solid #000; margin: 6px 0; }
   .sep-dashed { border-top: 2px dashed #000; margin: 5px 0; }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   td { vertical-align: top; padding: 1px 0; font-size: 15px; }
   .section-label { font-size: 13px; font-weight: 900; letter-spacing: 2px; padding-top: 4px; padding-bottom: 2px; }
-  .item-qty { width: 22px; font-size: 17px; font-weight: 900; white-space: nowrap; }
-  .item-name { font-size: 17px; font-weight: 900; padding-right: 4px; }
-  .item-price { font-size: 17px; font-weight: 900; text-align: right; white-space: nowrap; }
+  .item-qty { width: 28px; font-size: 17px; font-weight: 900; white-space: nowrap; }
+  .item-name { font-size: 17px; font-weight: 900; padding-right: 4px; word-break: break-word; }
+  .item-price { width: 56px; font-size: 17px; font-weight: 900; text-align: right; white-space: nowrap; }
   .item-detail { font-size: 13px; font-weight: normal; padding-left: 4px; padding-bottom: 3px; color: #111; }
   .total-row td { font-size: 15px; padding: 2px 0; }
   .total-row td:last-child { text-align: right; white-space: nowrap; }
@@ -157,8 +157,8 @@ function printOrder(order: any) {
 <div class="center"><div class="logo">SIMONETTI</div><div class="tagline">E I S C A F E</div>
 <div class="shop-info">Konrad-Adenauer-Platz 2, 40764 Langenfeld<br/>Tel: 02173 / 16 22 780</div></div>
 <div class="sep-solid"></div>
-<table>
-  <tr><td>Bestellung</td><td style="text-align:right"><b>#${orderNr}</b></td></tr>
+<table style="table-layout:fixed">
+  <tr><td style="width:55%">Bestellung</td><td style="text-align:right"><b>#${orderNr}</b></td></tr>
   <tr><td>Datum</td><td style="text-align:right">${dateStr}</td></tr>
   <tr><td>Uhrzeit</td><td style="text-align:right">${timeStr} Uhr</td></tr>
   <tr><td>Art</td><td style="text-align:right"><b>${pickupLabel}</b></td></tr>
