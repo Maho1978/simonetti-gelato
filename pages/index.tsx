@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import Navbar from '@/components/Navbar'
 import HeroSection from '@/components/HeroSection'
 import ProductCard, { ProductGrid, CategoryHeader } from '@/components/ProductCard'
@@ -6,6 +6,7 @@ import MiniCart from '@/components/MiniCart'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
 import ShopStatusBanner from '@/components/ShopStatusBanner'
+import WelcomeBanner from '@/components/WelcomeBanner'
 import { supabase } from '@/lib/supabase'
 
 export default function Home() {
@@ -131,6 +132,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
+      <WelcomeBanner />
       <ShopStatusBanner />
       <Navbar session={session} cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
       <HeroSection />
@@ -150,7 +152,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <CategoryHeader
             title="Unsere Gelato-Sorten"
-            description="Täglich frisch hergestellt nach traditioneller italienischer Rezeptur"
+            description="TÃ¤glich frisch hergestellt nach traditioneller italienischer Rezeptur"
           />
 
           {categories.length > 0 && (
@@ -173,12 +175,12 @@ export default function Home() {
 
           {loading ? (
             <div className="text-center py-12">
-              <div className="text-6xl mb-4 animate-pulse">🍦</div>
-              <p className="text-gray-600">Lädt Produkte...</p>
+              <div className="text-6xl mb-4 animate-pulse">ðŸ¦</div>
+              <p className="text-gray-600">LÃ¤dt Produkte...</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-6xl mb-4">😔</div>
+              <div className="text-6xl mb-4">ðŸ˜”</div>
               <p className="text-gray-600 text-xl">Keine Produkte in dieser Kategorie</p>
             </div>
           ) : (
@@ -188,11 +190,11 @@ export default function Home() {
                   key={product.id}
                   product={product}
                   extras={extras.filter(e => {
-                    // global: für alle Produkte
+                    // global: fÃ¼r alle Produkte
                     if (!e.scope || e.scope === 'global') return true
-                    // category: nur für bestimmte Kategorien
+                    // category: nur fÃ¼r bestimmte Kategorien
                     if (e.scope === 'category') return (e.category_names || []).includes(product.category)
-                    // product: nur für bestimmte Produkte
+                    // product: nur fÃ¼r bestimmte Produkte
                     if (e.scope === 'product') return (e.product_ids || []).includes(product.id)
                     return false
                   })}
@@ -210,3 +212,4 @@ export default function Home() {
     </div>
   )
 }
+
