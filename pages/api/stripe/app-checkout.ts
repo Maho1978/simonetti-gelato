@@ -1,6 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { stripe } from '@/lib/stripe'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' })
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -8,18 +15,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { amount, orderData } = req.body
     if (!amount || amount < 0.5) return res.status(400).json({ error: 'Ungültiger Betrag' })
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.eiscafe-simonetti.de'
+    const appUrl = 'https://www.eiscafe-simonetti.de'
 
-    // 1. Bestellung anlegen
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .insert({
-        items: orderData.items,
-        subtotal: orderData.subtotal,
-        delivery_fee: orderData.delivery_fee,
+        items: orderData.items || [],
+        subtotal: orderData.subtotal || 0,
+        delivery_fee: orderData.delivery_fee || 0,
         tip: orderData.tip || 0,
-        total: orderData.total,
-        order_type: orderData.order_type,
+        total: orderData.total || amount,
+        order_type: orderData.order_type || 'pickup',
         payment_method: 'card',
         payment_status: 'pending',
         status: 'AUSSTEHEND',
@@ -33,9 +39,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select()
       .single()
 
-    if (orderError) return res.status(500).json({ error: orderError.message })
+    if (orderError) {
+      console.error('Order insert error:', orderError)
+      return res.status(500).json({ error: orderError.message })
+    }
 
-    // 2. Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
@@ -43,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         price_data: {
           currency: 'eur',
           product_data: {
-            name: 'Simonetti Bestellung',
+            name: 'Simonetti Bestellung #' + order.id.slice(-6).toUpperCase(),
             description: `${orderData.items?.length || 1} Artikel · ${orderData.order_type === 'delivery' ? 'Lieferung' : 'Abholung'}`,
           },
           unit_amount: Math.round(amount * 100),
@@ -51,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         quantity: 1,
       }],
       customer_email: orderData.guest_email || undefined,
-      metadata: { order_id: order.id, order_type: orderData.order_type },
+      metadata: { order_id: order.id },
       success_url: `${appUrl}/order-success?orderId=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/order-cancelled?orderId=${order.id}`,
     })
@@ -60,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ url: session.url, orderId: order.id })
   } catch (error: any) {
-    console.error('App Checkout Error:', error.message)
-    return res.status(500).json({ error: error.message })
+    console.error('App Checkout Error:', error)
+    return res.status(500).json({ error: error.message || 'Checkout fehlgeschlagen' })
   }
 }
