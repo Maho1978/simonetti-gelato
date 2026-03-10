@@ -607,7 +607,6 @@ export default function KanbanPage() {
   useEffect(() => { popupRef.current   = popupOrder    }, [popupOrder])
 
   const loadOrders = useCallback(async () => {
-    // Berlin-Mitternacht korrekt berechnen (UTC)
     const now = new Date()
     const berlinMidnight = new Date(now.toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' }) + 'T00:00:00+01:00')
     const todayStart = berlinMidnight
@@ -657,11 +656,7 @@ export default function KanbanPage() {
 
   const loadWhatsAppToggle = async () => {
     const { data } = await supabase.from('feature_toggles').select('enabled').eq('id', 'whatsapp_notify').single()
-    // Falls Eintrag existiert und deaktiviert ist → global aus; sonst standardmäßig an
-    if (data && data.enabled === false) {
-      // Wir setzen einen globalen State — aber der waEnabled im Popup ist lokal
-      // Hier nur initial-Default setzen (wird im Popup-State genutzt)
-    }
+    if (data && data.enabled === false) {}
   }
 
   const closePopup = () => {
@@ -721,28 +716,37 @@ export default function KanbanPage() {
     if (ok) { if (order) await sendEmail('order_delivered', order); loadOrders() }
   }
 
+  // ── assignDriver MIT Push Notification ───────────────────
   const assignDriver = async (orderId: string, driverId: string) => {
     if (!driverId) return
     const order = orders['AN_FAHRER']?.find(o => o.id === orderId) || orders['IN_BEARBEITUNG']?.find(o => o.id === orderId)
     const ok = await apiUpdateOrder(orderId, { driver_id: driverId, status: 'AN_FAHRER', assigned_at: new Date().toISOString() })
     if (ok) {
       if (order) await sendEmail('order_out_for_delivery', order)
+
+      // Push Notification an Fahrer
       try {
         const driver = drivers.find((d: any) => d.id === driverId)
         if (driver?.push_token) {
-          await fetch('https://exp.host/--/api/v2/push/send', {
+          const address = typeof order?.delivery_address === 'object'
+            ? `${order.delivery_address.street}, ${order.delivery_address.city}`
+            : order?.delivery_address || ''
+
+          await fetch('/api/driver/notify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              to: driver.push_token,
-              title: '🚗 Neue Lieferung!',
-              body: `Bestellung #${order?.order_number} · ${order?.customer_name}`,
-              data: { order_id: orderId },
-              sound: 'default',
+              push_token:    driver.push_token,
+              order_number:  order?.order_number || orderId.slice(-6).toUpperCase(),
+              customer_name: order?.customer_name || 'Kunde',
+              address,
             }),
           })
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log('Push notification failed (non-critical):', e)
+      }
+
       loadOrders()
     }
   }
@@ -806,7 +810,7 @@ export default function KanbanPage() {
               </div>
             )}
 
-            {/* ── Umsatz Box ── */}
+            {/* Umsatz Box */}
             <div className="bg-white border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm">
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="text-center">
