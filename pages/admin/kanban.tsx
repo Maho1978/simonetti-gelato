@@ -282,7 +282,7 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
                     </div>
                     <span className="text-gray-500 font-semibold ml-2">{((item.price || 0) * item.quantity).toFixed(2)}â‚¬</span>
                   </div>
-                ))}
+                )})}
               </div>
               {order.notes && (
                 <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-2.5 text-sm">
@@ -412,7 +412,7 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
                   </div>
                   <span className="font-bold text-gray-700 ml-4">{((item.totalPrice || item.price * item.quantity) || 0).toFixed(2)} â‚¬</span>
                 </div>
-              ))}
+              )})}
             </div>
             {order.notes && (
               <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm text-yellow-800">
@@ -445,7 +445,7 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
                     className={`text-xs px-3 py-1.5 rounded-full border-2 font-semibold transition ${waText === t.text ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:border-green-400'}`}>
                     {t.label}
                   </button>
-                ))}
+                )})}
               </div>
               <textarea
                 value={waText}
@@ -914,16 +914,17 @@ export default function KanbanPage() {
                       onSelect={() => setSelectedOrder(order)}
                       drivers={drivers}
                     />
-                  ))}
+                  )})}
                   {(orders[col.id]?.length || 0) === 0 && (
                     <div className="text-center text-gray-400 text-xs pt-10">Keine Bestellungen</div>
                   )}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
     </AdminLayout>
   )
 }
+
