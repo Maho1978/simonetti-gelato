@@ -25,15 +25,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         delivery_fee: orderData.delivery_fee || 0,
         tip: orderData.tip || 0,
         total: orderData.total || amount,
-        order_type: orderData.order_type || 'pickup',
         payment_method: 'card',
         payment_status: 'pending',
         status: 'AUSSTEHEND',
         delivery_address: orderData.delivery_address || null,
         notes: orderData.notes || null,
         user_id: orderData.user_id || null,
+        customer_email: orderData.guest_email || null,
         guest_email: orderData.guest_email || null,
-        guest_phone: orderData.guest_phone || null,
+        customer_phone: orderData.guest_phone || null,
         customer_name: orderData.customer_name || null,
       })
       .select()
