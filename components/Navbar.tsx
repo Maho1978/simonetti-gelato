@@ -1,22 +1,25 @@
 import { useState } from 'react'
 import Link from 'next/link'
-import { ShoppingBag, Menu, X, User } from 'lucide-react'
+import { ShoppingBag, Menu, X, User, LayoutDashboard } from 'lucide-react'
 import Image from 'next/image'
 
 export default function Navbar({ session, cartCount, onCartClick }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  const isAdmin = session?.user?.email === 'info@eiscafe-langenfeld.de' ||
+                  session?.user?.email === 'info@eiscafe-simonetti.de'
+
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-20">
-          
+
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition">
-            <Image 
-              src="/images/simonetti-logo.jpg" 
-              alt="Eiscafe Simonetti Logo" 
-              width={60} 
+            <Image
+              src="/images/simonetti-logo.jpg"
+              alt="Eiscafe Simonetti Logo"
+              width={60}
               height={60}
               className="rounded-full"
             />
@@ -32,20 +35,14 @@ export default function Navbar({ session, cartCount, onCartClick }) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <Link 
-              href="/" 
-              className="text-gray-700 hover:text-[#4a5d54] font-semibold transition"
-            >
+            <Link href="/" className="text-gray-700 hover:text-[#4a5d54] font-semibold transition">
               Speisekarte
             </Link>
-            <Link 
-              href="/ueber-uns" 
-              className="text-gray-700 hover:text-[#4a5d54] font-semibold transition"
-            >
+            <Link href="/ueber-uns" className="text-gray-700 hover:text-[#4a5d54] font-semibold transition">
               Über uns
             </Link>
-            
-            {/* Cart Button */}
+
+            {/* Warenkorb */}
             <button
               onClick={onCartClick}
               className="relative flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-[#4a5d54] font-semibold transition"
@@ -61,18 +58,32 @@ export default function Navbar({ session, cartCount, onCartClick }) {
 
             {/* User Menu */}
             {session ? (
-              <Link 
-                href="/admin" 
-                className="flex items-center gap-2 px-4 py-2 bg-[#4a5d54] text-white rounded-lg hover:bg-[#3a4d44] transition font-semibold"
-              >
-                <User size={18} />
-                Admin
-              </Link>
+              <div className="flex items-center gap-2">
+                {/* Kunden-Account */}
+                <Link
+                  href="/account"
+                  className="flex items-center gap-2 px-4 py-2 border-2 border-[#C4973A] text-[#C4973A] rounded-lg hover:bg-[#C4973A] hover:text-white transition font-semibold"
+                >
+                  <User size={17} />
+                  Mein Konto
+                </Link>
+                {/* Admin-Link nur für Admins */}
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#4a5d54] text-white rounded-lg hover:bg-[#3a4d44] transition font-semibold"
+                  >
+                    <LayoutDashboard size={17} />
+                    Admin
+                  </Link>
+                )}
+              </div>
             ) : (
-              <Link 
-                href="/auth/login" 
-                className="px-4 py-2 border-2 border-[#4a5d54] text-[#4a5d54] rounded-lg hover:bg-[#4a5d54] hover:text-white transition font-semibold"
+              <Link
+                href="/auth/customer-login"
+                className="flex items-center gap-2 px-4 py-2 border-2 border-[#C4973A] text-[#C4973A] rounded-lg hover:bg-[#C4973A] hover:text-white transition font-semibold"
               >
+                <User size={17} />
                 Anmelden
               </Link>
             )}
@@ -91,26 +102,15 @@ export default function Navbar({ session, cartCount, onCartClick }) {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col space-y-4">
-              <Link 
-                href="/" 
-                className="text-gray-700 hover:text-[#4a5d54] font-semibold"
-                onClick={() => setMobileMenuOpen(false)}
-              >
+              <Link href="/" className="text-gray-700 hover:text-[#4a5d54] font-semibold" onClick={() => setMobileMenuOpen(false)}>
                 Speisekarte
               </Link>
-              <Link 
-                href="/ueber-uns" 
-                className="text-gray-700 hover:text-[#4a5d54] font-semibold"
-                onClick={() => setMobileMenuOpen(false)}
-              >
+              <Link href="/ueber-uns" className="text-gray-700 hover:text-[#4a5d54] font-semibold" onClick={() => setMobileMenuOpen(false)}>
                 Über uns
               </Link>
-              
+
               <button
-                onClick={() => {
-                  onCartClick()
-                  setMobileMenuOpen(false)
-                }}
+                onClick={() => { onCartClick(); setMobileMenuOpen(false) }}
                 className="flex items-center gap-2 text-gray-700 hover:text-[#4a5d54] font-semibold"
               >
                 <ShoppingBag size={20} />
@@ -118,20 +118,21 @@ export default function Navbar({ session, cartCount, onCartClick }) {
               </button>
 
               {session ? (
-                <Link 
-                  href="/admin" 
-                  className="text-gray-700 hover:text-[#4a5d54] font-semibold"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Admin
-                </Link>
+                <>
+                  <Link href="/account" className="flex items-center gap-2 text-[#C4973A] font-semibold" onClick={() => setMobileMenuOpen(false)}>
+                    <User size={18} />
+                    Mein Konto
+                  </Link>
+                  {isAdmin && (
+                    <Link href="/admin" className="text-gray-700 hover:text-[#4a5d54] font-semibold" onClick={() => setMobileMenuOpen(false)}>
+                      Admin
+                    </Link>
+                  )}
+                </>
               ) : (
-                <Link 
-                  href="/auth/login" 
-                  className="text-gray-700 hover:text-[#4a5d54] font-semibold"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Anmelden
+                <Link href="/auth/customer-login" className="flex items-center gap-2 text-[#C4973A] font-semibold" onClick={() => setMobileMenuOpen(false)}>
+                  <User size={18} />
+                  Anmelden / Registrieren
                 </Link>
               )}
             </div>
