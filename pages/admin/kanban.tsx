@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/AdminLayout'
 import {
@@ -8,10 +8,10 @@ import {
 } from 'lucide-react'
 
 const COLUMNS = [
-  { id: 'OFFEN',          title: 'Offen',          color: 'bg-red-50',    border: 'border-red-200',    icon: '🔔' },
-  { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-50',   border: 'border-blue-200',   icon: '👨‍🍳' },
-  { id: 'AN_FAHRER',      title: 'An Fahrer',      color: 'bg-orange-50', border: 'border-orange-200', icon: '🚗' },
-  { id: 'GELIEFERT',      title: 'Geliefert',      color: 'bg-green-50',  border: 'border-green-200',  icon: '✅' },
+  { id: 'OFFEN',          title: 'Offen',          color: 'bg-red-50',    border: 'border-red-200',    icon: 'ðŸ””' },
+  { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-50',   border: 'border-blue-200',   icon: 'ðŸ‘¨â€ðŸ³' },
+  { id: 'AN_FAHRER',      title: 'An Fahrer',      color: 'bg-orange-50', border: 'border-orange-200', icon: 'ðŸš—' },
+  { id: 'GELIEFERT',      title: 'Geliefert',      color: 'bg-green-50',  border: 'border-green-200',  icon: 'âœ…' },
 ]
 
 async function apiUpdateOrder(orderId: string, data: any) {
@@ -46,14 +46,14 @@ async function sendTelegram(order: any) {
 }
 
 function formatAddress(addr: any): string {
-  if (!addr) return '–'
+  if (!addr) return 'â€“'
   if (typeof addr === 'string') return addr
   if (typeof addr === 'object') {
     const parts = []
     if (addr.street) parts.push(addr.street)
     if (addr.zip && addr.city) parts.push(`${addr.zip} ${addr.city}`)
     else if (addr.city) parts.push(addr.city)
-    return parts.join(', ') || '–'
+    return parts.join(', ') || 'â€“'
   }
   return String(addr)
 }
@@ -92,7 +92,7 @@ function OrderTimer({ createdAt }: { createdAt: string }) {
               : mins >= 15 ? 'text-orange-500 font-semibold'
               : mins >= 10 ? 'text-yellow-600'
               : 'text-green-600'
-  return <span className={`text-xs ${color}`}>⏱ {label}</span>
+  return <span className={`text-xs ${color}`}>â± {label}</span>
 }
 
 function printOrder(order: any) {
@@ -167,7 +167,7 @@ function printOrder(order: any) {
 <div class="sep-dashed"></div>
 <table>
   <tr><td colspan="3" class="section-label">${order.order_type === 'pickup' ? 'ABHOLUNG DURCH' : 'LIEFERUNG AN'}</td></tr>
-  <tr><td colspan="3" style="font-size:18px"><b>${order.customer_name || '–'}</b></td></tr>
+  <tr><td colspan="3" style="font-size:18px"><b>${order.customer_name || 'â€“'}</b></td></tr>
   ${phoneHtml}
   ${order.order_type !== 'pickup' ? `<tr><td colspan="3" style="font-weight:normal">${addrStr}</td></tr>` : ''}
 </table>
@@ -191,7 +191,7 @@ function printOrder(order: any) {
   <div class="footer-main">Vielen Dank & Guten Appetit!</div>
   <div class="footer-small" style="margin-top:3px">www.eiscafe-simonetti.de</div>
   <div class="sep-dashed" style="margin-top:8px"></div>
-  <div class="footer-small">Beleg #${orderNr} · ${dateStr} · ${timeStr} Uhr</div>
+  <div class="footer-small">Beleg #${orderNr} Â· ${dateStr} Â· ${timeStr} Uhr</div>
 </div>
 <script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 400); };</script>
 </body></html>`
@@ -204,14 +204,14 @@ function printOrder(order: any) {
 
 function RejectModal({ order, onConfirm, onCancel }: { order: any; onConfirm: (r: string) => void; onCancel: () => void }) {
   const [reason, setReason] = useState('')
-  const REASONS = ['Liefergebiet nicht erreichbar', 'Zu viele Bestellungen – ausgelastet', 'Produkt nicht mehr verfügbar', 'Shop schließt gleich', 'Sonstiges']
+  const REASONS = ['Liefergebiet nicht erreichbar', 'Zu viele Bestellungen â€“ ausgelastet', 'Produkt nicht mehr verfÃ¼gbar', 'Shop schlieÃŸt gleich', 'Sonstiges']
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
         <div className="text-center mb-5">
-          <div className="text-5xl mb-3">❌</div>
+          <div className="text-5xl mb-3">âŒ</div>
           <h2 className="font-bold text-xl">Bestellung ablehnen</h2>
-          <p className="text-gray-500 text-sm mt-1">#{order.order_number || order.id?.slice(-6).toUpperCase()} · {order.customer_name}</p>
+          <p className="text-gray-500 text-sm mt-1">#{order.order_number || order.id?.slice(-6).toUpperCase()} Â· {order.customer_name}</p>
         </div>
         <div className="mb-4 space-y-2">
           {REASONS.map(r => (
@@ -222,7 +222,7 @@ function RejectModal({ order, onConfirm, onCancel }: { order: any; onConfirm: (r
           ))}
         </div>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-semibold text-gray-600 hover:bg-gray-50 text-sm">Zurück</button>
+          <button onClick={onCancel} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-semibold text-gray-600 hover:bg-gray-50 text-sm">ZurÃ¼ck</button>
           <button onClick={() => onConfirm(reason)} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 text-sm">Ablehnen</button>
         </div>
       </div>
@@ -238,14 +238,14 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ animation: 'popIn 0.35s ease-out' }}>
         <div className="bg-red-500 text-white px-8 py-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="text-5xl" style={{ animation: 'bellShake 0.5s infinite' }}>🔔</span>
+            <span className="text-5xl" style={{ animation: 'bellShake 0.5s infinite' }}>ðŸ””</span>
             <div>
               <h2 className="font-black text-3xl tracking-tight">NEUE BESTELLUNG!</h2>
               <p className="text-red-100 text-base">#{order.order_number || order.id?.slice(-6).toUpperCase()}</p>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-4xl font-black">{(order.total || 0).toFixed(2)}€</div>
+            <div className="text-4xl font-black">{(order.total || 0).toFixed(2)}â‚¬</div>
             <div className="text-red-200 text-sm">{new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</div>
           </div>
         </div>
@@ -266,7 +266,7 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
               <div className="flex items-start gap-2">
                 <MapPin size={18} className="text-gray-400 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-700">
-                  {order.order_type === 'pickup' ? '🏪 Abholung' : formatAddress(order.delivery_address)}
+                  {order.order_type === 'pickup' ? 'ðŸª Abholung' : formatAddress(order.delivery_address)}
                 </span>
               </div>
             </div>
@@ -277,16 +277,16 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
                   <div key={i} className="flex justify-between text-sm">
                     <div>
                       <span className="font-bold text-gray-900">{item.quantity}x {item.name}</span>
-                      {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-400">🍦 {item.selectedFlavors.join(', ')}</div>}
-                      {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-400">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
+                      {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-400">ðŸ¦ {item.selectedFlavors.join(', ')}</div>}
+                      {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-400">âž• {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
                     </div>
-                    <span className="text-gray-500 font-semibold ml-2">{((item.price || 0) * item.quantity).toFixed(2)}€</span>
+                    <span className="text-gray-500 font-semibold ml-2">{((item.price || 0) * item.quantity).toFixed(2)}â‚¬</span>
                   </div>
                 ))}
               </div>
               {order.notes && (
                 <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-2.5 text-sm">
-                  💬 {order.notes}
+                  ðŸ’¬ {order.notes}
                 </div>
               )}
             </div>
@@ -300,7 +300,7 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
             <button onClick={onAccept}
               className="py-5 rounded-2xl bg-green-500 text-white font-black text-xl hover:bg-green-600 transition flex items-center justify-center gap-3 shadow-xl"
               style={{ boxShadow: '0 8px 32px rgba(34,197,94,0.4)' }}>
-              <Check size={28} /> Annehmen ✓
+              <Check size={28} /> Annehmen âœ“
             </button>
           </div>
           <div className="flex items-center justify-between">
@@ -309,7 +309,7 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
               <Printer size={16} /> Drucken
             </button>
             <button onClick={onLater} className="text-gray-400 text-sm hover:text-gray-600 transition">
-              Später entscheiden →
+              SpÃ¤ter entscheiden â†’
             </button>
           </div>
         </div>
@@ -341,24 +341,24 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
 
   const WA_TEMPLATES = [
     {
-      label: '✅ Bestellung bestätigt',
-      text: `Hallo ${name}! Deine Bestellung #${orderNr} ist bei uns eingegangen und wird gerade zubereitet. 🍦 Ca. 30–45 Min. – Dein Simonetti Team`,
+      label: 'âœ… Bestellung bestÃ¤tigt',
+      text: `Hallo ${name}! Deine Bestellung #${orderNr} ist bei uns eingegangen und wird gerade zubereitet. ðŸ¦ Ca. 30â€“45 Min. â€“ Dein Simonetti Team`,
     },
     {
-      label: '🚗 Unterwegs',
-      text: `Hallo ${name}! Dein Eis ist unterwegs! 🚗 Unser Fahrer ist ca. 15–20 Min. bei dir. Guten Appetit! – Simonetti`,
+      label: 'ðŸš— Unterwegs',
+      text: `Hallo ${name}! Dein Eis ist unterwegs! ðŸš— Unser Fahrer ist ca. 15â€“20 Min. bei dir. Guten Appetit! â€“ Simonetti`,
     },
     {
-      label: '🎉 Zugestellt',
-      text: `Hallo ${name}! Deine Bestellung wurde zugestellt. Guten Appetit! 🍦 Wir freuen uns über eine Google Bewertung: https://g.page/r/CeAm6-NrGrYhEBE/review`,
+      label: 'ðŸŽ‰ Zugestellt',
+      text: `Hallo ${name}! Deine Bestellung wurde zugestellt. Guten Appetit! ðŸ¦ Wir freuen uns Ã¼ber eine Google Bewertung: https://g.page/r/CeAm6-NrGrYhEBE/review`,
     },
     {
-      label: '⏰ Verzögerung',
-      text: `Hallo ${name}! Kurze Info: Deine Bestellung #${orderNr} verzögert sich leider etwas. Wir sind so schnell wie möglich bei dir! Danke für deine Geduld 🙏 – Simonetti`,
+      label: 'â° VerzÃ¶gerung',
+      text: `Hallo ${name}! Kurze Info: Deine Bestellung #${orderNr} verzÃ¶gert sich leider etwas. Wir sind so schnell wie mÃ¶glich bei dir! Danke fÃ¼r deine Geduld ðŸ™ â€“ Simonetti`,
     },
     {
-      label: '❌ Abgelehnt',
-      text: `Hallo ${name}! Leider können wir deine Bestellung #${orderNr} heute nicht annehmen. Du wirst nicht belastet. Wir entschuldigen uns! – Simonetti`,
+      label: 'âŒ Abgelehnt',
+      text: `Hallo ${name}! Leider kÃ¶nnen wir deine Bestellung #${orderNr} heute nicht annehmen. Du wirst nicht belastet. Wir entschuldigen uns! â€“ Simonetti`,
     },
   ]
 
@@ -378,7 +378,7 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
             <span className="font-black text-xl">#{orderNr}</span>
             <span className="text-gray-400 text-sm ml-2">{new Date(order.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} Uhr</span>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-700 text-xl font-bold">✕</button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-700 text-xl font-bold">âœ•</button>
         </div>
 
         <div className="p-6 space-y-5">
@@ -394,9 +394,9 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
             )}
             <div className="flex items-center gap-2">
               <MapPin size={15} className="text-gray-400" />
-              <span className="text-gray-700">{isPickup ? '🏪 Abholung' : formatAddress(order.delivery_address)}</span>
+              <span className="text-gray-700">{isPickup ? 'ðŸª Abholung' : formatAddress(order.delivery_address)}</span>
             </div>
-            {order.customer_email && <div className="text-xs text-gray-400">✉️ {order.customer_email}</div>}
+            {order.customer_email && <div className="text-xs text-gray-400">âœ‰ï¸ {order.customer_email}</div>}
           </div>
 
           {/* Artikel */}
@@ -407,20 +407,20 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
                 <div key={i} className="flex justify-between items-start bg-gray-50 rounded-xl p-3">
                   <div>
                     <span className="font-bold text-gray-900">{item.quantity}x {item.name}</span>
-                    {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-500 mt-0.5">🍦 {item.selectedFlavors.join(', ')}</div>}
-                    {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-500">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
+                    {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-500 mt-0.5">ðŸ¦ {item.selectedFlavors.join(', ')}</div>}
+                    {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-500">âž• {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
                   </div>
-                  <span className="font-bold text-gray-700 ml-4">{((item.totalPrice || item.price * item.quantity) || 0).toFixed(2)} €</span>
+                  <span className="font-bold text-gray-700 ml-4">{((item.totalPrice || item.price * item.quantity) || 0).toFixed(2)} â‚¬</span>
                 </div>
               ))}
             </div>
             {order.notes && (
               <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm text-yellow-800">
-                💬 {order.notes}
+                ðŸ’¬ {order.notes}
               </div>
             )}
             <div className="mt-3 flex justify-between font-black text-lg border-t pt-3">
-              <span>Gesamt</span><span>{(order.total || 0).toFixed(2)} €</span>
+              <span>Gesamt</span><span>{(order.total || 0).toFixed(2)} â‚¬</span>
             </div>
           </div>
 
@@ -429,7 +429,7 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
             <div className={`border-2 rounded-xl p-4 transition ${waEnabled ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">💬</span>
+                  <span className="text-xl">ðŸ’¬</span>
                   <span className={`font-bold ${waEnabled ? 'text-green-800' : 'text-gray-400'}`}>WhatsApp senden</span>
                   <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full">kostenlos</span>
                 </div>
@@ -451,12 +451,12 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
                 value={waText}
                 onChange={e => setWaText(e.target.value)}
                 rows={3}
-                placeholder="Vorlage auswählen oder eigenen Text schreiben..."
+                placeholder="Vorlage auswÃ¤hlen oder eigenen Text schreiben..."
                 className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl text-sm focus:border-green-400 focus:outline-none resize-none mb-2"
               />
               <button onClick={openWhatsApp} disabled={!waText.trim()}
                 className="w-full py-2.5 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
-                <span>📲</span> WhatsApp öffnen → {order.customer_phone}
+                <span>ðŸ“²</span> WhatsApp Ã¶ffnen â†’ {order.customer_phone}
               </button>
               </>)}
             </div>
@@ -464,17 +464,17 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
 
           {/* Aktionen */}
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => { printOrder(order); }} className="flex-1 py-2.5 bg-gray-800 text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition">🖨️ Drucken</button>
+            <button onClick={() => { printOrder(order); }} className="flex-1 py-2.5 bg-gray-800 text-white rounded-xl font-bold text-sm hover:bg-gray-900 transition">ðŸ–¨ï¸ Drucken</button>
             {status !== 'GELIEFERT' && colIdx > 0 && (
-              <button onClick={() => { onMoveLeft(); onClose(); }} className="px-4 py-2.5 border-2 border-gray-200 rounded-xl font-bold text-sm hover:border-black transition">← Zurück</button>
+              <button onClick={() => { onMoveLeft(); onClose(); }} className="px-4 py-2.5 border-2 border-gray-200 rounded-xl font-bold text-sm hover:border-black transition">â† ZurÃ¼ck</button>
             )}
             {status !== 'GELIEFERT' && colIdx < 2 && (
-              <button onClick={() => { onMoveRight(); onClose(); }} className="px-4 py-2.5 bg-blue-500 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition">Weiter →</button>
+              <button onClick={() => { onMoveRight(); onClose(); }} className="px-4 py-2.5 bg-blue-500 text-white rounded-xl font-bold text-sm hover:bg-blue-600 transition">Weiter â†’</button>
             )}
             {status === 'AN_FAHRER' && (
               <button onClick={() => { onMarkDelivered(); onClose(); }}
                 className="flex-1 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition">
-                {isPickup ? '🏪 Abgeholt' : '✅ Geliefert'}
+                {isPickup ? 'ðŸª Abgeholt' : 'âœ… Geliefert'}
               </button>
             )}
           </div>
@@ -500,8 +500,8 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
         </button>
         <div className="flex-1 text-center px-2 cursor-pointer" onClick={onSelect}>
           <div className="font-bold text-xs text-gray-500">#{order.order_number || order.id?.slice(-6).toUpperCase()}</div>
-          <div className="font-bold text-lg text-gray-900">{(order.total || 0).toFixed(2)}€</div>
-          {isPickup && <div className="text-xs font-bold text-purple-600 bg-purple-50 rounded-full px-2 py-0.5 mt-0.5">🏪 Abholung</div>}
+          <div className="font-bold text-lg text-gray-900">{(order.total || 0).toFixed(2)}â‚¬</div>
+          {isPickup && <div className="text-xs font-bold text-purple-600 bg-purple-50 rounded-full px-2 py-0.5 mt-0.5">ðŸª Abholung</div>}
         </div>
         <button onClick={onMoveRight} disabled={colIdx >= 2 || isDelivered}
           className={`p-1.5 rounded-lg transition ${colIdx < 2 && !isDelivered ? 'hover:bg-gray-100 text-gray-700' : 'text-gray-200 cursor-not-allowed'}`}>
@@ -516,7 +516,7 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
         <div className="flex items-center gap-1.5 truncate">
           <MapPin size={11} className="text-gray-400 flex-shrink-0" />
           <span className="truncate text-gray-500">
-            {isPickup ? '🏪 Abholung' : formatAddress(order.delivery_address).split(',')[0]}
+            {isPickup ? 'ðŸª Abholung' : formatAddress(order.delivery_address).split(',')[0]}
           </span>
         </div>
         <div className="flex items-center justify-between">
@@ -545,36 +545,36 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
       )}
       <button onClick={() => printOrder(order)}
         className="w-full py-1.5 bg-gray-800 text-white rounded-lg text-xs font-bold hover:bg-gray-900 transition mb-1.5">
-        🖨️ Drucken
+        ðŸ–¨ï¸ Drucken
       </button>
       {status === 'AN_FAHRER' && !isPickup && (
         <div className="mt-1 space-y-1.5">
           {order.driver_id ? (
             <div className="bg-blue-50 rounded-lg px-2 py-1.5 text-center text-blue-700 font-semibold text-xs">
-              🚗 {drivers.find((d: any) => d.id === order.driver_id)?.name || 'Fahrer zugewiesen'}
+              ðŸš— {drivers.find((d: any) => d.id === order.driver_id)?.name || 'Fahrer zugewiesen'}
             </div>
           ) : (
             <select onChange={e => onAssignDriver(order.id, e.target.value)}
               className="w-full text-xs border-2 border-gray-200 rounded-lg px-2 py-1.5 focus:border-black focus:outline-none">
-              <option value="">Fahrer auswählen...</option>
+              <option value="">Fahrer auswÃ¤hlen...</option>
               {drivers.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           )}
           <button onClick={onMarkDelivered}
             className="w-full py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition">
-            ✅ Als geliefert markieren
+            âœ… Als geliefert markieren
           </button>
         </div>
       )}
       {status === 'AN_FAHRER' && isPickup && (
         <button onClick={onMarkDelivered}
           className="w-full py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition mt-1">
-          🏪 Als abgeholt markieren
+          ðŸª Als abgeholt markieren
         </button>
       )}
       {isDelivered && order.delivered_at && (
         <div className="text-center text-green-600 text-xs font-semibold mt-1">
-          ✅ {new Date(order.delivered_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+          âœ… {new Date(order.delivered_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
         </div>
       )}
     </div>
@@ -716,7 +716,7 @@ export default function KanbanPage() {
     if (ok) { if (order) await sendEmail('order_delivered', order); loadOrders() }
   }
 
-  // ── assignDriver MIT Push Notification ───────────────────
+  // â”€â”€ assignDriver MIT Push Notification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const assignDriver = async (orderId: string, driverId: string) => {
     if (!driverId) return
     const order = orders['AN_FAHRER']?.find(o => o.id === orderId) || orders['IN_BEARBEITUNG']?.find(o => o.id === orderId)
@@ -751,7 +751,7 @@ export default function KanbanPage() {
     }
   }
 
-  // ── Umsatz Berechnung ─────────────────────────────────────
+  // â”€â”€ Umsatz Berechnung â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const deliveredOrders = orders['GELIEFERT'] || []
   const isStripe  = (o: any) => (o.payment_method === 'stripe' || o.payment_method === 'card' || o.payment_method === 'STRIPE') && (!o.payment_intent_id || o.payment_intent_id.startsWith('pi_'))
   const isPayPal  = (o: any) => o.payment_method === 'paypal' || (o.payment_intent_id && !o.payment_intent_id.startsWith('pi_') && o.payment_intent_id !== '')
@@ -793,7 +793,7 @@ export default function KanbanPage() {
       )}
       {newOrderBanner && !popupOrder && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-full shadow-xl font-bold text-sm animate-bounce">
-          🔔 Neue Bestellung eingegangen!
+          ðŸ”” Neue Bestellung eingegangen!
         </div>
       )}
 
@@ -801,12 +801,12 @@ export default function KanbanPage() {
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold">Bestellungen</h1>
-            <p className="text-gray-400 text-xs mt-0.5">Aktualisiert alle 15 Sek · Neue Bestellungen erscheinen als Popup</p>
+            <p className="text-gray-400 text-xs mt-0.5">Aktualisiert alle 15 Sek Â· Neue Bestellungen erscheinen als Popup</p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             {openCount > 0 && (
               <div className="bg-red-100 text-red-700 px-3 py-1.5 rounded-full font-bold text-sm animate-pulse">
-                🔔 {openCount} offen
+                ðŸ”” {openCount} offen
               </div>
             )}
 
@@ -814,28 +814,28 @@ export default function KanbanPage() {
             <div className="bg-white border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm">
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="text-center">
-                  <div className="text-xs text-gray-400 font-medium">💳 Stripe</div>
-                  <div className="text-base font-black text-gray-900">{stripeTotal.toFixed(2)} €</div>
+                  <div className="text-xs text-gray-400 font-medium">ðŸ’³ Stripe</div>
+                  <div className="text-base font-black text-gray-900">{stripeTotal.toFixed(2)} â‚¬</div>
                 </div>
                 <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
-                  <div className="text-xs text-gray-400 font-medium">🅿️ PayPal</div>
-                  <div className="text-base font-black text-gray-900">{paypalTotal.toFixed(2)} €</div>
+                  <div className="text-xs text-gray-400 font-medium">ðŸ…¿ï¸ PayPal</div>
+                  <div className="text-base font-black text-gray-900">{paypalTotal.toFixed(2)} â‚¬</div>
                 </div>
                 <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
-                  <div className="text-xs text-gray-400 font-medium">💵 Bar</div>
-                  <div className="text-base font-black text-gray-900">{cashTotal.toFixed(2)} €</div>
+                  <div className="text-xs text-gray-400 font-medium">ðŸ’µ Bar</div>
+                  <div className="text-base font-black text-gray-900">{cashTotal.toFixed(2)} â‚¬</div>
                 </div>
                 <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
-                  <div className="text-xs text-gray-400 font-medium">💝 Trinkgeld</div>
-                  <div className="text-base font-black text-purple-600">{tipTotal.toFixed(2)} €</div>
+                  <div className="text-xs text-gray-400 font-medium">ðŸ’ Trinkgeld</div>
+                  <div className="text-base font-black text-purple-600">{tipTotal.toFixed(2)} â‚¬</div>
                 </div>
                 <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
                   <div className="text-xs text-gray-400 font-medium">Gesamt</div>
-                  <div className="text-base font-black text-green-600">{grandTotal.toFixed(2)} €</div>
+                  <div className="text-base font-black text-green-600">{grandTotal.toFixed(2)} â‚¬</div>
                 </div>
                 <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
@@ -857,13 +857,13 @@ export default function KanbanPage() {
               </button>
               {soundEnabled && (
                 <div className="flex items-center gap-1.5 bg-yellow-50 border-2 border-yellow-200 rounded-lg px-3 py-1.5">
-                  <span className="text-xs">🔈</span>
+                  <span className="text-xs">ðŸ”ˆ</span>
                   <input type="range" min="0.1" max="2.0" step="0.1" value={soundVolume}
                     onChange={e => setSoundVolume(parseFloat(e.target.value))}
                     className="w-20 accent-yellow-500"
-                    title={`Lautstärke: ${Math.round(soundVolume * 100)}%`} />
+                    title={`LautstÃ¤rke: ${Math.round(soundVolume * 100)}%`} />
                   <span className="text-xs font-bold text-yellow-700 w-8">{Math.round(soundVolume * 100)}%</span>
-                  <button onClick={() => playSound(soundVolume)} className="text-xs text-yellow-600 hover:text-yellow-800 font-semibold">▶</button>
+                  <button onClick={() => playSound(soundVolume)} className="text-xs text-yellow-600 hover:text-yellow-800 font-semibold">â–¶</button>
                 </div>
               )}
             </div>
@@ -873,19 +873,19 @@ export default function KanbanPage() {
         <div className="flex gap-2 mb-5">
           <button onClick={() => setShowAllDays(false)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition border-2 ${!showAllDays ? 'bg-black text-white border-black' : 'bg-white border-gray-200 hover:border-black'}`}>
-            📅 Nur Heute
+            ðŸ“… Nur Heute
           </button>
           <button onClick={() => setShowAllDays(true)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition border-2 ${showAllDays ? 'bg-black text-white border-black' : 'bg-white border-gray-200 hover:border-black'}`}>
-            📋 Alle
+            ðŸ“‹ Alle
           </button>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64"><div className="text-5xl animate-pulse">🍦</div></div>
+          <div className="flex items-center justify-center h-64"><div className="text-5xl animate-pulse">ðŸ¦</div></div>
         ) : (
-          <div className="grid grid-cols-4 gap-4">
-            {COLUMNS.map((col, colIdx) => (
+          <div className="grid grid-cols-3 gap-4">
+            {COLUMNS.filter(col => !col.hidden).map((col) => { const colIdx = COLUMNS.findIndex(c => c.id === col.id); return (
               <div key={col.id} className={`rounded-xl ${col.color} border-2 ${col.border} p-3`}>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-bold text-sm flex items-center gap-1.5">
