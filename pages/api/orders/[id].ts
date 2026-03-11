@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .from('orders')
     .update({ ...updateData, updated_at: new Date().toISOString() })
     .eq('id', id as string)
-    .select('*, user:user_id(push_token), guest_email, customer_name')
+    .select('*, customer:user_id(push_token), guest_email, customer_name')
     .single()
 
   if (error) return res.status(500).json({ error: error.message })
@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Push Notification bei Statuswechsel
   if (updateData.status && STATUS_MESSAGES[updateData.status]) {
     const { title, body } = STATUS_MESSAGES[updateData.status];
-    const pushToken = data.user?.push_token;
+    const pushToken = data.customer?.push_token;
     if (pushToken) {
       await sendPushNotification(pushToken, title, body, id as string);
     }
