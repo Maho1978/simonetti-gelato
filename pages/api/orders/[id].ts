@@ -14,22 +14,19 @@ const STATUS_MESSAGES: Record<string, { title: string; body: string }> = {
   STORNIERT:      { title: '❌ Bestellung storniert', body: 'Leider musste deine Bestellung storniert werden. Ruf uns an!' },
 };
 
-async function sendPushNotification(pushToken: string, title: string, body: string, orderId: string) {
-  if (!pushToken || !pushToken.startsWith('ExponentPushToken')) return;
+async function sendPush(token: string, title: string, body: string, orderId: string) {
+  if (!token?.startsWith('ExponentPushToken')) return;
   try {
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Accept-Encoding': 'gzip, deflate' },
-      body: JSON.stringify({ to: pushToken, title, body, sound: 'default', priority: 'high', channelId: 'orders', data: { orderId } }),
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ to: token, title, body, sound: 'default', priority: 'high', channelId: 'orders', data: { orderId } }),
     });
-  } catch (e) {
-    console.error('Push error:', e);
-  }
+  } catch (e) { console.error('Push error:', e); }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' })
-
   const { id } = req.query
   const updateData = req.body
   if (!id) return res.status(400).json({ error: 'Missing order id' })
@@ -38,17 +35,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .from('orders')
     .update({ ...updateData, updated_at: new Date().toISOString() })
     .eq('id', id as string)
-    .select('*, customer:user_id(push_token), guest_email, customer_name')
+    .select('id, user_id, status')
     .single()
 
   if (error) return res.status(500).json({ error: error.message })
 
-  // Push Notification bei Statuswechsel
-  if (updateData.status && STATUS_MESSAGES[updateData.status]) {
-    const { title, body } = STATUS_MESSAGES[updateData.status];
-    const pushToken = data.customer?.push_token;
-    if (pushToken) {
-      await sendPushNotification(pushToken, title, body, id as string);
+  // Push bei Statuswechsel
+  if (updateData.status && STATUS_MESSAGES[updateData.status] && data.user_id) {
+    const { data: tokenData } = await supabaseAdmin
+      .from('push_tokens')
+      .select('token')
+      .eq('user_id', data.user_id)
+      .single();
+
+    if (tokenData?.token) {
+      const { title, body } = STATUS_MESSAGES[updateData.status];
+      await sendPush(tokenData.token, title, body, id as string);
     }
   }
 
