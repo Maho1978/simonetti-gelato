@@ -711,7 +711,7 @@ export default function KanbanPage() {
     isFirstLoad.current = false
 
     const grouped: Record<string, any[]> = { OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] }
-    data.forEach(o => { const s = o.status || 'OFFEN'; if (grouped[s]) grouped[s].push(o) })
+    data.forEach(o => { const s = o.status === 'AUSSTEHEND' ? 'OFFEN' : (o.status || 'OFFEN'); if (grouped[s]) grouped[s].push(o) })
     setOrders(grouped)
     setLoading(false)
   }, [])
@@ -750,7 +750,7 @@ export default function KanbanPage() {
   }
 
   const acceptOrder = async (orderId: string) => {
-    const order = orders['OFFEN'].find(o => o.id === orderId)
+    const order = [...(orders['OFFEN'] || []), ...(orders['IN_BEARBEITUNG'] || [])].find(o => o.id === orderId) || Object.values(orders).flat().find(o => o.id === orderId)
     const ok = await apiUpdateOrder(orderId, { status: 'IN_BEARBEITUNG' })
     if (ok) { if (order) await sendEmail('order_confirmed', order); loadOrders() }
   }
@@ -992,6 +992,8 @@ export default function KanbanPage() {
     </AdminLayout>
   )
 }
+
+
 
 
 
