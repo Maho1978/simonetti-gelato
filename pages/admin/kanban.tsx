@@ -150,7 +150,9 @@ function printOrder(order: any) {
   const tipHtml      = tip > 0 ? `<tr class="total-row"><td colspan="2">Trinkgeld</td><td>${tip.toFixed(2)}</td></tr>` : ''
   const notesHtml    = order.notes ? `<tr><td colspan="3"><div class="sep-dashed"></div></td></tr><tr><td colspan="3" class="section-label">ANMERKUNG:</td></tr><tr><td colspan="3" class="notes-text">${order.notes}</td></tr>` : ''
   const phoneHtml    = order.customer_phone ? `<tr><td colspan="3">Tel: <b>${order.customer_phone}</b></td></tr>` : ''
-  const paymentLabel = (order.payment_method === 'cash' || order.payment_intent_id?.startsWith('cash-')) ? 'Barzahlung' : order.payment_method === 'paypal' ? 'PayPal' : 'Stripe (inkl. Klarna)'
+  const isBonCash   = order.payment_method === 'cash' || order.payment_intent_id?.startsWith('cash-')
+  const isBonPayPal = !isBonCash && (order.payment_method === 'paypal' || (order.payment_intent_id && !order.payment_intent_id.startsWith('pi_') && !order.payment_intent_id.startsWith('cash-')))
+  const paymentLabel = isBonCash ? 'Barzahlung' : isBonPayPal ? 'PayPal' : 'Stripe (inkl. Klarna)'
   const pickupLabel  = order.order_type === 'pickup' ? 'ABHOLUNG' : 'LIEFERUNG'
 
   const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"/><title>Bon #${orderNr}</title>
