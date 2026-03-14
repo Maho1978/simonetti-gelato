@@ -141,9 +141,7 @@ function printOrder(order: any) {
     for (const extra of extrasWithPrice) {
       itemsHtml += `<tr><td></td><td class="item-detail">+ ${extra.name}</td><td class="item-price" style="font-size:12px">${(extra.price).toFixed(2)}</td></tr>`
     }
-    if (extrasWithPrice.length > 0) {
-      itemsHtml += `<tr><td></td><td class="item-detail" style="border-top:1px dotted #999">= Gesamt</td><td class="item-price" style="border-top:1px dotted #999;font-weight:900">${item.lineTotal}</td></tr>`
-    } else if (item.extras.length > 0) {
+    if (extrasWithPrice.length === 0 && item.extras.length > 0) {
       itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Extras: ${item.extras.join(', ')}</td></tr>`
     }
   }
