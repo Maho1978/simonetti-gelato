@@ -688,7 +688,7 @@ export default function KanbanPage() {
     if (error || !data) return
 
     if (!isFirstLoad.current) {
-      const newOnes = data.filter(o => !knownIds.current.has(o.id) && (o.status === 'OFFEN' || o.status === 'AUSSTEHEND')
+      const newOnes = data.filter(o => !knownIds.current.has(o.id) && (o.status === 'OFFEN' || o.status === 'AUSSTEHEND'))
       if (newOnes.length > 0) {
         if (soundRef.current) playSound(volumeRef.current)
         setNewOrderBanner(true)
@@ -992,6 +992,7 @@ export default function KanbanPage() {
     </AdminLayout>
   )
 }
+
 
 
 
