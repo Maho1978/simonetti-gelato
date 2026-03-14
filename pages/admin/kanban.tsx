@@ -134,9 +134,18 @@ function printOrder(order: any) {
 
   let itemsHtml = ''
   for (const item of items) {
-    itemsHtml += `<tr><td class="item-qty">${item.quantity}x</td><td class="item-name">${item.name}</td><td class="item-price">${item.lineTotal}</td></tr>`
+    const extrasWithPrice = (item.selectedExtras || []).filter((e: any) => typeof e === 'object' && e.price)
+    const basePrice = item.price * item.quantity
+    itemsHtml += `<tr><td class="item-qty">${item.quantity}x</td><td class="item-name">${item.name}</td><td class="item-price">${basePrice.toFixed(2)}</td></tr>`
     if (item.flavors.length > 0) itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Sorten: ${item.flavors.join(', ')}</td></tr>`
-    if (item.extras.length > 0)  itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Extras: ${item.extras.join(', ')}</td></tr>`
+    for (const extra of extrasWithPrice) {
+      itemsHtml += `<tr><td></td><td class="item-detail">+ ${extra.name}</td><td class="item-price" style="font-size:12px">${(extra.price).toFixed(2)}</td></tr>`
+    }
+    if (extrasWithPrice.length > 0) {
+      itemsHtml += `<tr><td></td><td class="item-detail" style="border-top:1px dotted #999">= Gesamt</td><td class="item-price" style="border-top:1px dotted #999;font-weight:900">${item.lineTotal}</td></tr>`
+    } else if (item.extras.length > 0) {
+      itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Extras: ${item.extras.join(', ')}</td></tr>`
+    }
   }
 
   const discountHtml = discount > 0 ? `<tr class="total-row"><td colspan="2">Gutschein${order.voucher_code ? ` (${order.voucher_code})` : ''}</td><td>${(-discount).toFixed(2)}</td></tr>` : ''
