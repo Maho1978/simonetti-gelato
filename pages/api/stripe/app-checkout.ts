@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             name: 'Simonetti Bestellung #' + order.id.slice(-6).toUpperCase(),
             description: `${orderData.items?.length || 1} Artikel · ${orderData.order_type === 'delivery' ? 'Lieferung' : 'Abholung'}`,
           },
-          unit_amount: Math.round(amount * 100),
+          unit_amount: Math.round(Number(amount) * 100),
         },
         quantity: 1,
       }],
