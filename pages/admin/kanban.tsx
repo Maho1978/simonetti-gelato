@@ -779,7 +779,7 @@ export default function KanbanPage() {
 
   const deliveredOrders = orders['GELIEFERT'] || []
   const isCash    = (o: any) => o.payment_method === 'cash' || o.payment_intent_id?.startsWith('cash-')
-  const isPayPal  = (o: any) => o.payment_method === 'paypal' || (!o.payment_method && o.payment_intent_id && !o.payment_intent_id.startsWith('pi_') && !o.payment_intent_id.startsWith('cash-'))
+  const isPayPal  = (o: any) => o.payment_method === 'paypal' || (o.payment_intent_id && !o.payment_intent_id.startsWith('pi_') && !o.payment_intent_id.startsWith('cash-'))
   const isStripe  = (o: any) => !isCash(o) && !isPayPal(o)
   const stripeTotal    = deliveredOrders.filter(isStripe).reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
   const paypalTotal    = deliveredOrders.filter(isPayPal).reduce((sum, o) => sum + (o.total || 0) - (o.tip || 0), 0)
