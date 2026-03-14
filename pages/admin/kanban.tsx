@@ -263,9 +263,26 @@ function RejectModal({ order, onConfirm, onCancel }: { order: any; onConfirm: (r
   )
 }
 
+function TimeAdjuster({ label, value, onChange, min = 5, max = 120, step = 5 }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number }) {
+  return (
+    <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-2.5">
+      <span className="text-sm font-semibold text-gray-600">{label}</span>
+      <div className="flex items-center gap-3">
+        <button onClick={() => onChange(Math.max(min, value - step))} className="w-8 h-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center hover:border-black transition font-bold">−</button>
+        <span className="text-lg font-black text-gray-900 w-16 text-center">{value} Min</span>
+        <button onClick={() => onChange(Math.min(max, value + step))} className="w-8 h-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center hover:border-black transition font-bold">+</button>
+      </div>
+    </div>
+  )
+}
+
 function NewOrderPopup({ order, onAccept, onReject, onLater }: {
-  order: any; onAccept: () => void; onReject: () => void; onLater: () => void
+  order: any; onAccept: (prepTime: number, deliveryTime: number) => void; onReject: () => void; onLater: () => void
 }) {
+  const isPickup = order.order_type === 'pickup'
+  const [prepTime, setPrepTime] = useState(15)
+  const [deliveryTime, setDeliveryTime] = useState(30)
+  const totalTime = isPickup ? prepTime : prepTime + deliveryTime
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden" style={{ animation: 'popIn 0.35s ease-out' }}>
@@ -324,13 +341,24 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
               )}
             </div>
           </div>
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-5 mb-5">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-blue-600">🕐</span>
+              <h3 className="font-bold text-blue-800">Geschätzte Zeit</h3>
+              <span className="ml-auto text-2xl font-black text-blue-700">~{totalTime} Min</span>
+            </div>
+            <div className="space-y-3">
+              <TimeAdjuster label="🍦 Zubereitung" value={prepTime} onChange={setPrepTime} />
+              {!isPickup && <TimeAdjuster label="🚗 Lieferung" value={deliveryTime} onChange={setDeliveryTime} />}
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-4 mb-3">
             <button onClick={onReject}
               className="py-5 rounded-2xl bg-red-50 text-red-600 font-black text-xl hover:bg-red-100 transition flex items-center justify-center gap-3"
               style={{ border: '3px solid #fca5a5' }}>
               <XCircle size={28} /> Ablehnen
             </button>
-            <button onClick={onAccept}
+            <button onClick={() => onAccept(prepTime, deliveryTime)}
               className="py-5 rounded-2xl bg-green-500 text-white font-black text-xl hover:bg-green-600 transition flex items-center justify-center gap-3 shadow-xl"
               style={{ boxShadow: '0 8px 32px rgba(34,197,94,0.4)' }}>
               <Check size={28} /> Annehmen ✓
@@ -660,7 +688,7 @@ export default function KanbanPage() {
     if (error || !data) return
 
     if (!isFirstLoad.current) {
-      const newOnes = data.filter(o => !knownIds.current.has(o.id) && o.status === 'OFFEN')
+      const newOnes = data.filter(o => !knownIds.current.has(o.id) && o.status === 'OFFEN' || o.status === 'AUSSTEHEND')
       if (newOnes.length > 0) {
         if (soundRef.current) playSound(volumeRef.current)
         setNewOrderBanner(true)
@@ -673,6 +701,11 @@ export default function KanbanPage() {
         }
       }
     }
+
+    // Auto-Delete: nicht angenommene Bestellungen nach 1 Stunde loeschen
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+    const toDelete = data.filter(o => (o.status === 'OFFEN' || o.status === 'AUSSTEHEND') && new Date(o.created_at) < oneHourAgo)
+    for (const o of toDelete) { await supabase.from('orders').delete().eq('id', o.id) }
 
     data.forEach(o => knownIds.current.add(o.id))
     isFirstLoad.current = false
@@ -711,9 +744,9 @@ export default function KanbanPage() {
     }
   }
 
-  const acceptFromPopup = async (order: any) => {
-    const ok = await apiUpdateOrder(order.id, { status: 'IN_BEARBEITUNG' })
-    if (ok) { await sendEmail('order_confirmed', order); await sendTelegram(order); closePopup(); loadOrders() }
+  const acceptFromPopup = async (order: any, prepTime: number, deliveryTime: number) => {
+    const ok = await apiUpdateOrder(order.id, { status: 'IN_BEARBEITUNG', prep_time: prepTime, delivery_time: deliveryTime })
+    if (ok) { await sendEmail('order_confirmed', order); await sendTelegram(order); await sendPush(order, 'IN_BEARBEITUNG'); closePopup(); loadOrders() }
   }
 
   const acceptOrder = async (orderId: string) => {
@@ -820,7 +853,7 @@ export default function KanbanPage() {
       {popupOrder && !rejectTarget && (
         <NewOrderPopup
           order={popupOrder}
-          onAccept={() => acceptFromPopup(popupOrder)}
+          onAccept={(prepTime, deliveryTime) => acceptFromPopup(popupOrder, prepTime, deliveryTime)}
           onReject={() => setRejectTarget(popupOrder)}
           onLater={closePopup}
         />
@@ -959,3 +992,11 @@ export default function KanbanPage() {
     </AdminLayout>
   )
 }
+
+
+
+
+
+
+
+
