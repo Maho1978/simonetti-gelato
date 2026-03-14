@@ -660,7 +660,7 @@ export default function KanbanPage() {
     if (error || !data) return
 
     if (!isFirstLoad.current) {
-      const newOnes = data.filter(o => !knownIds.current.has(o.id) && o.status === 'OFFEN')
+      const newOnes = data.filter(o => !knownIds.current.has(o.id) && (o.status === 'OFFEN' || o.status === 'AUSSTEHEND'))
       if (newOnes.length > 0) {
         if (soundRef.current) playSound(volumeRef.current)
         setNewOrderBanner(true)
@@ -673,6 +673,11 @@ export default function KanbanPage() {
         }
       }
     }
+
+    // Auto-Delete nach 1 Stunde
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+    const toDelete = data.filter(o => (o.status === 'OFFEN' || o.status === 'AUSSTEHEND') && new Date(o.created_at) < oneHourAgo)
+    for (const o of toDelete) { await supabase.from('orders').delete().eq('id', o.id) }
 
     data.forEach(o => knownIds.current.add(o.id))
     isFirstLoad.current = false
@@ -959,3 +964,5 @@ export default function KanbanPage() {
     </AdminLayout>
   )
 }
+
+
