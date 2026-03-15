@@ -136,7 +136,7 @@ function printOrder(order: any) {
   for (const item of items) {
     const extrasWithPrice = (item.selectedExtras || []).filter((e: any) => typeof e === 'object' && e.price)
     const basePrice = item.price * item.quantity
-    itemsHtml += `<tr><td class="item-qty">${item.quantity}x</td><td class="item-name">${item.name}</td><td class="item-price">${basePrice.toFixed(2)}</td></tr>`
+    itemsHtml += `<tr><td class="item-qty">${item.quantity}x</td><td class="item-name">${item.name || item.productName}</td><td class="item-price">${basePrice.toFixed(2)}</td></tr>`
     if (item.flavors.length > 0) itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Sorten: ${item.flavors.join(', ')}</td></tr>`
     for (const extra of extrasWithPrice) {
       itemsHtml += `<tr><td></td><td class="item-detail">+ ${extra.name}</td><td class="item-price" style="font-size:12px">${(extra.price).toFixed(2)}</td></tr>`
@@ -326,7 +326,7 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
                 {(order.items || []).map((item: any, i: number) => (
                   <div key={i} className="flex justify-between text-sm">
                     <div>
-                      <span className="font-bold text-gray-900">{item.quantity}x {item.name}</span>
+                      <span className="font-bold text-gray-900">{item.quantity}x {item.name || item.productName}</span>
                       {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-400">🍦 {item.selectedFlavors.join(', ')}</div>}
                       {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-400">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
                     </div>
@@ -464,7 +464,7 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
               {(order.items || []).map((item: any, i: number) => (
                 <div key={i} className="flex justify-between items-start bg-gray-50 rounded-xl p-3">
                   <div>
-                    <span className="font-bold text-gray-900">{item.quantity}x {item.name}</span>
+                    <span className="font-bold text-gray-900">{item.quantity}x {item.name || item.productName}</span>
                     {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-500 mt-0.5">🍦 {item.selectedFlavors.join(', ')}</div>}
                     {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-500">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
                   </div>
@@ -996,6 +996,10 @@ export default function KanbanPage() {
     </AdminLayout>
   )
 }
+
+
+
+
 
 
 
