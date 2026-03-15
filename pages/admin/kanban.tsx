@@ -136,7 +136,13 @@ function printOrder(order: any) {
     const extrasWithPrice = (item.selectedExtras || []).filter((e: any) => typeof e === 'object' && e.price)
     const basePrice = item.price * item.quantity
     itemsHtml += `<tr><td class="item-qty">${item.quantity}x</td><td class="item-name">${item.name || item.productName}</td><td class="item-price">${basePrice.toFixed(2)}</td></tr>`
-    if (item.flavors.length > 0) itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Sorten: ${item.flavors.join(', ')}</td></tr>`
+    if (item.flavors.length > 0) {
+      for (const flavor of item.flavors) {
+        const flavorName = typeof flavor === 'object' ? flavor.name : flavor
+        const flavorPrice = typeof flavor === 'object' ? (flavor.price || 0) : 0
+        itemsHtml += `<tr><td></td><td class="item-detail">🍦 ${flavorName}</td><td class="item-price" style="font-size:12px">${flavorPrice > 0 ? flavorPrice.toFixed(2) : 'inkl.'}</td></tr>`
+      }
+    }
     for (const extra of extrasWithPrice) {
       itemsHtml += `<tr><td></td><td class="item-detail">+ ${extra.name}</td><td class="item-price" style="font-size:12px">${(extra.price).toFixed(2)}</td></tr>`
     }
