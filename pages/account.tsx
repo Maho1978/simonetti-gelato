@@ -83,6 +83,11 @@ export default function Account({ session }: { session: Session | null }) {
     )
   }
 
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar session={session} cartCount={0} onCartClick={() => {}} />
@@ -203,6 +208,17 @@ export default function Account({ session }: { session: Session | null }) {
             </div>
           )}
         </div>
+
+        {/* Abmelden */}
+        <div className="max-w-4xl mx-auto px-4 pb-10">
+          <button
+            onClick={handleSignOut}
+            className="w-full py-3 border-2 border-red-200 text-red-500 rounded-xl font-semibold hover:bg-red-50 transition text-sm"
+          >
+            🚪 Abmelden
+          </button>
+        </div>
+
       </div>
     </div>
   )
