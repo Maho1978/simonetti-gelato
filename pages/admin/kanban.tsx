@@ -138,10 +138,28 @@ function printOrder(order: any) {
     const basePrice = item.totalPrice ? (item.totalPrice - extrasTotal2) : item.price * item.quantity
     itemsHtml += `<tr><td class="item-qty">${item.quantity}x</td><td class="item-name">${item.name || item.productName}</td><td class="item-price">${basePrice.toFixed(2)}</td></tr>`
     if (item.flavors.length > 0) {
+      const flavorPriceMap = item.flavorPriceMap || {}
+      // Sorten gruppieren und zählen
+      const flavorGroups: Record<string, number> = {}
       for (const flavor of item.flavors) {
-        const flavorName = typeof flavor === 'object' ? flavor.name : flavor
-        const flavorPrice = typeof flavor === 'object' ? (flavor.price || 0) : 0
-        itemsHtml += `<tr><td></td><td class="item-detail">🍦 ${flavorName}</td><td class="item-price" style="font-size:12px">${flavorPrice > 0 ? flavorPrice.toFixed(2) : 'inkl.'}</td></tr>`
+        const fname = typeof flavor === 'object' ? flavor.name : flavor
+        flavorGroups[fname] = (flavorGroups[fname] || 0) + 1
+      }
+      // Aufpreis aus totalPrice berechnen falls flavorPriceMap leer
+      const extrasSum = (item.selectedExtras || []).filter((e: any) => e.price > 0).reduce((s: number, e: any) => s + e.price, 0)
+      const flavorTotalPrice = item.totalPrice ? (item.totalPrice - item.price * item.quantity - extrasSum) : 0
+      const totalFlavors = Object.values(flavorGroups).reduce((s: number, n: number) => s + n, 0)
+
+      for (const [fname, count] of Object.entries(flavorGroups)) {
+        let unitPrice = flavorPriceMap[fname] || 0
+        // Fallback: Aufpreis gleichmäßig verteilen
+        if (!unitPrice && flavorTotalPrice > 0) {
+          unitPrice = flavorTotalPrice / totalFlavors
+        }
+        const linePrice = unitPrice * count
+        const priceLabel = linePrice > 0 ? `${linePrice.toFixed(2)}` : 'inkl.'
+        const label = count > 1 ? `🍦 ${count}x ${fname}` : `🍦 ${fname}`
+        itemsHtml += `<tr><td></td><td class="item-detail">${label}</td><td class="item-price" style="font-size:12px">${priceLabel}</td></tr>`
       }
     }
     for (const extra of extrasWithPrice) {
@@ -1000,21 +1018,3 @@ export default function KanbanPage() {
     </AdminLayout>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
