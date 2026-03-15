@@ -5,15 +5,17 @@ import ProductCard, { ProductGrid, CategoryHeader } from '@/components/ProductCa
 import MiniCart from '@/components/MiniCart'
 import Footer from '@/components/Footer'
 import CookieBanner from '@/components/CookieBanner'
-import ShopStatusBanner from '@/components/ShopStatusBanner'
 import WelcomeBanner from '@/components/WelcomeBanner'
+import ShopStatusBanner from '@/components/ShopStatusBanner'
 import { supabase } from '@/lib/supabase'
+
+interface FlavorItem { name: string; price: number }
 
 export default function Home() {
   const [products, setProducts]               = useState<any[]>([])
   const [extras, setExtras]                   = useState<any[]>([])
   const [categories, setCategories]           = useState<string[]>([])
-  const [flavors, setFlavors]                 = useState<{ name: string; price: number }[]>([])
+  const [flavors, setFlavors]                 = useState<FlavorItem[]>([])
   const [selectedCategory, setSelectedCategory] = useState('')
   const [session, setSession]                 = useState<any>(null)
   const [loading, setLoading]                 = useState(true)
@@ -71,7 +73,7 @@ export default function Home() {
         .filter(c => c.visible === false)
         .map(c => c.name)
 
-      const dynamicFlavors = activeProducts
+      const dynamicFlavors: FlavorItem[] = activeProducts
         .filter(p => hiddenCatNames.includes(p.category))
         .map(p => ({ name: p.name, price: p.price || 0 }))
         .sort((a, b) => a.name.localeCompare(b.name))
@@ -91,12 +93,18 @@ export default function Home() {
   }
 
   const handleAddToCart = (product: any, portions = 1, selectedFlavors: string[] = [], selectedExtras: any[] = []) => {
+    // Flavor-Aufpreise berechnen
+    const flavorExtraPrice = selectedFlavors.reduce((sum, fname) => {
+      const fl = flavors.find(f => f.name === fname)
+      return sum + (fl ? (fl.price || 0) : 0)
+    }, 0)
+
     const cartItem = {
       ...product,
       quantity: portions,
       selectedFlavors,
       selectedExtras,
-      totalPrice: (product.price * portions) + selectedExtras.reduce((sum, e) => sum + e.price, 0),
+      totalPrice: (product.price * portions) + selectedExtras.reduce((sum, e) => sum + e.price, 0) + flavorExtraPrice,
       cartId: `${product.id}-${Date.now()}`
     }
     saveCart([...cart, cartItem])
@@ -112,7 +120,6 @@ export default function Home() {
     ))
   }
 
-  // FIX: Anmerkungen updaten ohne den Cart neu zu mounten
   const updateCartNotes = (cartId: string, notes: string) => {
     setCart(prev => {
       const updated = prev.map(item =>
@@ -152,7 +159,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <CategoryHeader
             title="Unsere Gelato-Sorten"
-            description="TÃ¤glich frisch hergestellt nach traditioneller italienischer Rezeptur"
+            description="Täglich frisch hergestellt nach traditioneller italienischer Rezeptur"
           />
 
           {categories.length > 0 && (
@@ -175,12 +182,12 @@ export default function Home() {
 
           {loading ? (
             <div className="text-center py-12">
-              <div className="text-6xl mb-4 animate-pulse">ðŸ¦</div>
-              <p className="text-gray-600">LÃ¤dt Produkte...</p>
+              <div className="text-6xl mb-4 animate-pulse">🍦</div>
+              <p className="text-gray-600">Lädt Produkte...</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-6xl mb-4">ðŸ˜”</div>
+              <div className="text-6xl mb-4">😔</div>
               <p className="text-gray-600 text-xl">Keine Produkte in dieser Kategorie</p>
             </div>
           ) : (
@@ -190,11 +197,8 @@ export default function Home() {
                   key={product.id}
                   product={product}
                   extras={extras.filter(e => {
-                    // global: fÃ¼r alle Produkte
                     if (!e.scope || e.scope === 'global') return true
-                    // category: nur fÃ¼r bestimmte Kategorien
                     if (e.scope === 'category') return (e.category_names || []).includes(product.category)
-                    // product: nur fÃ¼r bestimmte Produkte
                     if (e.scope === 'product') return (e.product_ids || []).includes(product.id)
                     return false
                   })}
@@ -212,4 +216,3 @@ export default function Home() {
     </div>
   )
 }
-
