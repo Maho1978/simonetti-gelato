@@ -13,7 +13,7 @@ export default function Home() {
   const [products, setProducts]               = useState<any[]>([])
   const [extras, setExtras]                   = useState<any[]>([])
   const [categories, setCategories]           = useState<string[]>([])
-  const [flavors, setFlavors]                 = useState<string[]>([])
+  const [flavors, setFlavors]                 = useState<{ name: string; price: number }[]>([])
   const [selectedCategory, setSelectedCategory] = useState('')
   const [session, setSession]                 = useState<any>(null)
   const [loading, setLoading]                 = useState(true)
@@ -73,8 +73,8 @@ export default function Home() {
 
       const dynamicFlavors = activeProducts
         .filter(p => hiddenCatNames.includes(p.category))
-        .map(p => p.name)
-        .sort()
+        .map(p => ({ name: p.name, price: p.price || 0 }))
+        .sort((a, b) => a.name.localeCompare(b.name))
 
       setFlavors(dynamicFlavors)
 
