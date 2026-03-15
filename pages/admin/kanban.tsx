@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 
 const COLUMNS = [
-  { id: 'OFFEN',          title: 'Offen',          color: 'bg-red-50',    border: 'border-red-200',    icon: '🔔',  hidden: true },
   { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-50',   border: 'border-blue-200',   icon: '👨‍🍳' },
   { id: 'AN_FAHRER',      title: 'An Fahrer',      color: 'bg-orange-50', border: 'border-orange-200', icon: '🚗' },
   { id: 'GELIEFERT',      title: 'Geliefert',      color: 'bg-green-50',  border: 'border-green-200',  icon: '✅' },
@@ -713,7 +712,7 @@ export default function KanbanPage() {
     isFirstLoad.current = false
 
     const grouped: Record<string, any[]> = { OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] }
-    data.forEach(o => { const s = o.status === 'AUSSTEHEND' ? 'OFFEN' : (o.status || 'OFFEN'); if (grouped[s]) grouped[s].push(o) })
+    data.forEach(o => { const s = (o.status === 'AUSSTEHEND' || o.status === 'OFFEN') ? 'IN_BEARBEITUNG' : (o.status || 'IN_BEARBEITUNG'); if (grouped[s]) grouped[s].push(o) })
     setOrders(grouped)
     setLoading(false)
   }, [])
@@ -994,6 +993,8 @@ export default function KanbanPage() {
     </AdminLayout>
   )
 }
+
+
 
 
 
