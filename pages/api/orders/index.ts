@@ -1,4 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+﻿import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 
 // Hilfsfunktion: Bestellnummer generieren z.B. "SIM-2024-0042"
@@ -10,7 +10,7 @@ function generateOrderNumber(): string {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
 
-  // ── POST: Neue Bestellung ──────────────────────────────────
+  // â”€â”€ POST: Neue Bestellung â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (req.method === 'POST') {
     try {
       const {
@@ -30,6 +30,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         delivery_address,
         notes,
         payment_intent_id,
+        payment_method,
+        order_type,
         status,
       } = req.body
 
@@ -53,6 +55,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           delivery_address,
           notes:             notes             || null,
           payment_intent_id: payment_intent_id || null,
+          payment_method:    payment_method    || 'cash',
+          order_type:        order_type        || 'delivery',
           status:            status            || 'OFFEN',
         })
         .select()
@@ -66,7 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ error: error.message || 'Failed to create order' })
     }
 
-  // ── GET: Bestellungen laden ────────────────────────────────
+  // â”€â”€ GET: Bestellungen laden â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   } else if (req.method === 'GET') {
     try {
       const { user_id } = req.query
@@ -91,3 +95,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(405).json({ error: 'Method not allowed' })
   }
 }
+
