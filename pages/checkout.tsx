@@ -318,7 +318,8 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const subtotal   = cart.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity), 0)
   const discount   = voucher?.discountAmount || 0
-  const grandTotal = parseFloat(Math.max(0, subtotal - discount + effectiveDeliveryFee + tip).toFixed(2))
+  const roundTo10Cents = (val: number) => Math.round(val * 10) / 10
+  const grandTotal = roundTo10Cents(Math.max(0, subtotal - discount + effectiveDeliveryFee + tip))
 
   const createPaymentIntent = async (cartItems: CartItem[], appliedVoucher: AppliedVoucher | null, tipAmount: number, fee?: number) => {
     const sub    = cartItems.reduce((sum, i) => sum + (i.totalPrice || i.price * i.quantity), 0)
