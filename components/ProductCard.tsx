@@ -10,6 +10,11 @@ interface Extra {
   selection_type?: 'multiple' | 'single'
 }
 
+interface FlavorItem {
+  name: string
+  price: number
+}
+
 interface ProductCardProps {
   product: {
     id: string
@@ -29,16 +34,24 @@ interface ProductCardProps {
     is_lactosefree?: boolean
   }
   extras: Extra[]
-  flavors?: { name: string; price: number }[]
+  flavors?: FlavorItem[] | string[]
   onAddToCart: (product: any, portions: number, selectedFlavors: string[], selectedExtras: Extra[]) => void
 }
 
 export default function ProductCard({ product, extras, flavors = [], onAddToCart }: ProductCardProps) {
-  const [showModal, setShowModal] = useState(false)
-  const portionSize = product.portion_size || 1
-  const availableFlavors = flavors.length > 0 ? flavors : (product.available_flavors || [])
+  const [showModal, setShowModal]       = useState(false)
+  const portionSize                     = product.portion_size || 1
+
+  // Normalize flavors to objects
+  const availableFlavors: FlavorItem[] = (flavors.length > 0 ? flavors : (product.available_flavors || []))
+    .map((f: any) => typeof f === 'string' ? { name: f, price: 0 } : f)
+
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>([])
-  const [selectedExtras, setSelectedExtras] = useState<Extra[]>([])
+  const [selectedExtras, setSelectedExtras]   = useState<Extra[]>([])
+  const [radioError, setRadioError]     = useState(false)
+
+  const singleExtras   = extras.filter(e => e.selection_type === 'single')
+  const multipleExtras = extras.filter(e => e.selection_type !== 'single')
 
   const handleQuickAdd = () => {
     if (product.has_portions || (extras && extras.length > 0)) {
@@ -53,6 +66,14 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
       alert(`Bitte wähle mindestens 1 Sorte aus!`)
       return
     }
+    if (singleExtras.length > 0) {
+      const hasSelectedSingle = selectedExtras.some(e => singleExtras.find(s => s.id === e.id))
+      if (!hasSelectedSingle) {
+        setRadioError(true)
+        return
+      }
+    }
+    setRadioError(false)
     onAddToCart(product, 1, selectedFlavors, selectedExtras)
     setShowModal(false)
     setSelectedFlavors([])
@@ -80,38 +101,26 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
   }
 
   const selectSingleExtra = (extra: Extra) => {
-    const singleIds = extras.filter(e => e.selection_type === 'single').map(e => e.id)
+    const singleIds = singleExtras.map(e => e.id)
     const alreadySelected = selectedExtras.find(e => e.id === extra.id)
     if (alreadySelected) {
-      // Deselect
       setSelectedExtras(selectedExtras.filter(e => e.id !== extra.id))
     } else {
-      // Remove all other singles, add this one
       setSelectedExtras([...selectedExtras.filter(e => !singleIds.includes(e.id)), extra])
     }
+    setRadioError(false)
   }
 
-  const selectedFlavorObjects = availableFlavors.filter((f: any) => selectedFlavors.includes(f.name))
-  const flavorExtraPrice = selectedFlavorObjects.reduce((sum: number, f: any) => sum + (f.price || 0), 0)
+  const selectedFlavorObjects = availableFlavors.filter(f => selectedFlavors.includes(f.name))
+  const flavorExtraPrice = selectedFlavorObjects.reduce((sum, f) => sum + (f.price || 0), 0)
   const totalPrice = product.price + flavorExtraPrice + selectedExtras.reduce((sum, e) => sum + e.price, 0)
-
-  const singleExtras   = extras.filter(e => e.selection_type === 'single')
-  const multipleExtras = extras.filter(e => e.selection_type !== 'single')
 
   const DiaetBadges = ({ small = false }: { small?: boolean }) => (
     <div className="flex flex-wrap gap-1">
-      {product.is_vegan && (
-        <span className={`px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full font-medium ${small ? 'text-xs' : 'text-xs'}`}>🌱 Vegan</span>
-      )}
-      {product.is_vegetarian && !product.is_vegan && (
-        <span className={`px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full font-medium ${small ? 'text-xs' : 'text-xs'}`}>🥗 Vegetarisch</span>
-      )}
-      {product.is_glutenfree && (
-        <span className={`px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium ${small ? 'text-xs' : 'text-xs'}`}>🌾 Glutenfrei</span>
-      )}
-      {product.is_lactosefree && (
-        <span className={`px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium ${small ? 'text-xs' : 'text-xs'}`}>🥛 Laktosefrei</span>
-      )}
+      {product.is_vegan && <span className={`px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full font-medium ${small ? 'text-xs' : 'text-xs'}`}>🌱 Vegan</span>}
+      {product.is_vegetarian && !product.is_vegan && <span className={`px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full font-medium ${small ? 'text-xs' : 'text-xs'}`}>🥗 Vegetarisch</span>}
+      {product.is_glutenfree && <span className={`px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium ${small ? 'text-xs' : 'text-xs'}`}>🌾 Glutenfrei</span>}
+      {product.is_lactosefree && <span className={`px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium ${small ? 'text-xs' : 'text-xs'}`}>🥛 Laktosefrei</span>}
     </div>
   )
 
@@ -120,28 +129,16 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
       {/* KARTE */}
       <div className="group relative bg-white border border-gray-100 hover:border-gray-300 transition-all duration-300 hover:shadow-md rounded-lg overflow-hidden">
         <div className="flex items-center gap-3 p-3">
-
-          {/* TEXT LINKS */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
               <h3 className="font-display font-bold text-gray-900 text-sm leading-tight">{product.name}</h3>
-              <FavoriteButton
-                productId={product.id}
-                size={14}
-                className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-              />
+              <FavoriteButton productId={product.id} size={14} className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-
-            {product.description && (
-              <p className="text-gray-500 text-xs line-clamp-2 mb-1.5">{product.description}</p>
-            )}
-
+            {product.description && <p className="text-gray-500 text-xs line-clamp-2 mb-1.5">{product.description}</p>}
             <DiaetBadges small />
-
             {product.allergens && product.allergens.length > 0 && (
               <p className="text-xs text-gray-400 mt-1 truncate">⚠️ {product.allergens.join(', ')}</p>
             )}
-
             <div className="flex items-center justify-between mt-2">
               <span className="font-display font-bold text-lg text-black">{product.price.toFixed(2)} €</span>
               <button onClick={handleQuickAdd}
@@ -151,8 +148,6 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
               </button>
             </div>
           </div>
-
-          {/* BILD RECHTS */}
           <div className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-gray-100 relative">
             {product.image_url ? (
               <Image src={product.image_url} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -207,25 +202,24 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
                       ))}
                     </div>
                   )}
+                  {/* Eissorten wie Extras — untereinander mit Preis */}
                   <div className="space-y-2">
-                    {availableFlavors.map((flavor: any) => {
-                      const flavorName = typeof flavor === 'string' ? flavor : flavor.name
-                      const flavorPrice = typeof flavor === 'string' ? 0 : (flavor.price || 0)
-                      const isSelected = selectedFlavors.includes(flavorName)
+                    {availableFlavors.map(flavor => {
+                      const isSelected = selectedFlavors.includes(flavor.name)
                       return (
-                        <label key={flavorName}
+                        <label key={flavor.name}
                           className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition ${isSelected ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-black'}`}>
                           <div className="flex items-center gap-3">
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => toggleFlavor(flavorName)}
+                              onChange={() => toggleFlavor(flavor.name)}
                               className="w-5 h-5"
                             />
-                            <span className="font-medium">🍦 {flavorName}</span>
+                            <span className="font-medium">🍦 {flavor.name}</span>
                           </div>
                           <span className="font-bold text-green-600">
-                            {flavorPrice > 0 ? `+${flavorPrice.toFixed(2)} €` : 'kostenlos'}
+                            {flavor.price > 0 ? `+${flavor.price.toFixed(2)} €` : 'kostenlos'}
                           </span>
                         </label>
                       )
@@ -237,20 +231,27 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
               {/* EXTRAS */}
               {extras && extras.length > 0 && (
                 <div>
-                  <h3 className="font-bold text-lg mb-3">Extras (optional)</h3>
+                  <h3 className="font-bold text-lg mb-3">Extras</h3>
                   <div className="space-y-2">
 
-                    {/* SINGLE: Radio — nur eine wählbar */}
+                    {/* SINGLE: Radio — Pflichtauswahl */}
                     {singleExtras.length > 0 && (
                       <div className="mb-1">
-                        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">
-                          Soße nach Wahl <span className="text-orange-400">(nur eine)</span>
+                        <p className={`text-xs font-semibold uppercase tracking-wide mb-2 flex items-center gap-1.5 ${radioError ? 'text-red-500' : 'text-gray-400'}`}>
+                          {radioError
+                            ? '⚠️ Bitte eine Option wählen (Pflichtfeld)'
+                            : 'Bitte wählen ✱ (Pflichtfeld)'}
                         </p>
                         {singleExtras.map(extra => {
                           const isSelected = !!selectedExtras.find(e => e.id === extra.id)
                           return (
                             <label key={extra.id}
-                              className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition mb-2 ${isSelected ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-black'}`}>
+                              className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition mb-2
+                                ${isSelected
+                                  ? 'border-black bg-gray-50'
+                                  : radioError
+                                    ? 'border-red-300 hover:border-red-500'
+                                    : 'border-gray-200 hover:border-black'}`}>
                               <div className="flex items-center gap-3">
                                 <input
                                   type="radio"
@@ -270,24 +271,31 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
                       </div>
                     )}
 
-                    {/* MULTIPLE: Checkbox — mehrere wählbar */}
-                    {multipleExtras.map(extra => (
-                      <label key={extra.id}
-                        className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition ${selectedExtras.find(e => e.id === extra.id) ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-black'}`}>
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            checked={!!selectedExtras.find(e => e.id === extra.id)}
-                            onChange={() => toggleExtra(extra)}
-                            className="w-5 h-5"
-                          />
-                          <span className="font-medium">{extra.name}</span>
-                        </div>
-                        <span className="font-bold text-green-600">
-                          {extra.price > 0 ? `+${extra.price.toFixed(2)} €` : 'kostenlos'}
-                        </span>
-                      </label>
-                    ))}
+                    {/* MULTIPLE: Checkbox — optional */}
+                    {multipleExtras.length > 0 && (
+                      <div>
+                        {singleExtras.length > 0 && (
+                          <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Optional</p>
+                        )}
+                        {multipleExtras.map(extra => (
+                          <label key={extra.id}
+                            className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition mb-2 ${selectedExtras.find(e => e.id === extra.id) ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-black'}`}>
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={!!selectedExtras.find(e => e.id === extra.id)}
+                                onChange={() => toggleExtra(extra)}
+                                className="w-5 h-5"
+                              />
+                              <span className="font-medium">{extra.name}</span>
+                            </div>
+                            <span className="font-bold text-green-600">
+                              {extra.price > 0 ? `+${extra.price.toFixed(2)} €` : 'kostenlos'}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
 
                   </div>
                 </div>
@@ -329,7 +337,9 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
                   className="w-full py-4 bg-black text-white font-bold text-lg uppercase tracking-wider hover:bg-gray-900 transition rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">
                   {product.has_portions && selectedFlavors.length === 0
                     ? `Bitte ${portionSize} Sorte${portionSize > 1 ? 'n' : ''} wählen`
-                    : 'In den Warenkorb'
+                    : singleExtras.length > 0 && !selectedExtras.some(e => singleExtras.find(s => s.id === e.id))
+                      ? 'Bitte eine Option wählen'
+                      : 'In den Warenkorb'
                   }
                 </button>
               </div>
@@ -354,9 +364,7 @@ export function CategoryHeader({ title, description }: { title: string; descript
   return (
     <div className="text-center mb-10">
       <h2 className="font-display text-4xl font-bold mb-3 text-black">{title}</h2>
-      {description && (
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">{description}</p>
-      )}
+      {description && <p className="text-lg text-gray-600 max-w-2xl mx-auto">{description}</p>}
     </div>
   )
 }
