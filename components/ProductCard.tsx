@@ -71,8 +71,8 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
   }
 
   const handleAddToCart = () => {
-    if (product.has_portions && totalSelected === 0) {
-      alert(`Bitte wähle mindestens 1 Sorte aus!`)
+    if (product.has_portions && totalSelected < portionSize) {
+      alert(`Bitte wähle noch ${portionSize - totalSelected} Sorte${portionSize - totalSelected > 1 ? 'n' : ''} aus!`)
       return
     }
     if (singleExtras.length > 0) {
@@ -355,7 +355,7 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
                   <span className="text-3xl font-display font-bold">{totalPrice.toFixed(2)} €</span>
                 </div>
                 <button onClick={handleAddToCart}
-                  disabled={product.has_portions && totalSelected === 0}
+                  disabled={product.has_portions && totalSelected < portionSize}
                   className="w-full py-4 bg-black text-white font-bold text-lg uppercase tracking-wider hover:bg-gray-900 transition rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">
                   {product.has_portions && totalSelected === 0
                     ? `Bitte ${portionSize} Kugel${portionSize > 1 ? 'n' : ''} wählen`
