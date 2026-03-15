@@ -682,9 +682,7 @@ export default function KanbanPage() {
     const now = new Date()
     const berlinDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Berlin' })
     const berlinMidnight = new Date(berlinDateStr + 'T00:00:00.000Z')
-    const tzOffset = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', timeZoneName: 'shortOffset' }).formatToParts(berlinMidnight).find(p => p.type === 'timeZoneName')?.value || 'GMT+1'
-    const offsetHours = parseInt(tzOffset.replace('GMT', '')) || 1
-    berlinMidnight.setHours(berlinMidnight.getHours() - offsetHours)
+    berlinMidnight.setHours(berlinMidnight.getHours() - 2)
     const todayStart = berlinMidnight
     let query = supabase.from('orders').select('*').order('created_at', { ascending: false })
     if (!showAllRef.current) query = query.gte('created_at', todayStart.toISOString())
@@ -996,6 +994,7 @@ export default function KanbanPage() {
     </AdminLayout>
   )
 }
+
 
 
 
