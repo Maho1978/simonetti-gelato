@@ -134,7 +134,8 @@ function printOrder(order: any) {
   let itemsHtml = ''
   for (const item of items) {
     const extrasWithPrice = (item.selectedExtras || []).filter((e: any) => typeof e === 'object' && e.price)
-    const basePrice = item.price * item.quantity
+    const extrasTotal2 = (item.selectedExtras || []).filter((e: any) => typeof e === 'object' && e.price).reduce((s: number, e: any) => s + (e.price || 0), 0)
+    const basePrice = item.totalPrice ? (item.totalPrice - extrasTotal2) : item.price * item.quantity
     itemsHtml += `<tr><td class="item-qty">${item.quantity}x</td><td class="item-name">${item.name || item.productName}</td><td class="item-price">${basePrice.toFixed(2)}</td></tr>`
     if (item.flavors.length > 0) {
       for (const flavor of item.flavors) {
