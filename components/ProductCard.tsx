@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Image from 'next/image'
-import { ShoppingCart, X } from 'lucide-react'
+import { ShoppingCart, X, Plus, Minus } from 'lucide-react'
 import FavoriteButton from './FavoriteButton'
 
 interface Extra {
@@ -46,12 +46,21 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
   const availableFlavors: FlavorItem[] = (flavors.length > 0 ? flavors : (product.available_flavors || []))
     .map((f: any) => typeof f === 'string' ? { name: f, price: 0 } : f)
 
-  const [selectedFlavors, setSelectedFlavors] = useState<string[]>([])
-  const [selectedExtras, setSelectedExtras]   = useState<Extra[]>([])
+  // Mengenauswahl pro Sorte: { [flavorName]: count }
+  const [flavorCounts, setFlavorCounts] = useState<Record<string, number>>({})
+  const [selectedExtras, setSelectedExtras] = useState<Extra[]>([])
   const [radioError, setRadioError]     = useState(false)
 
   const singleExtras   = extras.filter(e => e.selection_type === 'single')
   const multipleExtras = extras.filter(e => e.selection_type !== 'single')
+
+  // Gesamtanzahl gewählter Kugeln
+  const totalSelected = Object.values(flavorCounts).reduce((s, n) => s + n, 0)
+
+  // selectedFlavors als flaches Array (z.B. ["Pistazie","Pistazie","Vanille"])
+  const selectedFlavors = Object.entries(flavorCounts).flatMap(([name, count]) =>
+    Array(count).fill(name)
+  )
 
   const handleQuickAdd = () => {
     if (product.has_portions || (extras && extras.length > 0)) {
@@ -62,7 +71,7 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
   }
 
   const handleAddToCart = () => {
-    if (product.has_portions && selectedFlavors.length === 0) {
+    if (product.has_portions && totalSelected === 0) {
       alert(`Bitte wähle mindestens 1 Sorte aus!`)
       return
     }
@@ -76,20 +85,24 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
     setRadioError(false)
     onAddToCart(product, 1, selectedFlavors, selectedExtras)
     setShowModal(false)
-    setSelectedFlavors([])
+    setFlavorCounts({})
     setSelectedExtras([])
   }
 
-  const toggleFlavor = (flavorName: string) => {
-    if (selectedFlavors.includes(flavorName)) {
-      setSelectedFlavors(selectedFlavors.filter(f => f !== flavorName))
-    } else {
-      if (selectedFlavors.length >= portionSize) {
-        setSelectedFlavors([...selectedFlavors.slice(1), flavorName])
-        return
+  const incrementFlavor = (flavorName: string) => {
+    if (totalSelected >= portionSize) return
+    setFlavorCounts(prev => ({ ...prev, [flavorName]: (prev[flavorName] || 0) + 1 }))
+  }
+
+  const decrementFlavor = (flavorName: string) => {
+    setFlavorCounts(prev => {
+      const newCount = (prev[flavorName] || 0) - 1
+      if (newCount <= 0) {
+        const { [flavorName]: _, ...rest } = prev
+        return rest
       }
-      setSelectedFlavors([...selectedFlavors, flavorName])
-    }
+      return { ...prev, [flavorName]: newCount }
+    })
   }
 
   const toggleExtra = (extra: Extra) => {
@@ -111,8 +124,11 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
     setRadioError(false)
   }
 
-  const selectedFlavorObjects = availableFlavors.filter(f => selectedFlavors.includes(f.name))
-  const flavorExtraPrice = selectedFlavorObjects.reduce((sum, f) => sum + (f.price || 0), 0)
+  // Gesamtpreis inkl. Sorten-Aufpreise
+  const flavorExtraPrice = Object.entries(flavorCounts).reduce((sum, [name, count]) => {
+    const fl = availableFlavors.find(f => f.name === name)
+    return sum + (fl ? (fl.price || 0) * count : 0)
+  }, 0)
   const totalPrice = product.price + flavorExtraPrice + selectedExtras.reduce((sum, e) => sum + e.price, 0)
 
   const DiaetBadges = ({ small = false }: { small?: boolean }) => (
@@ -188,40 +204,46 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
                 <div>
                   <h3 className="font-bold text-lg mb-1">
                     Sorten auswählen
-                    <span className={`ml-2 text-sm px-2 py-0.5 rounded-full ${selectedFlavors.length === portionSize ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}>
-                      {selectedFlavors.length}/{portionSize}
+                    <span className={`ml-2 text-sm px-2 py-0.5 rounded-full ${totalSelected === portionSize ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}>
+                      {totalSelected}/{portionSize}
                     </span>
                   </h3>
                   <p className="text-sm text-gray-500 mb-3">
-                    Wähle {portionSize} Sorte{portionSize > 1 ? 'n' : ''} für deinen {product.name}
+                    Wähle {portionSize} Kugel{portionSize > 1 ? 'n' : ''} für deinen {product.name}
                   </p>
-                  {selectedFlavors.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {selectedFlavors.map((f, i) => (
-                        <span key={i} className="px-2 py-1 bg-black text-white text-xs rounded-full">{f}</span>
-                      ))}
-                    </div>
-                  )}
-                  {/* Eissorten wie Extras — untereinander mit Preis */}
                   <div className="space-y-2">
                     {availableFlavors.map(flavor => {
-                      const isSelected = selectedFlavors.includes(flavor.name)
+                      const count = flavorCounts[flavor.name] || 0
+                      const canAdd = totalSelected < portionSize
                       return (
-                        <label key={flavor.name}
-                          className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition ${isSelected ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-black'}`}>
+                        <div key={flavor.name}
+                          className={`flex items-center justify-between p-3 border-2 rounded-lg transition ${count > 0 ? 'border-black bg-gray-50' : 'border-gray-200'}`}>
                           <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleFlavor(flavor.name)}
-                              className="w-5 h-5"
-                            />
                             <span className="font-medium">🍦 {flavor.name}</span>
                           </div>
-                          <span className="font-bold text-green-600">
-                            {flavor.price > 0 ? `+${flavor.price.toFixed(2)} €` : 'kostenlos'}
-                          </span>
-                        </label>
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold text-green-600 text-sm min-w-[60px] text-right">
+                              {flavor.price > 0 ? `+${flavor.price.toFixed(2)} €` : 'kostenlos'}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => decrementFlavor(flavor.name)}
+                                disabled={count === 0}
+                                className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition ${count > 0 ? 'border-black bg-black text-white hover:bg-gray-800' : 'border-gray-200 text-gray-300 cursor-not-allowed'}`}>
+                                <Minus size={12} />
+                              </button>
+                              <span className="w-6 text-center font-bold text-sm">{count}</span>
+                              <button
+                                type="button"
+                                onClick={() => incrementFlavor(flavor.name)}
+                                disabled={!canAdd}
+                                className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition ${canAdd ? 'border-black bg-black text-white hover:bg-gray-800' : 'border-gray-200 text-gray-300 cursor-not-allowed'}`}>
+                                <Plus size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       )
                     })}
                   </div>
@@ -333,13 +355,15 @@ export default function ProductCard({ product, extras, flavors = [], onAddToCart
                   <span className="text-3xl font-display font-bold">{totalPrice.toFixed(2)} €</span>
                 </div>
                 <button onClick={handleAddToCart}
-                  disabled={product.has_portions && selectedFlavors.length === 0}
+                  disabled={product.has_portions && totalSelected === 0}
                   className="w-full py-4 bg-black text-white font-bold text-lg uppercase tracking-wider hover:bg-gray-900 transition rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">
-                  {product.has_portions && selectedFlavors.length === 0
-                    ? `Bitte ${portionSize} Sorte${portionSize > 1 ? 'n' : ''} wählen`
-                    : singleExtras.length > 0 && !selectedExtras.some(e => singleExtras.find(s => s.id === e.id))
-                      ? 'Bitte eine Option wählen'
-                      : 'In den Warenkorb'
+                  {product.has_portions && totalSelected === 0
+                    ? `Bitte ${portionSize} Kugel${portionSize > 1 ? 'n' : ''} wählen`
+                    : product.has_portions && totalSelected < portionSize
+                      ? `Noch ${portionSize - totalSelected} Kugel${portionSize - totalSelected > 1 ? 'n' : ''} wählen`
+                      : singleExtras.length > 0 && !selectedExtras.some(e => singleExtras.find(s => s.id === e.id))
+                        ? 'Bitte eine Option wählen'
+                        : 'In den Warenkorb'
                   }
                 </button>
               </div>
