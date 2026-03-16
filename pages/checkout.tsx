@@ -331,7 +331,6 @@ export default function Checkout({ session }: { session: Session | null }) {
         if (data) {
           setShowVoucher(data.find(f => f.id === 'vouchers')?.enabled ?? true)
           setShowTip(data.find(f => f.id === 'tip_option')?.enabled ?? true)
-        })
           setShowPayPal(data.find(f => f.id === 'payment_paypal')?.enabled ?? false)
         }
       })
