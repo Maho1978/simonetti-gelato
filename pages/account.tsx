@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+﻿import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -10,9 +10,9 @@ import {
   Star, MessageSquare, Plus, Edit2, Trash2, AlertTriangle, Send
 } from 'lucide-react'
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // FEATURE FLAGS
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface FeatureFlags {
   reorder_enabled:      boolean
   live_tracking:        boolean
@@ -51,9 +51,9 @@ const FLAG_DEFAULTS: FeatureFlags = {
   subscription_enabled: false,
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // TYPES
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface Order {
   id: string
   order_number: string
@@ -105,9 +105,9 @@ interface Message {
   created_at: string
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // HELPERS
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   OFFEN:          { label: 'Offen',          color: 'text-yellow-700', bg: 'bg-yellow-100', icon: Clock       },
   IN_BEARBEITUNG: { label: 'In Bearbeitung', color: 'text-blue-700',   bg: 'bg-blue-100',   icon: RefreshCw   },
@@ -135,9 +135,9 @@ function formatPayment(method: string): string {
   }
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ORDER CARD
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function OrderCard({ order, flags, onReorder }: {
   order: Order
   flags: FeatureFlags
@@ -271,9 +271,9 @@ function OrderCard({ order, flags, onReorder }: {
   )
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ADDRESS CARD
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
   address: CustomerAddress
   onEdit: (a: CustomerAddress) => void
@@ -289,7 +289,7 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
           Standard
         </span>
       )}
-      <div className="text-2xl mb-2">{address.icon || '📍'}</div>
+      <div className="text-2xl mb-2">{address.icon || 'ðŸ“'}</div>
       <div className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">{address.label}</div>
       <div className="font-semibold text-gray-900 text-sm mb-1">{address.recipient_name}</div>
       <div className="text-sm text-gray-500 leading-relaxed">
@@ -316,9 +316,9 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
   )
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ADDRESS MODAL
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AddressModal({ address, isNew, onSave, onClose }: {
   address: CustomerAddress
   isNew: boolean
@@ -336,7 +336,7 @@ function AddressModal({ address, isNew, onSave, onClose }: {
             <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Bezeichnung</label>
             <select
               value={draft.label}
-              onChange={e => setDraft(p => ({ ...p, label: e.target.value, icon: e.target.value === 'Zuhause' ? '🏠' : e.target.value === 'Arbeit' ? '🏢' : '📌' }))}
+              onChange={e => setDraft(p => ({ ...p, label: e.target.value, icon: e.target.value === 'Zuhause' ? 'ðŸ ' : e.target.value === 'Arbeit' ? 'ðŸ¢' : 'ðŸ“Œ' }))}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition"
             >
               <option>Zuhause</option>
@@ -383,14 +383,14 @@ function AddressModal({ address, isNew, onSave, onClose }: {
   )
 }
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // TABS
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type Tab = 'bestellungen' | 'adressen' | 'profil' | 'nachrichten' | 'wallet'
 
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // MAIN PAGE
-// ─────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function AccountPage({ session }: { session: Session | null }) {
   const router = useRouter()
 
@@ -412,7 +412,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
   const bottomRef                               = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!session) { router.push('/auth/login?redirect=/account'); return }
+    if (!session) { router.push('/auth/customer-login?redirect=/account'); return }
     Promise.all([fetchOrders(), fetchFlags(), fetchProfile(), fetchAddresses(), fetchMessages()])
       .finally(() => setLoading(false))
   }, [session])
@@ -571,12 +571,12 @@ export default function AccountPage({ session }: { session: Session | null }) {
         .eq('code', voucherCode.toUpperCase())
         .eq('is_active', true)
         .single()
-      if (!data) { showToast('Ungültiger oder abgelaufener Code'); return }
+      if (!data) { showToast('UngÃ¼ltiger oder abgelaufener Code'); return }
       if (data.valid_until && new Date(data.valid_until) < new Date()) { showToast('Gutschein abgelaufen'); return }
       if (data.current_uses >= data.max_uses) { showToast('Gutschein bereits ausgeschoepft'); return }
       showToast(`Gutschein aktiviert! ${data.discount_type === 'percentage' ? data.discount_value + '%' : data.discount_value + ' EUR'} Rabatt`)
       setVoucherCode('')
-    } catch (e) { showToast('Ungültiger Code') }
+    } catch (e) { showToast('UngÃ¼ltiger Code') }
   }
 
   const toggleAllergy = (allergen: string) => {
@@ -593,8 +593,8 @@ export default function AccountPage({ session }: { session: Session | null }) {
   if (loading) return (
     <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
       <div className="text-center">
-        <div className="text-4xl mb-3 animate-spin">🍦</div>
-        <p className="text-gray-400">Lädt...</p>
+        <div className="text-4xl mb-3 animate-spin">ðŸ¦</div>
+        <p className="text-gray-400">LÃ¤dt...</p>
       </div>
     </div>
   )
@@ -679,7 +679,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
             </div>
             {orders.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-                <div className="text-6xl mb-4">🍦</div>
+                <div className="text-6xl mb-4">ðŸ¦</div>
                 <p className="text-xl font-bold text-gray-700 mb-2">Noch keine Bestellungen</p>
                 <p className="text-gray-400 mb-6">Bestell jetzt dein erstes Eis!</p>
                 <button onClick={() => router.push('/')} className="px-6 py-3 bg-[#1a1a1a] text-white font-bold rounded-xl hover:bg-black transition">
@@ -702,7 +702,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Lieferadressen</h2>
               <button
-                onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Zuhause', icon: '🏠', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
+                onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Zuhause', icon: 'ðŸ ', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
                 className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white text-sm font-bold rounded-xl hover:bg-black transition"
               >
                 <Plus size={14} /> Neue Adresse
@@ -719,7 +719,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
                   <AddressCard key={addr.id} address={addr} onEdit={a => { setAddrModal(a); setAddrNew(false) }} onDelete={deleteAddress} onSetDefault={setDefaultAddress} />
                 ))}
                 <button
-                  onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Sonstige', icon: '📌', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
+                  onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Sonstige', icon: 'ðŸ“Œ', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
                   className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-4 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#C4973A] hover:text-[#C4973A] hover:bg-[#fffbf2] transition min-h-[140px]"
                 >
                   <Plus size={24} />
@@ -801,7 +801,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
 
             <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3 text-sm text-gray-600">
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">🔒</div>
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">ðŸ”’</div>
                 Passwort aendern oder zuruecksetzen
               </div>
               <Link href="/auth/forgot-password" className="text-sm font-semibold text-[#C4973A] hover:text-[#a87c2a] transition">Aendern</Link>
@@ -969,10 +969,10 @@ export default function AccountPage({ session }: { session: Session | null }) {
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                 <h3 className="font-bold text-gray-900 mb-3">Treuepunkte-Stufen</h3>
                 {[
-                  { icon: '🥉', name: 'Bronze',  pts: '0-499',    reward: 'Gratis Waffelbecher' },
-                  { icon: '🥈', name: 'Silber',  pts: '500-999',  reward: 'Gratis Kugel' },
-                  { icon: '🥇', name: 'Gold',    pts: '1000+',    reward: 'Gratis Lieferung' },
-                  { icon: '💎', name: 'Diamond', pts: '2500+',    reward: '10% auf alles' },
+                  { icon: 'ðŸ¥‰', name: 'Bronze',  pts: '0-499',    reward: 'Gratis Waffelbecher' },
+                  { icon: 'ðŸ¥ˆ', name: 'Silber',  pts: '500-999',  reward: 'Gratis Kugel' },
+                  { icon: 'ðŸ¥‡', name: 'Gold',    pts: '1000+',    reward: 'Gratis Lieferung' },
+                  { icon: 'ðŸ’Ž', name: 'Diamond', pts: '2500+',    reward: '10% auf alles' },
                 ].map(tier => {
                   const pts = profile?.loyalty_points || 0
                   const isActive = (tier.name === 'Bronze' && pts < 500) || (tier.name === 'Silber' && pts >= 500 && pts < 1000) || (tier.name === 'Gold' && pts >= 1000 && pts < 2500) || (tier.name === 'Diamond' && pts >= 2500)
