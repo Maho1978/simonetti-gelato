@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       label:        t.reward_label,
       type:         t.reward_type,
       value:        t.reward_value,
-      points:       t.points_from,
+      points:       t.redeem_points ?? t.points_from,
       tierName:     t.name,
       icon:         t.icon,
       canRedeem:    points >= t.points_from,
@@ -58,21 +58,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', user_id)
       .single()
 
-    if (!profile || profile.loyalty_points < tier.points_from) {
+    if (!profile || profile.loyalty_points < (tier.redeem_points ?? tier.points_from)) {
       return res.status(400).json({ error: 'Nicht genug Punkte' })
     }
 
     const { error } = await supabase
       .from('loyalty_transactions')
-      .insert({ user_id, points: -tier.points_from, reason: 'redemption' })
+      .insert({ user_id, points: -(tier.redeem_points ?? tier.points_from), reason: 'redemption' })
 
     if (error) return res.status(500).json({ error: error.message })
 
     return res.status(200).json({
       success:         true,
       reward:          { key: reward_key, label: tier.reward_label, type: tier.reward_type, value: tier.reward_value },
-      pointsUsed:      tier.points_from,
-      pointsRemaining: profile.loyalty_points - tier.points_from,
+      pointsUsed:      tier.redeem_points ?? tier.points_from,
+      pointsRemaining: profile.loyalty_points - (tier.redeem_points ?? tier.points_from),
     })
   }
 
