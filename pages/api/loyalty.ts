@@ -1,9 +1,9 @@
 ﻿import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -11,18 +11,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { user_id } = req.query
     if (!user_id) return res.status(400).json({ error: 'Missing user_id' })
 
-    const { data: profile } = await supabaseAdmin
+    const { data: profile, error: e1 } = await supabase
       .from('customer_profiles')
       .select('loyalty_points')
       .eq('id', user_id)
       .single()
 
-    const { data: tiers } = await supabaseAdmin
+    const { data: tiers, error: e2 } = await supabase
       .from('loyalty_tiers')
       .select('*')
       .order('sort_order')
 
-    console.log("profile:", profile, "tiers:", tiers)
+    if (e1 || e2) return res.status(200).json({ points: 0, rewards: [], tiers: null, debug: { e1, e2 } })
+
     const points = profile?.loyalty_points || 0
     const rewards = (tiers || []).map((t: any) => ({
       key:          t.id,
@@ -43,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { user_id, reward_key } = req.body
     if (!user_id || !reward_key) return res.status(400).json({ error: 'Missing params' })
 
-    const { data: tier } = await supabaseAdmin
+    const { data: tier } = await supabase
       .from('loyalty_tiers')
       .select('*')
       .eq('id', reward_key)
@@ -51,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!tier) return res.status(400).json({ error: 'Unknown reward' })
 
-    const { data: profile } = await supabaseAdmin
+    const { data: profile } = await supabase
       .from('customer_profiles')
       .select('loyalty_points')
       .eq('id', user_id)
@@ -61,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Nicht genug Punkte' })
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await supabase
       .from('loyalty_transactions')
       .insert({ user_id, points: -tier.points_from, reason: 'redemption' })
 
