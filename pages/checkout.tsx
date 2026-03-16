@@ -576,7 +576,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
               )}
 
-              {session?.user?.id && (<LoyaltyRedeemer userId={session.user.id} applied={loyalty} onApply={(l) => { setLoyalty(l); setClientSecret(""); createPaymentIntent(cart, voucher, tip) }} />)}
+              {session?.user?.id ? (<LoyaltyRedeemer userId={session.user.id} applied={loyalty} onApply={(l) => { setLoyalty(l); setClientSecret(""); createPaymentIntent(cart, voucher, tip) }} />) : null}
               {(showVoucher || showTip) && (
                 <div className={`grid grid-cols-1 ${showVoucher && showTip ? 'sm:grid-cols-2' : ''} gap-4`}>
                   {showVoucher && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5"><h3 className="font-bold text-sm mb-3 text-gray-700">🎟️ Gutscheincode</h3><VoucherInput subtotal={subtotal} onApply={handleVoucherApply} /></div>}

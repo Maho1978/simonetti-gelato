@@ -22,6 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select('*')
       .order('sort_order')
 
+    console.log("profile:", profile, "tiers:", tiers)
     const points = profile?.loyalty_points || 0
     const rewards = (tiers || []).map((t: any) => ({
       key:          t.id,
