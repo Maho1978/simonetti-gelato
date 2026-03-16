@@ -209,7 +209,7 @@ function LoyaltyRedeemer({ userId, applied, onApply }: { userId: string; applied
       </div>
       {open && <div className="space-y-2 mt-2">
         {tiers.filter((t: any) => t.canRedeem).map((t: any) => (
-          <button key={t.key} onClick={() => { onApply({ tier_id: t.key, label: t.label, type: t.type, value: t.value, points_used: t.points, discountAmount: t.type === "free_delivery" ? 3 : t.value }); setOpen(false) }}
+          <button key={t.key} onClick={() => { const discountAmount = t.type === "free_delivery" ? 3 : t.value; onApply({ tier_id: t.key, label: t.label, type: t.type, value: t.value, points_used: t.points, discountAmount, note: t.type === "free_item" ? `Treuepunkte: ${t.label} (Sorte bitte in Anmerkungen angeben)` : "" }); setOpen(false) }}
             className="w-full flex items-center justify-between bg-white border border-amber-200 rounded-xl px-4 py-3 hover:border-amber-400 transition text-sm">
             <span className="font-semibold text-amber-900">{t.label}</span>
             <span className="text-amber-600 font-bold">{t.points} Punkte</span>
@@ -409,7 +409,7 @@ export default function Checkout({ session }: { session: Session | null }) {
       tip,
       total:             grandTotal,
       delivery_address:  orderType === 'pickup' ? null : { name, street, zip, city },
-      notes:             [notes, cashChangeNote ? `Wechselgeld für: ${cashChangeNote}` : ''].filter(Boolean).join(' | ') || null,
+      notes:             [notes, cashChangeNote ? `Wechselgeld für: ${cashChangeNote}` : '', loyalty?.note || ''].filter(Boolean).join(' | ') || null,
       payment_intent_id: paymentId,
       payment_method:    method,
       order_type:        orderType,
