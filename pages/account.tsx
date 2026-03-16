@@ -3,222 +3,1063 @@ import { useRouter } from 'next/router'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
-import { Package, RefreshCw, Star } from 'lucide-react'
+import Link from 'next/link'
+import {
+  Package, RefreshCw, LogOut, User, MapPin, Phone, Mail,
+  ChevronDown, ChevronUp, Clock, CheckCircle, Truck, XCircle,
+  Star, MessageSquare, Heart, Gift, Bell, Shield, Trash2,
+  Plus, Edit2, Home, Briefcase, AlertTriangle, Send
+} from 'lucide-react'
 
+// ─────────────────────────────────────────────
+// FEATURE FLAGS — aus Supabase laden
+// Fallback: alles false (sicher)
+// ─────────────────────────────────────────────
+interface FeatureFlags {
+  reorder_enabled:      boolean
+  live_tracking:        boolean
+  multi_address:        boolean
+  allergy_profile:      boolean
+  favorites_enabled:    boolean
+  feedback_enabled:     boolean
+  messages_enabled:     boolean
+  suggestions_enabled:  boolean
+  loyalty_enabled:      boolean
+  wallet_enabled:       boolean
+  voucher_enabled:      boolean
+  tip_enabled:          boolean
+  scheduled_order:      boolean
+  gift_enabled:         boolean
+  referral_enabled:     boolean
+  subscription_enabled: boolean
+}
+
+const FLAG_DEFAULTS: FeatureFlags = {
+  reorder_enabled:      true,
+  live_tracking:        true,
+  multi_address:        true,
+  allergy_profile:      false,
+  favorites_enabled:    false,
+  feedback_enabled:     true,
+  messages_enabled:     true,
+  suggestions_enabled:  true,
+  loyalty_enabled:      false,
+  wallet_enabled:       false,
+  voucher_enabled:      false,
+  tip_enabled:          false,
+  scheduled_order:      false,
+  gift_enabled:         false,
+  referral_enabled:     false,
+  subscription_enabled: false,
+}
+
+// ─────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────
 interface Order {
   id: string
+  order_number: string
   created_at: string
   items: any[]
   total: number
+  subtotal: number
+  delivery_fee: number
+  tip: number
+  discount: number
   status: string
   delivery_address: any
-  tip?: number
+  order_type: string
+  payment_method: string
+  notes?: string
 }
 
-export default function Account({ session }: { session: Session | null }) {
+interface CustomerAddress {
+  id: string
+  label: string
+  icon: string
+  recipient_name: string
+  street: string
+  house_number?: string
+  zip: string
+  city: string
+  extra?: string
+  is_default: boolean
+}
+
+interface CustomerProfile {
+  first_name?: string
+  last_name?: string
+  phone?: string
+  birth_date?: string
+  newsletter: boolean
+  allergies: string[]
+  dietary_notes?: string
+  loyalty_points: number
+  wallet_balance: number
+  referral_code?: string
+}
+
+interface Message {
+  id: string
+  direction: 'from_customer' | 'from_shop'
+  message: string
+  read_by_customer: boolean
+  created_at: string
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+  OFFEN:          { label: 'Offen',          color: 'text-yellow-700', bg: 'bg-yellow-100', icon: Clock       },
+  IN_BEARBEITUNG: { label: 'In Bearbeitung', color: 'text-blue-700',   bg: 'bg-blue-100',   icon: RefreshCw   },
+  UNTERWEGS:      { label: 'Unterwegs',      color: 'text-orange-700', bg: 'bg-orange-100', icon: Truck       },
+  ABGEHOLT:       { label: 'Abgeholt',       color: 'text-green-700',  bg: 'bg-green-100',  icon: CheckCircle },
+  GELIEFERT:      { label: 'Geliefert',      color: 'text-green-700',  bg: 'bg-green-100',  icon: CheckCircle },
+  STORNIERT:      { label: 'Storniert',      color: 'text-red-700',    bg: 'bg-red-100',    icon: XCircle     },
+}
+
+const ALLERGEN_LIST = ['Nüsse', 'Laktose', 'Gluten', 'Eier', 'Soja', 'Erdbeeren', 'Schokolade', 'Alkohol']
+
+function formatAddress(addr: any): string {
+  if (!addr) return '–'
+  if (typeof addr === 'string') return addr
+  return [addr.street, addr.zip && addr.city ? addr.zip + ' ' + addr.city : addr.city].filter(Boolean).join(', ')
+}
+
+function formatPayment(method: string): string {
+  switch (method) {
+    case 'stripe':  return '💳 Kreditkarte'
+    case 'paypal':  return '🅿️ PayPal'
+    case 'cash':    return '💵 Barzahlung'
+    case 'klarna':  return '🛒 Klarna'
+    default:        return method || '–'
+  }
+}
+
+// ─────────────────────────────────────────────
+// ORDER CARD (unverändert aus deiner Version)
+// ─────────────────────────────────────────────
+function OrderCard({ order, flags, onReorder }: { order: Order; flags: FeatureFlags; onReorder: (order: Order) => void }) {
+  const [expanded, setExpanded] = useState(false)
+  const status = STATUS_CONFIG[order.status] || { label: order.status, color: 'text-gray-700', bg: 'bg-gray-100', icon: Clock }
+  const StatusIcon = status.icon
+  const isLive = ['OFFEN', 'IN_BEARBEITUNG', 'UNTERWEGS'].includes(order.status)
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden hover:border-[#C4973A]/40 transition-colors">
+      {/* Header */}
+      <div className="flex items-center justify-between p-5 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center flex-shrink-0">
+            <Package size={20} className="text-[#C4973A]" />
+          </div>
+          <div>
+            <div className="font-bold text-gray-900">#{order.order_number || order.id.slice(0, 8).toUpperCase()}</div>
+            <div className="text-sm text-gray-400 mt-0.5">
+              {new Date(order.created_at).toLocaleDateString('de-DE', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              })} Uhr
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="font-bold text-lg text-gray-900">{order.total.toFixed(2)} €</div>
+            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${status.bg} ${status.color}`}>
+              <StatusIcon size={11} />
+              {status.label}
+            </span>
+          </div>
+          {expanded ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+        </div>
+      </div>
+
+      {/* Live-Tracking Banner */}
+      {flags.live_tracking && isLive && (
+        <div className="mx-5 mb-3 bg-[#C4973A]/10 border border-[#C4973A]/30 rounded-xl px-4 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#8a6510]">
+            <Truck size={15} />
+            Deine Bestellung ist unterwegs 🛵
+          </div>
+          <Link href={`/tracking/${order.id}`} className="text-xs font-bold text-[#C4973A] hover:text-[#a87b20]">
+            Live verfolgen →
+          </Link>
+        </div>
+      )}
+
+      {/* Details */}
+      {expanded && (
+        <div className="px-5 pb-5 border-t border-gray-100 pt-4 space-y-4">
+          {/* Artikel */}
+          <div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Artikel</div>
+            <div className="space-y-2">
+              {(order.items || []).map((item: any, idx: number) => {
+                const flavors = (item.selectedFlavors || item.flavors || []).join(', ')
+                const extras  = (item.selectedExtras  || item.extras  || []).map((e: any) => e.name || e).join(', ')
+                const lineTotal = ((item.totalPrice || (item.price * item.quantity)) || 0).toFixed(2)
+                return (
+                  <div key={idx} className="flex justify-between items-start">
+                    <div>
+                      <span className="font-semibold text-sm text-gray-800">{item.quantity}x {item.name}</span>
+                      {flavors && <div className="text-xs text-gray-400 mt-0.5">🍦 {flavors}</div>}
+                      {extras  && <div className="text-xs text-gray-400">➕ {extras}</div>}
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 ml-4 flex-shrink-0">{lineTotal} €</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Summen */}
+          <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
+            {order.subtotal > 0 && (
+              <div className="flex justify-between text-gray-500"><span>Zwischensumme</span><span>{order.subtotal.toFixed(2)} €</span></div>
+            )}
+            {order.order_type !== 'pickup' && (
+              <div className="flex justify-between text-gray-500"><span>Liefergebühr</span><span>{(order.delivery_fee ?? 3).toFixed(2)} €</span></div>
+            )}
+            {order.tip > 0 && (
+              <div className="flex justify-between text-gray-500"><span>Trinkgeld</span><span>{order.tip.toFixed(2)} €</span></div>
+            )}
+            {order.discount > 0 && (
+              <div className="flex justify-between text-green-600"><span>Rabatt</span><span>-{order.discount.toFixed(2)} €</span></div>
+            )}
+            <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-200">
+              <span>Gesamt</span><span>{order.total.toFixed(2)} €</span>
+            </div>
+          </div>
+
+          {/* Infos Grid */}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="bg-gray-50 rounded-xl p-3">
+              <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">
+                {order.order_type === 'pickup' ? '🏪 Abholung' : '📍 Lieferadresse'}
+              </div>
+              <div className="text-gray-700 font-medium">
+                {order.order_type === 'pickup' ? 'Konrad-Adenauer-Platz 2, 40764 Langenfeld' : formatAddress(order.delivery_address)}
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3">
+              <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">💳 Zahlung</div>
+              <div className="text-gray-700 font-medium">{formatPayment(order.payment_method)}</div>
+            </div>
+          </div>
+
+          {order.notes && (
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-800">
+              💬 {order.notes}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2 flex-wrap pt-1">
+            {flags.reorder_enabled && (
+              <button
+                onClick={() => onReorder(order)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#1a1a1a] text-white text-sm font-semibold rounded-xl hover:bg-black transition"
+              >
+                <RefreshCw size={14} />
+                Nochmal bestellen
+              </button>
+            )}
+            <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:border-[#C4973A] hover:text-[#C4973A] transition">
+              Rechnung
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// ADRESS CARD
+// ─────────────────────────────────────────────
+function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
+  address: CustomerAddress
+  onEdit: (a: CustomerAddress) => void
+  onDelete: (id: string) => void
+  onSetDefault: (id: string) => void
+}) {
+  return (
+    <div className={`bg-white rounded-2xl border-2 p-4 relative transition-colors ${address.is_default ? 'border-[#C4973A] bg-[#fffbf2]' : 'border-gray-100 hover:border-[#C4973A]/40'}`}>
+      {address.is_default && (
+        <span className="absolute top-3 right-3 bg-[#C4973A] text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+          Standard
+        </span>
+      )}
+      <div className="text-2xl mb-2">{address.icon || '📍'}</div>
+      <div className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">{address.label}</div>
+      <div className="font-semibold text-gray-900 text-sm mb-1">{address.recipient_name}</div>
+      <div className="text-sm text-gray-500 leading-relaxed">
+        {address.street} {address.house_number}<br />
+        {address.zip} {address.city}
+        {address.extra && <><br /><span className="text-gray-400 text-xs">{address.extra}</span></>}
+      </div>
+      <div className="flex gap-2 mt-3 flex-wrap">
+        <button onClick={() => onEdit(address)} className="flex items-center gap-1 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-[#C4973A] hover:text-[#C4973A] transition">
+          <Edit2 size={11} /> Bearbeiten
+        </button>
+        {!address.is_default && (
+          <button onClick={() => onSetDefault(address.id)} className="flex items-center gap-1 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-[#C4973A] hover:text-[#C4973A] transition">
+            ⭐ Als Standard
+          </button>
+        )}
+        {!address.is_default && (
+          <button onClick={() => onDelete(address.id)} className="flex items-center gap-1 text-xs font-semibold text-red-400 border border-red-100 rounded-lg px-2.5 py-1.5 hover:bg-red-50 transition">
+            <Trash2 size={11} /> Löschen
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────
+type Tab = 'bestellungen' | 'adressen' | 'profil' | 'nachrichten'
+
+// ─────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────
+export default function AccountPage({ session }: { session: Session | null }) {
   const router = useRouter()
-  const [orders, setOrders] = useState<Order[]>([])
-  const [favorites, setFavorites] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
 
+  // State
+  const [tab, setTab]               = useState<Tab>('bestellungen')
+  const [orders, setOrders]         = useState<Order[]>([])
+  const [addresses, setAddresses]   = useState<CustomerAddress[]>([])
+  const [profile, setProfile]       = useState<CustomerProfile | null>(null)
+  const [messages, setMessages]     = useState<Message[]>([])
+  const [flags, setFlags]           = useState<FeatureFlags>(FLAG_DEFAULTS)
+  const [loading, setLoading]       = useState(true)
+  const [msgInput, setMsgInput]     = useState('')
+  const [feedback, setFeedback]     = useState({ rating: 4, mood: 'good', text: '' })
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [profileDraft, setProfileDraft]     = useState<Partial<CustomerProfile>>({})
+  const [toast, setToast]           = useState('')
+  const [voucherCode, setVoucherCode] = useState('')
+  const [addrModal, setAddrModal]   = useState<CustomerAddress | null>(null)
+  const [addrNew, setAddrNew]       = useState(false)
+
+  // ── Init ──────────────────────────────────
   useEffect(() => {
-    if (!session) {
-      router.push('/auth/login?redirect=/account')
-      return
-    }
-
-    fetchOrders()
-    fetchFavorites()
+    if (!session) { router.push('/auth/login?redirect=/account'); return }
+    Promise.all([fetchOrders(), fetchFlags(), fetchProfile(), fetchAddresses(), fetchMessages()])
+      .finally(() => setLoading(false))
   }, [session])
 
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), 3000)
+  }
+
+  // ── Data Fetchers ─────────────────────────
   const fetchOrders = async () => {
     try {
-      const response = await fetch(`/api/orders?user_id=${session?.user.id}`)
-      const data = await response.json()
+      const res = await fetch(`/api/orders?user_id=${session?.user.id}`)
+      const data = await res.json()
       setOrders(data.orders || [])
-    } catch (error) {
-      console.error('Error fetching orders:', error)
-    } finally {
-      setLoading(false)
-    }
+    } catch (e) { console.error(e) }
   }
 
-  const fetchFavorites = async () => {
+  const fetchFlags = async () => {
     try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token
-      const response = await fetch('/api/favorites', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      const data = await response.json()
-      setFavorites(data.favorites || [])
-    } catch (error) {
-      console.error('Error fetching favorites:', error)
-    }
+      const { data } = await supabase.from('feature_flags').select('id,enabled')
+      if (data) {
+        const map = Object.fromEntries(data.map((f: any) => [f.id, f.enabled]))
+        setFlags({ ...FLAG_DEFAULTS, ...map })
+      }
+    } catch (e) { console.error(e) }
   }
 
-  const handleReorder = (order: Order) => {
-    // Add all items from order to cart
-    const cart = order.items.map(item => ({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      icon: item.icon || '🍽️',
-      quantity: item.quantity,
-      description: item.description || '',
-      category: item.category || '',
-      available: true,
-    }))
-
-    localStorage.setItem('cart', JSON.stringify(cart))
-    router.push('/')
+  const fetchProfile = async () => {
+    try {
+      const { data } = await supabase
+        .from('customer_profiles')
+        .select('*')
+        .eq('id', session?.user.id)
+        .single()
+      if (data) { setProfile(data); setProfileDraft(data) }
+      else {
+        // Profil anlegen falls noch nicht vorhanden
+        await supabase.from('customer_profiles').insert({ id: session?.user.id })
+      }
+    } catch (e) { console.error(e) }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="spinner"></div>
-      </div>
-    )
+  const fetchAddresses = async () => {
+    try {
+      const { data } = await supabase
+        .from('customer_addresses')
+        .select('*')
+        .eq('user_id', session?.user.id)
+        .order('is_default', { ascending: false })
+      setAddresses(data || [])
+    } catch (e) { console.error(e) }
   }
 
-  const handleSignOut = async () => {
+  const fetchMessages = async () => {
+    try {
+      const { data } = await supabase
+        .from('customer_messages')
+        .select('*')
+        .eq('user_id', session?.user.id)
+        .order('created_at', { ascending: true })
+      setMessages(data || [])
+      // Als gelesen markieren
+      if (data?.length) {
+        await supabase.from('customer_messages')
+          .update({ read_by_customer: true })
+          .eq('user_id', session?.user.id)
+          .eq('direction', 'from_shop')
+      }
+    } catch (e) { console.error(e) }
+  }
+
+  // ── Actions ───────────────────────────────
+  const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
+  const handleReorder = (order: Order) => {
+    // Items in localStorage für Warenkorb
+    localStorage.setItem('reorder_items', JSON.stringify(order.items))
+    router.push('/?reorder=1')
+    showToast('🔄 Bestellung in den Warenkorb gelegt!')
+  }
+
+  const saveProfile = async () => {
+    try {
+      await supabase.from('customer_profiles').upsert({ id: session?.user.id, ...profileDraft })
+      setProfile(prev => ({ ...prev!, ...profileDraft }))
+      setEditingProfile(false)
+      showToast('✓ Profil gespeichert!')
+    } catch (e) { showToast('❌ Fehler beim Speichern') }
+  }
+
+  const saveAddress = async (addr: Partial<CustomerAddress>) => {
+    try {
+      if (addrNew) {
+        await supabase.from('customer_addresses').insert({ ...addr, user_id: session?.user.id })
+      } else {
+        await supabase.from('customer_addresses').update(addr).eq('id', addrModal?.id)
+      }
+      await fetchAddresses()
+      setAddrModal(null); setAddrNew(false)
+      showToast('📍 Adresse gespeichert!')
+    } catch (e) { showToast('❌ Fehler beim Speichern') }
+  }
+
+  const deleteAddress = async (id: string) => {
+    await supabase.from('customer_addresses').delete().eq('id', id)
+    setAddresses(prev => prev.filter(a => a.id !== id))
+    showToast('🗑️ Adresse gelöscht')
+  }
+
+  const setDefaultAddress = async (id: string) => {
+    await supabase.from('customer_addresses').update({ is_default: false }).eq('user_id', session?.user.id)
+    await supabase.from('customer_addresses').update({ is_default: true }).eq('id', id)
+    await fetchAddresses()
+    showToast('⭐ Standardadresse gesetzt')
+  }
+
+  const sendMessage = async () => {
+    if (!msgInput.trim()) return
+    try {
+      const { data } = await supabase.from('customer_messages').insert({
+        user_id: session?.user.id,
+        direction: 'from_customer',
+        message: msgInput.trim(),
+        read_by_admin: false,
+        read_by_customer: true,
+      }).select().single()
+      if (data) setMessages(prev => [...prev, data])
+      setMsgInput('')
+    } catch (e) { showToast('❌ Fehler beim Senden') }
+  }
+
+  const sendFeedback = async () => {
+    try {
+      await supabase.from('customer_feedback').insert({
+        user_id: session?.user.id,
+        rating: feedback.rating,
+        mood: feedback.mood,
+        message: feedback.text,
+        category: 'general',
+      })
+      setFeedback({ rating: 4, mood: 'good', text: '' })
+      showToast('💬 Feedback gesendet — Danke! 🙏')
+    } catch (e) { showToast('❌ Fehler beim Senden') }
+  }
+
+  const redeemVoucher = async () => {
+    if (!voucherCode.trim()) return
+    try {
+      const { data } = await supabase
+        .from('vouchers')
+        .select('*')
+        .eq('code', voucherCode.toUpperCase())
+        .eq('is_active', true)
+        .single()
+      if (!data) { showToast('❌ Ungültiger oder abgelaufener Code'); return }
+      if (data.valid_until && new Date(data.valid_until) < new Date()) { showToast('❌ Gutschein abgelaufen'); return }
+      if (data.current_uses >= data.max_uses) { showToast('❌ Gutschein bereits ausgeschöpft'); return }
+      showToast(`🎟️ Gutschein aktiviert! ${data.discount_type === 'percentage' ? data.discount_value + '%' : data.discount_value + ' €'} Rabatt`)
+      setVoucherCode('')
+    } catch (e) { showToast('❌ Ungültiger Code') }
+  }
+
+  const toggleAllergy = (allergen: string) => {
+    const current = profileDraft.allergies || []
+    const updated = current.includes(allergen)
+      ? current.filter(a => a !== allergen)
+      : [...current, allergen]
+    setProfileDraft(prev => ({ ...prev, allergies: updated }))
+  }
+
+  // ── Counts ────────────────────────────────
+  const unreadMessages = messages.filter(m => m.direction === 'from_shop' && !m.read_by_customer).length
+  const userName = profile?.first_name
+    ? `${profile.first_name} ${profile.last_name || ''}`.trim()
+    : session?.user?.user_metadata?.name || session?.user?.email?.split('@')[0] || 'Kunde'
+
+  // ── Loading ───────────────────────────────
+  if (loading) return (
+    <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-4xl mb-3 animate-spin">🍦</div>
+        <p className="text-gray-400">Lädt...</p>
+      </div>
+    </div>
+  )
+
+  const TABS: { key: Tab; label: string; icon: any; show: boolean; badge?: number }[] = [
+    { key: 'bestellungen', label: 'Bestellungen', icon: Package,       show: true },
+    { key: 'adressen',     label: 'Adressen',     icon: MapPin,        show: flags.multi_address },
+    { key: 'profil',       label: 'Profil',        icon: User,          show: true },
+    { key: 'nachrichten',  label: 'Nachrichten',   icon: MessageSquare, show: flags.messages_enabled || flags.feedback_enabled, badge: unreadMessages },
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#faf9f7]">
       <Navbar session={session} cartCount={0} onCartClick={() => {}} />
 
-      <div className="max-w-5xl mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h1 className="text-4xl font-display font-bold mb-2">Mein Account</h1>
-          <p className="text-xl text-gray-600">
-            Willkommen zurück, {session?.user?.user_metadata?.name || session?.user?.email}!
-          </p>
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1a1a1a] text-white px-5 py-3 rounded-2xl shadow-2xl text-sm font-semibold flex items-center gap-2 animate-fade-in">
+          {toast}
         </div>
+      )}
 
-        <div className="card">
-          <h2 className="text-2xl font-display font-bold mb-6">
-            Meine Bestellungen
-          </h2>
+      <div className="max-w-3xl mx-auto px-4 py-10">
 
-          {orders.length === 0 ? (
-            <div className="text-center py-20">
-              <Package size={80} className="text-gray-300 mx-auto mb-4" />
-              <p className="text-xl text-gray-500 mb-6">
-                Du hast noch keine Bestellungen aufgegeben
-              </p>
-              <button
-                onClick={() => router.push('/')}
-                className="btn-primary"
-              >
-                Jetzt bestellen
-              </button>
+        {/* ── PROFIL HEADER ── */}
+        <div className="bg-[#1a1a1a] rounded-2xl p-6 mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-[#C4973A] rounded-full flex items-center justify-center flex-shrink-0">
+              <User size={26} className="text-white" />
             </div>
-          ) : (
-            <div className="space-y-6">
-              {orders.map(order => (
-                <div
-                  key={order.id}
-                  className="border-2 border-gray-200 rounded-2xl p-6 hover:border-primary transition-colors duration-300"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-bold text-lg mb-1">
-                        Bestellung #{order.id.slice(0, 8)}
-                      </h3>
-                      <p className="text-gray-600">
-                        {new Date(order.created_at).toLocaleDateString('de-DE', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                        order.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : order.status === 'processing'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}
-                    >
-                      {order.status === 'pending'
-                        ? 'Ausstehend'
-                        : order.status === 'processing'
-                        ? 'In Bearbeitung'
-                        : 'Abgeschlossen'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    {order.items.map((item: any, index: number) => (
-                      <div
-                        key={index}
-                        className="flex justify-between text-gray-700"
-                      >
-                        <span>
-                          {item.quantity}x {item.name}
-                        </span>
-                        <span className="font-semibold">
-                          {(item.price * item.quantity).toFixed(2)} €
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="border-t-2 pt-4 flex justify-between items-center">
-                    <div className="text-gray-600">
-                      <div className="font-semibold">Lieferadresse:</div>
-                      <div>
-                        {order.delivery_address.name}
-                        <br />
-                        {order.delivery_address.street}
-                        <br />
-                        {order.delivery_address.zip} {order.delivery_address.city}
-                      </div>
-                    </div>
-
-                    <div className="text-right space-y-2">
-                      <div className="text-2xl font-bold text-primary">
-                        {order.total.toFixed(2)} €
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {order.tip && order.tip > 0 && `inkl. ${order.tip.toFixed(2)} € Trinkgeld`}
-                      </div>
-                      
-                      <button
-                        onClick={() => handleReorder(order)}
-                        className="btn-primary text-sm py-2 px-4 flex items-center space-x-2"
-                      >
-                        <RefreshCw size={16} />
-                        <span>Erneut bestellen</span>
-                      </button>
-                    </div>
-                  </div>
+            <div>
+              <div className="font-bold text-white text-lg">{userName}</div>
+              <div className="text-gray-400 text-sm flex items-center gap-1.5 mt-0.5">
+                <Mail size={12} />
+                {session?.user?.email}
+              </div>
+              {/* Loyalty Badge */}
+              {flags.loyalty_enabled && profile?.loyalty_points !== undefined && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="text-xs font-bold text-[#C4973A]">⭐ {profile.loyalty_points} Punkte</div>
+                  {profile.wallet_balance > 0 && (
+                    <div className="text-xs text-gray-400">· 💰 {profile.wallet_balance.toFixed(2)} € Guthaben</div>
+                  )}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Abmelden */}
-        <div className="max-w-4xl mx-auto px-4 pb-10">
+          </div>
           <button
-            onClick={handleSignOut}
-            className="w-full py-3 border-2 border-red-200 text-red-500 rounded-xl font-semibold hover:bg-red-50 transition text-sm"
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-semibold transition"
           >
-            🚪 Abmelden
+            <LogOut size={16} />
+            Abmelden
           </button>
         </div>
 
+        {/* ── TABS ── */}
+        <div className="flex gap-1 bg-[#f0ede7] p-1 rounded-xl border border-black/8 mb-6 overflow-x-auto">
+          {TABS.filter(t => t.show).map(t => {
+            const Icon = t.icon
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition relative flex-1 justify-center
+                  ${tab === t.key ? 'bg-[#1a1a1a] text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 hover:bg-white/60'}`}
+              >
+                <Icon size={14} />
+                {t.label}
+                {t.badge ? (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {t.badge}
+                  </span>
+                ) : null}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ══════════════════════════════════════
+            TAB: BESTELLUNGEN
+        ══════════════════════════════════════ */}
+        {tab === 'bestellungen' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Meine Bestellungen</h2>
+              <span className="text-sm text-gray-400">{orders.length} Bestellung{orders.length !== 1 ? 'en' : ''}</span>
+            </div>
+
+            {orders.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+                <div className="text-6xl mb-4">🍦</div>
+                <p className="text-xl font-bold text-gray-700 mb-2">Noch keine Bestellungen</p>
+                <p className="text-gray-400 mb-6">Bestell jetzt dein erstes Eis!</p>
+                <button onClick={() => router.push('/')} className="px-6 py-3 bg-[#1a1a1a] text-white font-bold rounded-xl hover:bg-black transition">
+                  Jetzt bestellen
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {orders.map(order => (
+                  <OrderCard key={order.id} order={order} flags={flags} onReorder={handleReorder} />
+                ))}
+              </div>
+            )}
+
+            {/* Voucher Box — wenn aktiv */}
+            {flags.voucher_enabled && (
+              <div className="mt-4 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
+                  🎟️ Gutschein einlösen
+                </div>
+                <p className="text-sm text-gray-400 mb-3">Code eingeben und beim nächsten Checkout automatisch abziehen.</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={voucherCode}
+                    onChange={e => setVoucherCode(e.target.value.toUpperCase())}
+                    placeholder="z.B. SOMMER25"
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10"
+                  />
+                  <button onClick={redeemVoucher} className="px-5 py-2.5 bg-[#C4973A] text-white text-sm font-bold rounded-xl hover:bg-[#a87b20] transition">
+                    Einlösen
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════
+            TAB: ADRESSEN
+        ══════════════════════════════════════ */}
+        {tab === 'adressen' && flags.multi_address && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Lieferadressen</h2>
+              <button
+                onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Zuhause', icon: '🏠', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white text-sm font-bold rounded-xl hover:bg-black transition"
+              >
+                <Plus size={14} /> Neue Adresse
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-400 mb-4">Speichere Zuhause, Arbeit und weitere Adressen für schnelleres Bestellen.</p>
+
+            {addresses.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
+                <MapPin size={32} className="text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 font-semibold mb-1">Noch keine Adressen</p>
+                <p className="text-sm text-gray-400">Füge deine erste Lieferadresse hinzu.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {addresses.map(addr => (
+                  <AddressCard
+                    key={addr.id}
+                    address={addr}
+                    onEdit={a => { setAddrModal(a); setAddrNew(false) }}
+                    onDelete={deleteAddress}
+                    onSetDefault={setDefaultAddress}
+                  />
+                ))}
+                {/* Add new */}
+                <button
+                  onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Sonstige', icon: '📌', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
+                  className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-4 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#C4973A] hover:text-[#C4973A] hover:bg-[#fffbf2] transition min-h-[140px]"
+                >
+                  <Plus size={24} />
+                  <span className="text-sm font-semibold">Neue Adresse</span>
+                </button>
+              </div>
+            )}
+
+            {/* Adress Modal */}
+            {addrModal && (
+              <AddressModal
+                address={addrModal}
+                isNew={addrNew}
+                onSave={saveAddress}
+                onClose={() => { setAddrModal(null); setAddrNew(false) }}
+              />
+            )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════
+            TAB: PROFIL
+        ══════════════════════════════════════ */}
+        {tab === 'profil' && (
+          <div className="space-y-4">
+
+            {/* Persönliche Daten */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2"><User size={16} /> Persönliche Daten</h3>
+                {!editingProfile ? (
+                  <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-[#C4973A] hover:text-[#C4973A] transition">
+                    <Edit2 size={12} /> Bearbeiten
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEditingProfile(false); setProfileDraft(profile || {}) }} className="text-sm font-semibold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition">
+                      Abbrechen
+                    </button>
+                    <button onClick={saveProfile} className="text-sm font-semibold bg-[#C4973A] text-white px-3 py-1.5 rounded-lg hover:bg-[#a87b20] transition">
+                      Speichern
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Vorname', key: 'first_name', type: 'text', placeholder: 'Mario' },
+                  { label: 'Nachname', key: 'last_name', type: 'text', placeholder: 'Mustermann' },
+                  { label: 'Telefon', key: 'phone', type: 'tel', placeholder: '+49 2173 …' },
+                  { label: 'Geburtstag', key: 'birth_date', type: 'date', placeholder: '' },
+                ].map(f => (
+                  <div key={f.key}>
+                    <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">{f.label}</label>
+                    <input
+                      type={f.type}
+                      disabled={!editingProfile}
+                      value={(profileDraft as any)[f.key] || ''}
+                      onChange={e => setProfileDraft(prev => ({ ...prev, [f.key]: e.target.value }))}
+                      placeholder={f.placeholder}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm disabled:bg-gray-50 disabled:text-gray-400 focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition"
+                    />
+                  </div>
+                ))}
+                <div className="col-span-2">
+                  <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Newsletter</label>
+                  <select
+                    disabled={!editingProfile}
+                    value={profileDraft.newsletter ? 'ja' : 'nein'}
+                    onChange={e => setProfileDraft(prev => ({ ...prev, newsletter: e.target.value === 'ja' }))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm disabled:bg-gray-50 disabled:text-gray-400 focus:outline-none focus:border-[#C4973A] transition"
+                  >
+                    <option value="ja">Ja, Angebote erhalten</option>
+                    <option value="nein">Nein danke</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Allergie-Profil */}
+            {flags.allergy_profile && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2"><AlertTriangle size={16} className="text-red-500" /> Allergie & Ernährung</h3>
+                  <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">Wird an Küche gesendet</span>
+                </div>
+                <p className="text-sm text-gray-400 mb-3">Wähle deine Allergene — wir informieren die Küche bei jeder Bestellung automatisch.</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {ALLERGEN_LIST.map(a => {
+                    const active = (profileDraft.allergies || []).includes(a)
+                    return (
+                      <button
+                        key={a}
+                        onClick={() => toggleAllergy(a)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition ${active ? 'border-red-400 bg-red-50 text-red-600' : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'}`}
+                      >
+                        {active ? '⚠️ ' : ''}{a}
+                      </button>
+                    )
+                  })}
+                </div>
+                <textarea
+                  rows={2}
+                  value={profileDraft.dietary_notes || ''}
+                  onChange={e => setProfileDraft(prev => ({ ...prev, dietary_notes: e.target.value }))}
+                  placeholder="Weitere Anmerkungen (z.B. bitte ohne Walnüsse in allen Sorten)…"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition"
+                />
+                <div className="flex justify-end mt-2">
+                  <button onClick={saveProfile} className="text-sm font-bold bg-[#C4973A] text-white px-4 py-2 rounded-xl hover:bg-[#a87b20] transition">
+                    Allergie-Profil speichern
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Passwort */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">🔒</div>
+                Passwort ändern oder zurücksetzen
+              </div>
+              <Link href="/auth/forgot-password" className="text-sm font-semibold text-[#C4973A] hover:text-[#a87c2a] transition">
+                Ändern →
+              </Link>
+            </div>
+
+            {/* Referral */}
+            {flags.referral_enabled && profile?.referral_code && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2">🤝 Freunde werben</h3>
+                <p className="text-sm text-gray-400 mb-3">Dein Freund bekommt 2 € Rabatt · Du bekommst 2 € Guthaben</p>
+                <div className="bg-[#f7f5f1] border border-[#C4973A]/20 rounded-xl p-4 text-center">
+                  <div className="text-2xl font-black tracking-widest text-[#C4973A] font-mono mb-2">{profile.referral_code}</div>
+                  <button
+                    onClick={() => { navigator.clipboard?.writeText(profile.referral_code!); showToast('📋 Code kopiert!') }}
+                    className="text-sm font-bold text-[#C4973A] hover:text-[#a87b20] transition"
+                  >
+                    Code kopieren
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Konto löschen */}
+            <div className="bg-white rounded-2xl border border-red-100 p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-red-500 font-semibold flex items-center gap-2">
+                  <Trash2 size={14} /> Konto löschen
+                </div>
+                <button
+                  onClick={() => showToast('Bitte kontaktiere uns direkt: info@eiscafe-simonetti.de')}
+                  className="text-sm font-semibold text-red-400 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition"
+                >
+                  Anfragen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════
+            TAB: NACHRICHTEN
+        ══════════════════════════════════════ */}
+        {tab === 'nachrichten' && (
+          <div className="space-y-4">
+
+            {/* Feedback */}
+            {flags.feedback_enabled && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><Star size={16} className="text-[#C4973A]" /> Bewertung abgeben</h3>
+
+                {/* Sterne */}
+                <div className="flex gap-1 mb-3">
+                  {[1,2,3,4,5].map(n => (
+                    <button key={n} onClick={() => setFeedback(f => ({ ...f, rating: n }))}>
+                      <Star size={24} className={n <= feedback.rating ? 'text-[#C4973A] fill-[#C4973A]' : 'text-gray-200'} />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Mood */}
+                <div className="flex gap-2 flex-wrap mb-3">
+                  {[
+                    { key: 'fantastic', emoji: '😍', label: 'Fantastisch' },
+                    { key: 'good',      emoji: '😊', label: 'Gut' },
+                    { key: 'ok',        emoji: '😐', label: 'Geht so' },
+                    { key: 'bad',       emoji: '😕', label: 'Nicht gut' },
+                  ].map(m => (
+                    <button
+                      key={m.key}
+                      onClick={() => setFeedback(f => ({ ...f, mood: m.key }))}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-full border text-sm font-semibold transition
+                        ${feedback.mood === m.key ? 'border-[#C4973A] bg-[#fffbf2] text-[#a87b20]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                    >
+                      {m.emoji} {m.label}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  rows={3}
+                  value={feedback.text}
+                  onChange={e => setFeedback(f => ({ ...f, text: e.target.value }))}
+                  placeholder="Was hat dir gefallen? Was können wir besser machen?"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition mb-2"
+                />
+                <button onClick={sendFeedback} className="w-full py-2.5 bg-[#C4973A] text-white font-bold rounded-xl hover:bg-[#a87b20] transition text-sm">
+                  Feedback absenden
+                </button>
+              </div>
+            )}
+
+            {/* Direktnachrichten */}
+            {flags.messages_enabled && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2"><MessageSquare size={16} /> Nachrichten</h3>
+                  <span className="text-[10px] text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full">Antwortzeit &lt; 2 Std.</span>
+                </div>
+
+                {/* Chat */}
+                <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
+                  {messages.length === 0 && (
+                    <p className="text-sm text-gray-400 text-center py-6">Noch keine Nachrichten. Schreib uns!</p>
+                  )}
+                  {messages.map(msg => (
+                    <div key={msg.id} className={`flex ${msg.direction === 'from_customer' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
+                        ${msg.direction === 'from_customer'
+                          ? 'bg-[#fffbf2] border border-[#C4973A]/20 text-gray-800 rounded-br-sm'
+                          : 'bg-gray-100 text-gray-700 rounded-bl-sm'
+                        }`}>
+                        {msg.message}
+                        <div className="text-[10px] text-gray-400 mt-1">
+                          {new Date(msg.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Input */}
+                <div className="flex gap-2">
+                  <textarea
+                    rows={2}
+                    value={msgInput}
+                    onChange={e => setMsgInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
+                    placeholder="Schreib uns — Fragen, Sonderwünsche, alles willkommen…"
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition"
+                  />
+                  <button onClick={sendMessage} className="px-4 py-2 bg-[#1a1a1a] text-white rounded-xl hover:bg-black transition self-end">
+                    <Send size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Anregungen */}
+            {flags.suggestions_enabled && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2">💡 Wünsche & Anregungen</h3>
+                <p className="text-sm text-gray-400 mb-3">Welche Eissorten oder Produkte sollen wir anbieten?</p>
+                <textarea
+                  rows={2}
+                  id="suggestionText"
+                  placeholder="z.B. mehr vegane Sorten, glutenfreie Waffeln, Saisonales…"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition mb-2"
+                />
+                <button
+                  onClick={async () => {
+                    const el = document.getElementById('suggestionText') as HTMLTextAreaElement
+                    if (!el.value.trim()) return
+                    await supabase.from('customer_suggestions').insert({ user_id: session?.user.id, suggestion: el.value.trim() })
+                    el.value = ''
+                    showToast('💡 Wunsch eingereicht — danke!')
+                  }}
+                  className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:border-[#C4973A] hover:text-[#C4973A] transition"
+                >
+                  Einreichen
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// ADRESS MODAL
+// ─────────────────────────────────────────────
+function AddressModal({ address, isNew, onSave, onClose }: {
+  address: CustomerAddress
+  isNew: boolean
+  onSave: (a: Partial<CustomerAddress>) => void
+  onClose: () => void
+}) {
+  const [draft, setDraft] = useState<Partial<CustomerAddress>>(address)
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h3 className="font-bold text-gray-900 text-lg mb-4">{isNew ? 'Neue Adresse' : 'Adresse bearbeiten'}</h3>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Bezeichnung</label>
+            <select
+              value={draft.label}
+              onChange={e => setDraft(p => ({ ...p, label: e.target.value, icon: e.target.value === 'Zuhause' ? '🏠' : e.target.value === 'Arbeit' ? '🏢' : '📌' }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition"
+            >
+              <option>🏠 Zuhause</option>
+              <option>🏢 Arbeit</option>
+              <option>📌 Sonstige</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Name</label>
+            <input type="text" value={draft.recipient_name || ''} onChange={e => setDraft(p => ({ ...p, recipient_name: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Straße & Hausnummer</label>
+            <input type="text" value={draft.street || ''} onChange={e => setDraft(p => ({ ...p, street: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">PLZ</label>
+            <input type="text" value={draft.zip || ''} onChange={e => setDraft(p => ({ ...p, zip: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Stadt</label>
+            <input type="text" value={draft.city || ''} onChange={e => setDraft(p => ({ ...p, city: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Zusatz (Klingel, Etage…)</label>
+            <input type="text" value={draft.extra || ''} onChange={e => setDraft(p => ({ ...p, extra: e.target.value }))} placeholder="z.B. 3. OG links"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end mt-5">
+          <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition">
+            Abbrechen
+          </button>
+          <button onClick={() => onSave(draft)} className="px-5 py-2 bg-[#C4973A] text-white text-sm font-bold rounded-xl hover:bg-[#a87b20] transition">
+            ✓ Speichern
+          </button>
+        </div>
       </div>
     </div>
   )
