@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import AdminLayout from '@/components/AdminLayout'
 import { supabase } from '@/lib/supabase'
-import { ToggleLeft, ToggleRight, CreditCard, ShoppingBag, RefreshCw } from 'lucide-react'
+import { ToggleLeft, ToggleRight, CreditCard, ShoppingBag, RefreshCw, User } from 'lucide-react'
 
 interface Feature {
   id: string
@@ -11,6 +11,28 @@ interface Feature {
 }
 
 const PAYMENT_FEATURES = ['card', 'sepa', 'giropay', 'sofort', 'apple_pay', 'google_pay', 'paypal', 'cash', 'wero']
+
+// NEU: Kunden-Portal Features — aus feature_flags Tabelle
+const CUSTOMER_PORTAL_FEATURES: Feature[] = [
+  { id: 'reorder_enabled',      name: 'Nochmal bestellen',        description: 'Kunden können vergangene Bestellungen mit 1 Klick wiederholen',  enabled: true  },
+  { id: 'live_tracking',        name: 'Live-Tracking',            description: 'Echtzeit-Fahrer-Tracking für Kunden im Konto anzeigen',           enabled: true  },
+  { id: 'multi_address',        name: 'Mehrere Lieferadressen',   description: 'Kunden speichern Zuhause, Arbeit und weitere Adressen',           enabled: true  },
+  { id: 'allergy_profile',      name: 'Allergie-Profil',          description: 'Kunden hinterlegen Allergene — wird automatisch an Küche gesendet', enabled: false },
+  { id: 'favorites_enabled',    name: 'Lieblingsbestellungen',    description: 'Kunden speichern und wiederholen Lieblingsbestellungen',           enabled: false },
+  { id: 'feedback_enabled',     name: 'Bewertungen & Feedback',   description: 'Sterne-Bewertung und Stimmungs-Feedback nach Bestellungen',       enabled: true  },
+  { id: 'messages_enabled',     name: 'Nachrichten (Chat)',       description: 'Direktnachrichten zwischen Kunden und Restaurant im Konto',        enabled: true  },
+  { id: 'suggestions_enabled',  name: 'Wünsche & Anregungen',     description: 'Kunden können Produktwünsche einreichen',                         enabled: true  },
+  { id: 'voucher_enabled',      name: 'Gutschein-Codes (Konto)',  description: 'Gutschein-Einlösung im Kunden-Konto (Wallet-Bereich)',            enabled: false },
+  { id: 'wallet_enabled',       name: 'Guthaben-Wallet',          description: 'Kunden sehen Guthaben-Konto und Wallet-Tab im Konto',             enabled: false },
+  { id: 'loyalty_enabled',      name: 'Treuepunkte',              description: 'Punkte-System mit Bronze/Silber/Gold/Diamond Stufen',              enabled: false },
+  { id: 'tip_enabled',          name: 'Trinkgeld (Konto)',        description: 'Trinkgeld-Button bei aktiven Bestellungen im Kunden-Konto',       enabled: false },
+  { id: 'referral_enabled',     name: 'Freunde werben',           description: 'Kunden erhalten persönlichen Empfehlungscode mit Rabatt',          enabled: false },
+  { id: 'subscription_enabled', name: 'Simonetti Plus (Abo)',     description: 'Monatliches Abo mit Gratislieferung, Rabatten & Doppelpunkten',   enabled: false },
+  { id: 'scheduled_order',      name: 'Vorbestellungen',          description: 'Kunden wählen Lieferdatum und -uhrzeit im Voraus',                enabled: false },
+  { id: 'gift_enabled',         name: 'Geschenk-Versand',         description: 'Bestellung als Geschenk mit Grußkarte an andere Adresse senden',  enabled: false },
+]
+
+const CUSTOMER_FEATURE_IDS = CUSTOMER_PORTAL_FEATURES.map(f => f.id)
 
 const FEATURE_ICONS: Record<string, string> = {
   // Zahlungsmethoden
@@ -30,43 +52,65 @@ const FEATURE_ICONS: Record<string, string> = {
   email_notifications: '📧',
   vouchers:            '🎟️',
   reviews:             '⭐',
+  // Kunden-Portal
+  reorder_enabled:     '🔄',
+  live_tracking:       '🛵',
+  multi_address:       '📍',
+  allergy_profile:     '🚨',
+  favorites_enabled:   '⭐',
+  feedback_enabled:    '⭐',
+  messages_enabled:    '💬',
+  suggestions_enabled: '💡',
+  voucher_enabled:     '🎟️',
+  wallet_enabled:      '💰',
+  loyalty_enabled:     '🏆',
+  tip_enabled:         '💛',
+  referral_enabled:    '🤝',
+  subscription_enabled:'👑',
+  scheduled_order:     '⏰',
+  gift_enabled:        '🎁',
 }
 
 const FEATURE_EXTRAS: Record<string, string> = {
-  paypal:    '💡 Code bereit – Toggle AN und Kunden sehen PayPal sofort',
-  cash:      '💡 Nur für eingeloggte Kunden sichtbar – kein Gast-Checkout',
-  wero:      '🔜 Kommt bald – deutsche P2P-Zahlungsmethode (Deutsche Bank, Commerzbank etc.)',
-  apple_pay: 'Erscheint automatisch auf iOS Safari',
-  google_pay:'Erscheint automatisch auf Android Chrome',
-  vouchers:  'Gutscheinfeld im Checkout ein- oder ausblenden',
-  reviews:   'Kundenbewertungen auf der Shopseite anzeigen',
-  tip_option:'Trinkgeld-Auswahl (0%, 5%, 10%, 15%, eigen) im Checkout anzeigen',
+  paypal:              '💡 Code bereit – Toggle AN und Kunden sehen PayPal sofort',
+  cash:                '💡 Nur für eingeloggte Kunden sichtbar – kein Gast-Checkout',
+  wero:                '🔜 Kommt bald – deutsche P2P-Zahlungsmethode (Deutsche Bank, Commerzbank etc.)',
+  apple_pay:           'Erscheint automatisch auf iOS Safari',
+  google_pay:          'Erscheint automatisch auf Android Chrome',
+  vouchers:            'Gutscheinfeld im Checkout ein- oder ausblenden',
+  reviews:             'Kundenbewertungen auf der Shopseite anzeigen',
+  tip_option:          'Trinkgeld-Auswahl (0%, 5%, 10%, 15%, eigen) im Checkout anzeigen',
+  allergy_profile:     '⚠️ Allergene werden bei jeder Bestellung automatisch an die Küche übermittelt',
+  loyalty_enabled:     '💡 Benötigt: loyalty_transactions Tabelle in Supabase',
+  wallet_enabled:      '💡 Zeigt Guthaben-Tab im Kunden-Konto an',
+  subscription_enabled:'💡 Benötigt Stripe-Abo-Integration für Zahlungsabwicklung',
+  referral_enabled:    '💡 Jeder Kunde erhält automatisch einen einzigartigen Code',
 }
 
 const DEFAULT_SHOP_FEATURES: Feature[] = [
-  { id: 'tip_option',          name: 'Trinkgeld-Option',         description: 'Trinkgeld-Auswahl im Checkout anzeigen',              enabled: true  },
-  { id: 'vouchers',            name: 'Gutscheine',                description: 'Gutscheinfeld im Checkout ein- oder ausblenden',       enabled: true  },
-  { id: 'guest_checkout',      name: 'Gast-Checkout',             description: 'Bestellen ohne Konto möglich',                        enabled: true  },
-  { id: 'favorites',           name: 'Favoriten',                 description: 'Kunden können Produkte auf Merkliste setzen',          enabled: true  },
-  { id: 'reviews',             name: 'Bewertungen',               description: 'Kundenbewertungen auf der Shopseite anzeigen',         enabled: false },
-  { id: 'email_notifications', name: 'E-Mail Benachrichtigungen', description: 'Automatische Emails bei Statusänderungen versenden',   enabled: true  },
+  { id: 'tip_option',          name: 'Trinkgeld-Option',         description: 'Trinkgeld-Auswahl im Checkout anzeigen',            enabled: true  },
+  { id: 'vouchers',            name: 'Gutscheine',                description: 'Gutscheinfeld im Checkout ein- oder ausblenden',     enabled: true  },
+  { id: 'guest_checkout',      name: 'Gast-Checkout',             description: 'Bestellen ohne Konto möglich',                      enabled: true  },
+  { id: 'favorites',           name: 'Favoriten',                 description: 'Kunden können Produkte auf Merkliste setzen',        enabled: true  },
+  { id: 'reviews',             name: 'Bewertungen',               description: 'Kundenbewertungen auf der Shopseite anzeigen',       enabled: false },
+  { id: 'email_notifications', name: 'E-Mail Benachrichtigungen', description: 'Automatische Emails bei Statusänderungen versenden', enabled: true  },
 ]
 
 export default function FeaturesPage() {
-  const [features, setFeatures] = useState<Feature[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [saving, setSaving]     = useState<string | null>(null)
-  const [toast, setToast]       = useState('')
+  const [features, setFeatures]         = useState<Feature[]>([])
+  const [customerFeatures, setCustomerFeatures] = useState<Feature[]>(CUSTOMER_PORTAL_FEATURES)
+  const [loading, setLoading]           = useState(true)
+  const [saving, setSaving]             = useState<string | null>(null)
+  const [toast, setToast]               = useState('')
 
   useEffect(() => { loadFeatures() }, [])
 
   const loadFeatures = async () => {
     setLoading(true)
 
-    // feature_toggles aus DB
+    // ── feature_toggles (bestehende Tabelle: Zahlung + Shop) ──
     const { data } = await supabase.from('feature_toggles').select('*').order('id')
 
-    // cash_payment_enabled aus shop_settings laden
     const { data: settings } = await supabase
       .from('shop_settings')
       .select('cash_payment_enabled')
@@ -74,28 +118,39 @@ export default function FeaturesPage() {
       .single()
 
     const cashEnabled = settings?.cash_payment_enabled ?? false
-
-    // Cash als virtueller Feature-Eintrag
     const cashFeature: Feature = {
-      id:          'cash',
-      name:        'Barzahlung',
+      id: 'cash', name: 'Barzahlung',
       description: 'Kunden können bei Lieferung bar bezahlen (nur eingeloggte Kunden)',
-      enabled:     cashEnabled,
+      enabled: cashEnabled,
     }
 
     if (data && data.length > 0) {
       const dbIds   = data.map((f: Feature) => f.id)
       const missing = DEFAULT_SHOP_FEATURES.filter(f => !dbIds.includes(f.id))
-      // Cash nicht aus feature_toggles – kommt aus shop_settings
       const withoutCash = [...data, ...missing].filter(f => f.id !== 'cash')
       setFeatures([...withoutCash, cashFeature])
     } else {
       setFeatures([...DEFAULT_SHOP_FEATURES, cashFeature])
     }
 
+    // ── feature_flags (neue Tabelle: Kunden-Portal) ──
+    const { data: flagData } = await supabase
+      .from('feature_flags')
+      .select('id, enabled')
+      .in('id', CUSTOMER_FEATURE_IDS)
+
+    if (flagData && flagData.length > 0) {
+      const flagMap = Object.fromEntries(flagData.map((f: any) => [f.id, f.enabled]))
+      setCustomerFeatures(CUSTOMER_PORTAL_FEATURES.map(f => ({
+        ...f,
+        enabled: flagMap[f.id] ?? f.enabled,
+      })))
+    }
+
     setLoading(false)
   }
 
+  // ── Toggle: bestehende Tabelle (Zahlung + Shop) ──
   const toggleFeature = async (id: string, currentEnabled: boolean) => {
     if (id === 'wero') { showToast('🔜 Wero ist noch nicht verfügbar – kommt bald!'); return }
 
@@ -103,7 +158,6 @@ export default function FeaturesPage() {
     const newEnabled = !currentEnabled
     setFeatures(prev => prev.map(f => f.id === id ? { ...f, enabled: newEnabled } : f))
 
-    // ── Barzahlung: in shop_settings speichern ──
     if (id === 'cash') {
       const { error } = await supabase
         .from('shop_settings')
@@ -120,7 +174,6 @@ export default function FeaturesPage() {
       return
     }
 
-    // ── Alle anderen: in feature_toggles speichern ──
     const { error: updateError } = await supabase
       .from('feature_toggles')
       .update({ enabled: newEnabled, updated_at: new Date().toISOString() })
@@ -144,6 +197,31 @@ export default function FeaturesPage() {
     setSaving(null)
   }
 
+  // ── Toggle: neue feature_flags Tabelle (Kunden-Portal) ──
+  const toggleCustomerFeature = async (id: string, currentEnabled: boolean) => {
+    setSaving(id)
+    const newEnabled = !currentEnabled
+
+    // Optimistic UI
+    setCustomerFeatures(prev => prev.map(f => f.id === id ? { ...f, enabled: newEnabled } : f))
+
+    const { error } = await supabase
+      .from('feature_flags')
+      .update({ enabled: newEnabled, updated_at: new Date().toISOString() })
+      .eq('id', id)
+
+    if (error) {
+      // Rollback
+      setCustomerFeatures(prev => prev.map(f => f.id === id ? { ...f, enabled: currentEnabled } : f))
+      showToast('❌ Fehler beim Speichern')
+    } else {
+      const name = CUSTOMER_PORTAL_FEATURES.find(f => f.id === id)?.name || id
+      showToast(newEnabled ? `✅ ${name} aktiviert` : `⏸️ ${name} deaktiviert`)
+    }
+
+    setSaving(null)
+  }
+
   const showToast = (msg: string) => {
     setToast(msg); setTimeout(() => setToast(''), 3000)
   }
@@ -151,7 +229,6 @@ export default function FeaturesPage() {
   const paymentFeatures = features.filter(f => PAYMENT_FEATURES.includes(f.id))
   const shopFeatures    = features.filter(f => !PAYMENT_FEATURES.includes(f.id))
 
-  // Wero als virtuellen Eintrag falls nicht in DB
   const weroInDb = features.find(f => f.id === 'wero')
   const allPaymentFeatures = weroInDb
     ? paymentFeatures
@@ -206,7 +283,7 @@ export default function FeaturesPage() {
         </div>
 
         {/* ── Shop Features ── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
             <ShoppingBag size={18} className="text-gray-600" />
             <h2 className="font-bold text-gray-900">Shop-Features</h2>
@@ -229,7 +306,30 @@ export default function FeaturesPage() {
           </div>
         </div>
 
-        <div className="mt-6 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
+        {/* ── NEU: Kunden-Portal Features ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <User size={18} className="text-gray-600" />
+            <div>
+              <h2 className="font-bold text-gray-900">Kunden-Konto Features</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Sichtbar unter „Mein Konto" für eingeloggte Kunden</p>
+            </div>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {customerFeatures.map(feature => (
+              <FeatureRow
+                key={feature.id}
+                feature={feature}
+                icon={FEATURE_ICONS[feature.id] || '👤'}
+                saving={saving === feature.id}
+                onToggle={() => toggleCustomerFeature(feature.id, feature.enabled)}
+                extra={FEATURE_EXTRAS[feature.id]}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-2 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
           <strong>💡 Hinweis:</strong> Zahlungsmethoden müssen auch im{' '}
           <a href="https://dashboard.stripe.com/settings/payment_methods" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
             Stripe Dashboard
