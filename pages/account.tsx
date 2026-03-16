@@ -679,7 +679,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
             </div>
             {orders.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-                <div className="text-6xl mb-4">ðŸ¦</div>
+                <div className="text-6xl mb-4">🍦</div>
                 <p className="text-xl font-bold text-gray-700 mb-2">Noch keine Bestellungen</p>
                 <p className="text-gray-400 mb-6">Bestell jetzt dein erstes Eis!</p>
                 <button onClick={() => router.push('/')} className="px-6 py-3 bg-[#1a1a1a] text-white font-bold rounded-xl hover:bg-black transition">
