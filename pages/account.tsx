@@ -1,19 +1,17 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/router'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import {
-  Package, RefreshCw, LogOut, User, MapPin, Phone, Mail,
+  Package, RefreshCw, LogOut, User, MapPin, Mail,
   ChevronDown, ChevronUp, Clock, CheckCircle, Truck, XCircle,
-  Star, MessageSquare, Heart, Gift, Bell, Shield, Trash2,
-  Plus, Edit2, Home, Briefcase, AlertTriangle, Send
+  Star, MessageSquare, Plus, Edit2, Trash2, AlertTriangle, Send
 } from 'lucide-react'
 
 // ─────────────────────────────────────────────
-// FEATURE FLAGS — aus Supabase laden
-// Fallback: alles false (sicher)
+// FEATURE FLAGS
 // ─────────────────────────────────────────────
 interface FeatureFlags {
   reorder_enabled:      boolean
@@ -119,28 +117,32 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   STORNIERT:      { label: 'Storniert',      color: 'text-red-700',    bg: 'bg-red-100',    icon: XCircle     },
 }
 
-const ALLERGEN_LIST = ['Nüsse', 'Laktose', 'Gluten', 'Eier', 'Soja', 'Erdbeeren', 'Schokolade', 'Alkohol']
+const ALLERGEN_LIST = ['Nuesse', 'Laktose', 'Gluten', 'Eier', 'Soja', 'Erdbeeren', 'Schokolade', 'Alkohol']
 
 function formatAddress(addr: any): string {
-  if (!addr) return '–'
+  if (!addr) return '-'
   if (typeof addr === 'string') return addr
   return [addr.street, addr.zip && addr.city ? addr.zip + ' ' + addr.city : addr.city].filter(Boolean).join(', ')
 }
 
 function formatPayment(method: string): string {
   switch (method) {
-    case 'stripe':  return '💳 Kreditkarte'
-    case 'paypal':  return '🅿️ PayPal'
-    case 'cash':    return '💵 Barzahlung'
-    case 'klarna':  return '🛒 Klarna'
-    default:        return method || '–'
+    case 'stripe':  return 'Kreditkarte'
+    case 'paypal':  return 'PayPal'
+    case 'cash':    return 'Barzahlung'
+    case 'klarna':  return 'Klarna'
+    default:        return method || '-'
   }
 }
 
 // ─────────────────────────────────────────────
-// ORDER CARD (unverändert aus deiner Version)
+// ORDER CARD
 // ─────────────────────────────────────────────
-function OrderCard({ order, flags, onReorder }: { order: Order; flags: FeatureFlags; onReorder: (order: Order) => void }) {
+function OrderCard({ order, flags, onReorder }: {
+  order: Order
+  flags: FeatureFlags
+  onReorder: (order: Order) => void
+}) {
   const [expanded, setExpanded] = useState(false)
   const status = STATUS_CONFIG[order.status] || { label: order.status, color: 'text-gray-700', bg: 'bg-gray-100', icon: Clock }
   const StatusIcon = status.icon
@@ -148,7 +150,6 @@ function OrderCard({ order, flags, onReorder }: { order: Order; flags: FeatureFl
 
   return (
     <div className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden hover:border-[#C4973A]/40 transition-colors">
-      {/* Header */}
       <div className="flex items-center justify-between p-5 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center flex-shrink-0">
@@ -166,7 +167,7 @@ function OrderCard({ order, flags, onReorder }: { order: Order; flags: FeatureFl
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="font-bold text-lg text-gray-900">{order.total.toFixed(2)} €</div>
+            <div className="font-bold text-lg text-gray-900">{order.total.toFixed(2)} EUR</div>
             <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${status.bg} ${status.color}`}>
               <StatusIcon size={11} />
               {status.label}
@@ -176,86 +177,80 @@ function OrderCard({ order, flags, onReorder }: { order: Order; flags: FeatureFl
         </div>
       </div>
 
-      {/* Live-Tracking Banner */}
       {flags.live_tracking && isLive && (
         <div className="mx-5 mb-3 bg-[#C4973A]/10 border border-[#C4973A]/30 rounded-xl px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold text-[#8a6510]">
             <Truck size={15} />
-            Deine Bestellung ist unterwegs 🛵
+            Deine Bestellung ist unterwegs
           </div>
           <Link href={`/tracking/${order.id}`} className="text-xs font-bold text-[#C4973A] hover:text-[#a87b20]">
-            Live verfolgen →
+            Live verfolgen
           </Link>
         </div>
       )}
 
-      {/* Details */}
       {expanded && (
         <div className="px-5 pb-5 border-t border-gray-100 pt-4 space-y-4">
-          {/* Artikel */}
           <div>
             <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Artikel</div>
             <div className="space-y-2">
               {(order.items || []).map((item: any, idx: number) => {
                 const flavors = (item.selectedFlavors || item.flavors || []).join(', ')
-                const extras  = (item.selectedExtras  || item.extras  || []).map((e: any) => e.name || e).join(', ')
+                const extras  = (item.selectedExtras || item.extras || []).map((e: any) => e.name || e).join(', ')
                 const lineTotal = ((item.totalPrice || (item.price * item.quantity)) || 0).toFixed(2)
                 return (
                   <div key={idx} className="flex justify-between items-start">
                     <div>
                       <span className="font-semibold text-sm text-gray-800">{item.quantity}x {item.name}</span>
-                      {flavors && <div className="text-xs text-gray-400 mt-0.5">🍦 {flavors}</div>}
-                      {extras  && <div className="text-xs text-gray-400">➕ {extras}</div>}
+                      {flavors && <div className="text-xs text-gray-400 mt-0.5">{flavors}</div>}
+                      {extras  && <div className="text-xs text-gray-400">{extras}</div>}
                     </div>
-                    <span className="text-sm font-semibold text-gray-700 ml-4 flex-shrink-0">{lineTotal} €</span>
+                    <span className="text-sm font-semibold text-gray-700 ml-4 flex-shrink-0">{lineTotal} EUR</span>
                   </div>
                 )
               })}
             </div>
           </div>
 
-          {/* Summen */}
           <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
             {order.subtotal > 0 && (
-              <div className="flex justify-between text-gray-500"><span>Zwischensumme</span><span>{order.subtotal.toFixed(2)} €</span></div>
+              <div className="flex justify-between text-gray-500"><span>Zwischensumme</span><span>{order.subtotal.toFixed(2)} EUR</span></div>
             )}
             {order.order_type !== 'pickup' && (
-              <div className="flex justify-between text-gray-500"><span>Liefergebühr</span><span>{(order.delivery_fee ?? 3).toFixed(2)} €</span></div>
+              <div className="flex justify-between text-gray-500"><span>Liefergebuehr</span><span>{(order.delivery_fee ?? 3).toFixed(2)} EUR</span></div>
             )}
             {order.tip > 0 && (
-              <div className="flex justify-between text-gray-500"><span>Trinkgeld</span><span>{order.tip.toFixed(2)} €</span></div>
+              <div className="flex justify-between text-gray-500"><span>Trinkgeld</span><span>{order.tip.toFixed(2)} EUR</span></div>
             )}
             {order.discount > 0 && (
-              <div className="flex justify-between text-green-600"><span>Rabatt</span><span>-{order.discount.toFixed(2)} €</span></div>
+              <div className="flex justify-between text-green-600"><span>Rabatt</span><span>-{order.discount.toFixed(2)} EUR</span></div>
             )}
             <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-200">
-              <span>Gesamt</span><span>{order.total.toFixed(2)} €</span>
+              <span>Gesamt</span><span>{order.total.toFixed(2)} EUR</span>
             </div>
           </div>
 
-          {/* Infos Grid */}
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="bg-gray-50 rounded-xl p-3">
               <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">
-                {order.order_type === 'pickup' ? '🏪 Abholung' : '📍 Lieferadresse'}
+                {order.order_type === 'pickup' ? 'Abholung' : 'Lieferadresse'}
               </div>
               <div className="text-gray-700 font-medium">
                 {order.order_type === 'pickup' ? 'Konrad-Adenauer-Platz 2, 40764 Langenfeld' : formatAddress(order.delivery_address)}
               </div>
             </div>
             <div className="bg-gray-50 rounded-xl p-3">
-              <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">💳 Zahlung</div>
+              <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">Zahlung</div>
               <div className="text-gray-700 font-medium">{formatPayment(order.payment_method)}</div>
             </div>
           </div>
 
           {order.notes && (
             <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-800">
-              💬 {order.notes}
+              {order.notes}
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex gap-2 flex-wrap pt-1">
             {flags.reorder_enabled && (
               <button
@@ -277,7 +272,7 @@ function OrderCard({ order, flags, onReorder }: { order: Order; flags: FeatureFl
 }
 
 // ─────────────────────────────────────────────
-// ADRESS CARD
+// ADDRESS CARD
 // ─────────────────────────────────────────────
 function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
   address: CustomerAddress
@@ -286,7 +281,9 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
   onSetDefault: (id: string) => void
 }) {
   return (
-    <div className={`bg-white rounded-2xl border-2 p-4 relative transition-colors ${address.is_default ? 'border-[#C4973A] bg-[#fffbf2]' : 'border-gray-100 hover:border-[#C4973A]/40'}`}>
+    <div className={`bg-white rounded-2xl border-2 p-4 relative transition-colors ${
+      address.is_default ? 'border-[#C4973A] bg-[#fffbf2]' : 'border-gray-100 hover:border-[#C4973A]/40'
+    }`}>
       {address.is_default && (
         <span className="absolute top-3 right-3 bg-[#C4973A] text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
           Standard
@@ -305,15 +302,82 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
           <Edit2 size={11} /> Bearbeiten
         </button>
         {!address.is_default && (
-          <button onClick={() => onSetDefault(address.id)} className="flex items-center gap-1 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-[#C4973A] hover:text-[#C4973A] transition">
-            ⭐ Als Standard
-          </button>
+          <>
+            <button onClick={() => onSetDefault(address.id)} className="flex items-center gap-1 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-[#C4973A] hover:text-[#C4973A] transition">
+              Als Standard
+            </button>
+            <button onClick={() => onDelete(address.id)} className="flex items-center gap-1 text-xs font-semibold text-red-400 border border-red-100 rounded-lg px-2.5 py-1.5 hover:bg-red-50 transition">
+              <Trash2 size={11} /> Loeschen
+            </button>
+          </>
         )}
-        {!address.is_default && (
-          <button onClick={() => onDelete(address.id)} className="flex items-center gap-1 text-xs font-semibold text-red-400 border border-red-100 rounded-lg px-2.5 py-1.5 hover:bg-red-50 transition">
-            <Trash2 size={11} /> Löschen
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// ADDRESS MODAL
+// ─────────────────────────────────────────────
+function AddressModal({ address, isNew, onSave, onClose }: {
+  address: CustomerAddress
+  isNew: boolean
+  onSave: (a: Partial<CustomerAddress>) => void
+  onClose: () => void
+}) {
+  const [draft, setDraft] = useState<Partial<CustomerAddress>>(address)
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h3 className="font-bold text-gray-900 text-lg mb-4">{isNew ? 'Neue Adresse' : 'Adresse bearbeiten'}</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Bezeichnung</label>
+            <select
+              value={draft.label}
+              onChange={e => setDraft(p => ({ ...p, label: e.target.value, icon: e.target.value === 'Zuhause' ? '🏠' : e.target.value === 'Arbeit' ? '🏢' : '📌' }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition"
+            >
+              <option>Zuhause</option>
+              <option>Arbeit</option>
+              <option>Sonstige</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Name</label>
+            <input type="text" value={draft.recipient_name || ''} onChange={e => setDraft(p => ({ ...p, recipient_name: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Strasse und Hausnummer</label>
+            <input type="text" value={draft.street || ''} onChange={e => setDraft(p => ({ ...p, street: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">PLZ</label>
+            <input type="text" value={draft.zip || ''} onChange={e => setDraft(p => ({ ...p, zip: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Stadt</label>
+            <input type="text" value={draft.city || ''} onChange={e => setDraft(p => ({ ...p, city: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Zusatz (Klingel, Etage)</label>
+            <input type="text" value={draft.extra || ''} onChange={e => setDraft(p => ({ ...p, extra: e.target.value }))} placeholder="z.B. 3. OG links"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end mt-5">
+          <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition">
+            Abbrechen
           </button>
-        )}
+          <button onClick={() => onSave(draft)} className="px-5 py-2 bg-[#C4973A] text-white text-sm font-bold rounded-xl hover:bg-[#a87b20] transition">
+            Speichern
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -322,7 +386,7 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
 // ─────────────────────────────────────────────
 // TABS
 // ─────────────────────────────────────────────
-type Tab = 'bestellungen' | 'adressen' | 'profil' | 'nachrichten'
+type Tab = 'bestellungen' | 'adressen' | 'profil' | 'nachrichten' | 'wallet'
 
 // ─────────────────────────────────────────────
 // MAIN PAGE
@@ -330,36 +394,37 @@ type Tab = 'bestellungen' | 'adressen' | 'profil' | 'nachrichten'
 export default function AccountPage({ session }: { session: Session | null }) {
   const router = useRouter()
 
-  // State
-  const [tab, setTab]               = useState<Tab>('bestellungen')
-  const [orders, setOrders]         = useState<Order[]>([])
-  const [addresses, setAddresses]   = useState<CustomerAddress[]>([])
-  const [profile, setProfile]       = useState<CustomerProfile | null>(null)
-  const [messages, setMessages]     = useState<Message[]>([])
-  const [flags, setFlags]           = useState<FeatureFlags>(FLAG_DEFAULTS)
-  const [loading, setLoading]       = useState(true)
-  const [msgInput, setMsgInput]     = useState('')
-  const [feedback, setFeedback]     = useState({ rating: 4, mood: 'good', text: '' })
-  const [editingProfile, setEditingProfile] = useState(false)
-  const [profileDraft, setProfileDraft]     = useState<Partial<CustomerProfile>>({})
-  const [toast, setToast]           = useState('')
-  const [voucherCode, setVoucherCode] = useState('')
-  const [addrModal, setAddrModal]   = useState<CustomerAddress | null>(null)
-  const [addrNew, setAddrNew]       = useState(false)
+  const [tab, setTab]                           = useState<Tab>('bestellungen')
+  const [orders, setOrders]                     = useState<Order[]>([])
+  const [addresses, setAddresses]               = useState<CustomerAddress[]>([])
+  const [profile, setProfile]                   = useState<CustomerProfile | null>(null)
+  const [messages, setMessages]                 = useState<Message[]>([])
+  const [flags, setFlags]                       = useState<FeatureFlags>(FLAG_DEFAULTS)
+  const [loading, setLoading]                   = useState(true)
+  const [msgInput, setMsgInput]                 = useState('')
+  const [feedback, setFeedback]                 = useState({ rating: 4, mood: 'good', text: '' })
+  const [editingProfile, setEditingProfile]     = useState(false)
+  const [profileDraft, setProfileDraft]         = useState<Partial<CustomerProfile>>({})
+  const [toast, setToast]                       = useState('')
+  const [voucherCode, setVoucherCode]           = useState('')
+  const [addrModal, setAddrModal]               = useState<CustomerAddress | null>(null)
+  const [addrNew, setAddrNew]                   = useState(false)
+  const bottomRef                               = useRef<HTMLDivElement>(null)
 
-  // ── Init ──────────────────────────────────
   useEffect(() => {
     if (!session) { router.push('/auth/login?redirect=/account'); return }
     Promise.all([fetchOrders(), fetchFlags(), fetchProfile(), fetchAddresses(), fetchMessages()])
       .finally(() => setLoading(false))
   }, [session])
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
   const showToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 3000)
+    setToast(msg); setTimeout(() => setToast(''), 3000)
   }
 
-  // ── Data Fetchers ─────────────────────────
   const fetchOrders = async () => {
     try {
       const res = await fetch(`/api/orders?user_id=${session?.user.id}`)
@@ -385,9 +450,10 @@ export default function AccountPage({ session }: { session: Session | null }) {
         .select('*')
         .eq('id', session?.user.id)
         .single()
-      if (data) { setProfile(data); setProfileDraft(data) }
-      else {
-        // Profil anlegen falls noch nicht vorhanden
+      if (data) {
+        setProfile(data)
+        setProfileDraft(data)
+      } else {
         await supabase.from('customer_profiles').insert({ id: session?.user.id })
       }
     } catch (e) { console.error(e) }
@@ -412,7 +478,6 @@ export default function AccountPage({ session }: { session: Session | null }) {
         .eq('user_id', session?.user.id)
         .order('created_at', { ascending: true })
       setMessages(data || [])
-      // Als gelesen markieren
       if (data?.length) {
         await supabase.from('customer_messages')
           .update({ read_by_customer: true })
@@ -422,17 +487,15 @@ export default function AccountPage({ session }: { session: Session | null }) {
     } catch (e) { console.error(e) }
   }
 
-  // ── Actions ───────────────────────────────
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
   const handleReorder = (order: Order) => {
-    // Items in localStorage für Warenkorb
     localStorage.setItem('reorder_items', JSON.stringify(order.items))
     router.push('/?reorder=1')
-    showToast('🔄 Bestellung in den Warenkorb gelegt!')
+    showToast('Bestellung in den Warenkorb gelegt!')
   }
 
   const saveProfile = async () => {
@@ -440,8 +503,8 @@ export default function AccountPage({ session }: { session: Session | null }) {
       await supabase.from('customer_profiles').upsert({ id: session?.user.id, ...profileDraft })
       setProfile(prev => ({ ...prev!, ...profileDraft }))
       setEditingProfile(false)
-      showToast('✓ Profil gespeichert!')
-    } catch (e) { showToast('❌ Fehler beim Speichern') }
+      showToast('Profil gespeichert!')
+    } catch (e) { showToast('Fehler beim Speichern') }
   }
 
   const saveAddress = async (addr: Partial<CustomerAddress>) => {
@@ -453,21 +516,21 @@ export default function AccountPage({ session }: { session: Session | null }) {
       }
       await fetchAddresses()
       setAddrModal(null); setAddrNew(false)
-      showToast('📍 Adresse gespeichert!')
-    } catch (e) { showToast('❌ Fehler beim Speichern') }
+      showToast('Adresse gespeichert!')
+    } catch (e) { showToast('Fehler beim Speichern') }
   }
 
   const deleteAddress = async (id: string) => {
     await supabase.from('customer_addresses').delete().eq('id', id)
     setAddresses(prev => prev.filter(a => a.id !== id))
-    showToast('🗑️ Adresse gelöscht')
+    showToast('Adresse geloescht')
   }
 
   const setDefaultAddress = async (id: string) => {
     await supabase.from('customer_addresses').update({ is_default: false }).eq('user_id', session?.user.id)
     await supabase.from('customer_addresses').update({ is_default: true }).eq('id', id)
     await fetchAddresses()
-    showToast('⭐ Standardadresse gesetzt')
+    showToast('Standardadresse gesetzt')
   }
 
   const sendMessage = async () => {
@@ -482,7 +545,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
       }).select().single()
       if (data) setMessages(prev => [...prev, data])
       setMsgInput('')
-    } catch (e) { showToast('❌ Fehler beim Senden') }
+    } catch (e) { showToast('Fehler beim Senden') }
   }
 
   const sendFeedback = async () => {
@@ -495,8 +558,8 @@ export default function AccountPage({ session }: { session: Session | null }) {
         category: 'general',
       })
       setFeedback({ rating: 4, mood: 'good', text: '' })
-      showToast('💬 Feedback gesendet — Danke! 🙏')
-    } catch (e) { showToast('❌ Fehler beim Senden') }
+      showToast('Feedback gesendet - Danke!')
+    } catch (e) { showToast('Fehler beim Senden') }
   }
 
   const redeemVoucher = async () => {
@@ -508,29 +571,25 @@ export default function AccountPage({ session }: { session: Session | null }) {
         .eq('code', voucherCode.toUpperCase())
         .eq('is_active', true)
         .single()
-      if (!data) { showToast('❌ Ungültiger oder abgelaufener Code'); return }
-      if (data.valid_until && new Date(data.valid_until) < new Date()) { showToast('❌ Gutschein abgelaufen'); return }
-      if (data.current_uses >= data.max_uses) { showToast('❌ Gutschein bereits ausgeschöpft'); return }
-      showToast(`🎟️ Gutschein aktiviert! ${data.discount_type === 'percentage' ? data.discount_value + '%' : data.discount_value + ' €'} Rabatt`)
+      if (!data) { showToast('Ungültiger oder abgelaufener Code'); return }
+      if (data.valid_until && new Date(data.valid_until) < new Date()) { showToast('Gutschein abgelaufen'); return }
+      if (data.current_uses >= data.max_uses) { showToast('Gutschein bereits ausgeschoepft'); return }
+      showToast(`Gutschein aktiviert! ${data.discount_type === 'percentage' ? data.discount_value + '%' : data.discount_value + ' EUR'} Rabatt`)
       setVoucherCode('')
-    } catch (e) { showToast('❌ Ungültiger Code') }
+    } catch (e) { showToast('Ungültiger Code') }
   }
 
   const toggleAllergy = (allergen: string) => {
     const current = profileDraft.allergies || []
-    const updated = current.includes(allergen)
-      ? current.filter(a => a !== allergen)
-      : [...current, allergen]
+    const updated = current.includes(allergen) ? current.filter(a => a !== allergen) : [...current, allergen]
     setProfileDraft(prev => ({ ...prev, allergies: updated }))
   }
 
-  // ── Counts ────────────────────────────────
   const unreadMessages = messages.filter(m => m.direction === 'from_shop' && !m.read_by_customer).length
   const userName = profile?.first_name
     ? `${profile.first_name} ${profile.last_name || ''}`.trim()
     : session?.user?.user_metadata?.name || session?.user?.email?.split('@')[0] || 'Kunde'
 
-  // ── Loading ───────────────────────────────
   if (loading) return (
     <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
       <div className="text-center">
@@ -545,22 +604,22 @@ export default function AccountPage({ session }: { session: Session | null }) {
     { key: 'adressen',     label: 'Adressen',     icon: MapPin,        show: flags.multi_address },
     { key: 'profil',       label: 'Profil',        icon: User,          show: true },
     { key: 'nachrichten',  label: 'Nachrichten',   icon: MessageSquare, show: flags.messages_enabled || flags.feedback_enabled, badge: unreadMessages },
+    { key: 'wallet',       label: 'Wallet',         icon: Star,          show: flags.wallet_enabled || flags.loyalty_enabled || flags.voucher_enabled },
   ]
 
   return (
     <div className="min-h-screen bg-[#faf9f7]">
       <Navbar session={session} cartCount={0} onCartClick={() => {}} />
 
-      {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1a1a1a] text-white px-5 py-3 rounded-2xl shadow-2xl text-sm font-semibold flex items-center gap-2 animate-fade-in">
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1a1a1a] text-white px-5 py-3 rounded-2xl shadow-2xl text-sm font-semibold">
           {toast}
         </div>
       )}
 
       <div className="max-w-3xl mx-auto px-4 py-10">
 
-        {/* ── PROFIL HEADER ── */}
+        {/* Profil Header */}
         <div className="bg-[#1a1a1a] rounded-2xl p-6 mb-5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-[#C4973A] rounded-full flex items-center justify-center flex-shrink-0">
@@ -572,27 +631,23 @@ export default function AccountPage({ session }: { session: Session | null }) {
                 <Mail size={12} />
                 {session?.user?.email}
               </div>
-              {/* Loyalty Badge */}
               {flags.loyalty_enabled && profile?.loyalty_points !== undefined && (
                 <div className="flex items-center gap-2 mt-1.5">
-                  <div className="text-xs font-bold text-[#C4973A]">⭐ {profile.loyalty_points} Punkte</div>
-                  {profile.wallet_balance > 0 && (
-                    <div className="text-xs text-gray-400">· 💰 {profile.wallet_balance.toFixed(2)} € Guthaben</div>
+                  <div className="text-xs font-bold text-[#C4973A]">{profile.loyalty_points} Punkte</div>
+                  {flags.wallet_enabled && profile.wallet_balance > 0 && (
+                    <div className="text-xs text-gray-400">{profile.wallet_balance.toFixed(2)} EUR Guthaben</div>
                   )}
                 </div>
               )}
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-semibold transition"
-          >
+          <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-semibold transition">
             <LogOut size={16} />
             Abmelden
           </button>
         </div>
 
-        {/* ── TABS ── */}
+        {/* Tabs */}
         <div className="flex gap-1 bg-[#f0ede7] p-1 rounded-xl border border-black/8 mb-6 overflow-x-auto">
           {TABS.filter(t => t.show).map(t => {
             const Icon = t.icon
@@ -615,16 +670,13 @@ export default function AccountPage({ session }: { session: Session | null }) {
           })}
         </div>
 
-        {/* ══════════════════════════════════════
-            TAB: BESTELLUNGEN
-        ══════════════════════════════════════ */}
+        {/* TAB: BESTELLUNGEN */}
         {tab === 'bestellungen' && (
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Meine Bestellungen</h2>
               <span className="text-sm text-gray-400">{orders.length} Bestellung{orders.length !== 1 ? 'en' : ''}</span>
             </div>
-
             {orders.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
                 <div className="text-6xl mb-4">🍦</div>
@@ -641,34 +693,10 @@ export default function AccountPage({ session }: { session: Session | null }) {
                 ))}
               </div>
             )}
-
-            {/* Voucher Box — wenn aktiv */}
-            {flags.voucher_enabled && (
-              <div className="mt-4 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  🎟️ Gutschein einlösen
-                </div>
-                <p className="text-sm text-gray-400 mb-3">Code eingeben und beim nächsten Checkout automatisch abziehen.</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={voucherCode}
-                    onChange={e => setVoucherCode(e.target.value.toUpperCase())}
-                    placeholder="z.B. SOMMER25"
-                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10"
-                  />
-                  <button onClick={redeemVoucher} className="px-5 py-2.5 bg-[#C4973A] text-white text-sm font-bold rounded-xl hover:bg-[#a87b20] transition">
-                    Einlösen
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
-        {/* ══════════════════════════════════════
-            TAB: ADRESSEN
-        ══════════════════════════════════════ */}
+        {/* TAB: ADRESSEN */}
         {tab === 'adressen' && flags.multi_address && (
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -680,27 +708,16 @@ export default function AccountPage({ session }: { session: Session | null }) {
                 <Plus size={14} /> Neue Adresse
               </button>
             </div>
-
-            <p className="text-sm text-gray-400 mb-4">Speichere Zuhause, Arbeit und weitere Adressen für schnelleres Bestellen.</p>
-
             {addresses.length === 0 ? (
               <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
                 <MapPin size={32} className="text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 font-semibold mb-1">Noch keine Adressen</p>
-                <p className="text-sm text-gray-400">Füge deine erste Lieferadresse hinzu.</p>
+                <p className="text-gray-500 font-semibold">Noch keine Adressen</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {addresses.map(addr => (
-                  <AddressCard
-                    key={addr.id}
-                    address={addr}
-                    onEdit={a => { setAddrModal(a); setAddrNew(false) }}
-                    onDelete={deleteAddress}
-                    onSetDefault={setDefaultAddress}
-                  />
+                  <AddressCard key={addr.id} address={addr} onEdit={a => { setAddrModal(a); setAddrNew(false) }} onDelete={deleteAddress} onSetDefault={setDefaultAddress} />
                 ))}
-                {/* Add new */}
                 <button
                   onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Sonstige', icon: '📌', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
                   className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-4 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#C4973A] hover:text-[#C4973A] hover:bg-[#fffbf2] transition min-h-[140px]"
@@ -710,51 +727,33 @@ export default function AccountPage({ session }: { session: Session | null }) {
                 </button>
               </div>
             )}
-
-            {/* Adress Modal */}
-            {addrModal && (
-              <AddressModal
-                address={addrModal}
-                isNew={addrNew}
-                onSave={saveAddress}
-                onClose={() => { setAddrModal(null); setAddrNew(false) }}
-              />
-            )}
+            {addrModal && <AddressModal address={addrModal} isNew={addrNew} onSave={saveAddress} onClose={() => { setAddrModal(null); setAddrNew(false) }} />}
           </div>
         )}
 
-        {/* ══════════════════════════════════════
-            TAB: PROFIL
-        ══════════════════════════════════════ */}
+        {/* TAB: PROFIL */}
         {tab === 'profil' && (
           <div className="space-y-4">
-
-            {/* Persönliche Daten */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2"><User size={16} /> Persönliche Daten</h3>
+                <h3 className="font-bold text-gray-900 flex items-center gap-2"><User size={16} /> Persoenliche Daten</h3>
                 {!editingProfile ? (
                   <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-[#C4973A] hover:text-[#C4973A] transition">
                     <Edit2 size={12} /> Bearbeiten
                   </button>
                 ) : (
                   <div className="flex gap-2">
-                    <button onClick={() => { setEditingProfile(false); setProfileDraft(profile || {}) }} className="text-sm font-semibold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition">
-                      Abbrechen
-                    </button>
-                    <button onClick={saveProfile} className="text-sm font-semibold bg-[#C4973A] text-white px-3 py-1.5 rounded-lg hover:bg-[#a87b20] transition">
-                      Speichern
-                    </button>
+                    <button onClick={() => { setEditingProfile(false); setProfileDraft(profile || {}) }} className="text-sm font-semibold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition">Abbrechen</button>
+                    <button onClick={saveProfile} className="text-sm font-semibold bg-[#C4973A] text-white px-3 py-1.5 rounded-lg hover:bg-[#a87b20] transition">Speichern</button>
                   </div>
                 )}
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Vorname', key: 'first_name', type: 'text', placeholder: 'Mario' },
-                  { label: 'Nachname', key: 'last_name', type: 'text', placeholder: 'Mustermann' },
-                  { label: 'Telefon', key: 'phone', type: 'tel', placeholder: '+49 2173 …' },
-                  { label: 'Geburtstag', key: 'birth_date', type: 'date', placeholder: '' },
+                  { label: 'Vorname',    key: 'first_name', type: 'text',  placeholder: 'Mario' },
+                  { label: 'Nachname',   key: 'last_name',  type: 'text',  placeholder: 'Mustermann' },
+                  { label: 'Telefon',    key: 'phone',      type: 'tel',   placeholder: '+49 2173' },
+                  { label: 'Geburtstag', key: 'birth_date', type: 'date',  placeholder: '' },
                 ].map(f => (
                   <div key={f.key}>
                     <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">{f.label}</label>
@@ -764,54 +763,34 @@ export default function AccountPage({ session }: { session: Session | null }) {
                       value={(profileDraft as any)[f.key] || ''}
                       onChange={e => setProfileDraft(prev => ({ ...prev, [f.key]: e.target.value }))}
                       placeholder={f.placeholder}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm disabled:bg-gray-50 disabled:text-gray-400 focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm disabled:bg-gray-50 disabled:text-gray-400 focus:outline-none focus:border-[#C4973A] transition"
                     />
                   </div>
                 ))}
-                <div className="col-span-2">
-                  <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Newsletter</label>
-                  <select
-                    disabled={!editingProfile}
-                    value={profileDraft.newsletter ? 'ja' : 'nein'}
-                    onChange={e => setProfileDraft(prev => ({ ...prev, newsletter: e.target.value === 'ja' }))}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm disabled:bg-gray-50 disabled:text-gray-400 focus:outline-none focus:border-[#C4973A] transition"
-                  >
-                    <option value="ja">Ja, Angebote erhalten</option>
-                    <option value="nein">Nein danke</option>
-                  </select>
-                </div>
               </div>
             </div>
 
-            {/* Allergie-Profil */}
             {flags.allergy_profile && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2"><AlertTriangle size={16} className="text-red-500" /> Allergie & Ernährung</h3>
-                  <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">Wird an Küche gesendet</span>
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2"><AlertTriangle size={16} className="text-red-500" /> Allergie und Ernaehrung</h3>
+                  <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">Wird an Kueche gesendet</span>
                 </div>
-                <p className="text-sm text-gray-400 mb-3">Wähle deine Allergene — wir informieren die Küche bei jeder Bestellung automatisch.</p>
+                <p className="text-sm text-gray-400 mb-3">Waehle deine Allergene - automatisch bei jeder Bestellung.</p>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {ALLERGEN_LIST.map(a => {
                     const active = (profileDraft.allergies || []).includes(a)
                     return (
-                      <button
-                        key={a}
-                        onClick={() => toggleAllergy(a)}
-                        className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition ${active ? 'border-red-400 bg-red-50 text-red-600' : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'}`}
-                      >
-                        {active ? '⚠️ ' : ''}{a}
+                      <button key={a} onClick={() => toggleAllergy(a)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition ${active ? 'border-red-400 bg-red-50 text-red-600' : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'}`}>
+                        {active ? '! ' : ''}{a}
                       </button>
                     )
                   })}
                 </div>
-                <textarea
-                  rows={2}
-                  value={profileDraft.dietary_notes || ''}
-                  onChange={e => setProfileDraft(prev => ({ ...prev, dietary_notes: e.target.value }))}
-                  placeholder="Weitere Anmerkungen (z.B. bitte ohne Walnüsse in allen Sorten)…"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition"
-                />
+                <textarea rows={2} value={profileDraft.dietary_notes || ''} onChange={e => setProfileDraft(prev => ({ ...prev, dietary_notes: e.target.value }))}
+                  placeholder="Weitere Anmerkungen..."
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] transition" />
                 <div className="flex justify-end mt-2">
                   <button onClick={saveProfile} className="text-sm font-bold bg-[#C4973A] text-white px-4 py-2 rounded-xl hover:bg-[#a87b20] transition">
                     Allergie-Profil speichern
@@ -820,44 +799,31 @@ export default function AccountPage({ session }: { session: Session | null }) {
               </div>
             )}
 
-            {/* Passwort */}
             <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3 text-sm text-gray-600">
                 <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">🔒</div>
-                Passwort ändern oder zurücksetzen
+                Passwort aendern oder zuruecksetzen
               </div>
-              <Link href="/auth/forgot-password" className="text-sm font-semibold text-[#C4973A] hover:text-[#a87c2a] transition">
-                Ändern →
-              </Link>
+              <Link href="/auth/forgot-password" className="text-sm font-semibold text-[#C4973A] hover:text-[#a87c2a] transition">Aendern</Link>
             </div>
 
-            {/* Referral */}
             {flags.referral_enabled && profile?.referral_code && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2">🤝 Freunde werben</h3>
-                <p className="text-sm text-gray-400 mb-3">Dein Freund bekommt 2 € Rabatt · Du bekommst 2 € Guthaben</p>
+                <h3 className="font-bold text-gray-900 mb-1">Freunde werben</h3>
+                <p className="text-sm text-gray-400 mb-3">Dein Freund bekommt 2 EUR Rabatt - Du bekommst 2 EUR Guthaben</p>
                 <div className="bg-[#f7f5f1] border border-[#C4973A]/20 rounded-xl p-4 text-center">
                   <div className="text-2xl font-black tracking-widest text-[#C4973A] font-mono mb-2">{profile.referral_code}</div>
-                  <button
-                    onClick={() => { navigator.clipboard?.writeText(profile.referral_code!); showToast('📋 Code kopiert!') }}
-                    className="text-sm font-bold text-[#C4973A] hover:text-[#a87b20] transition"
-                  >
+                  <button onClick={() => { navigator.clipboard?.writeText(profile.referral_code!); showToast('Code kopiert!') }} className="text-sm font-bold text-[#C4973A] hover:text-[#a87b20] transition">
                     Code kopieren
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Konto löschen */}
             <div className="bg-white rounded-2xl border border-red-100 p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-red-500 font-semibold flex items-center gap-2">
-                  <Trash2 size={14} /> Konto löschen
-                </div>
-                <button
-                  onClick={() => showToast('Bitte kontaktiere uns direkt: info@eiscafe-simonetti.de')}
-                  className="text-sm font-semibold text-red-400 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition"
-                >
+                <div className="text-sm text-red-500 font-semibold flex items-center gap-2"><Trash2 size={14} /> Konto loeschen</div>
+                <button onClick={() => showToast('Bitte kontaktiere uns: info@eiscafe-simonetti.de')} className="text-sm font-semibold text-red-400 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
                   Anfragen
                 </button>
               </div>
@@ -865,18 +831,12 @@ export default function AccountPage({ session }: { session: Session | null }) {
           </div>
         )}
 
-        {/* ══════════════════════════════════════
-            TAB: NACHRICHTEN
-        ══════════════════════════════════════ */}
+        {/* TAB: NACHRICHTEN */}
         {tab === 'nachrichten' && (
           <div className="space-y-4">
-
-            {/* Feedback */}
             {flags.feedback_enabled && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                 <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><Star size={16} className="text-[#C4973A]" /> Bewertung abgeben</h3>
-
-                {/* Sterne */}
                 <div className="flex gap-1 mb-3">
                   {[1,2,3,4,5].map(n => (
                     <button key={n} onClick={() => setFeedback(f => ({ ...f, rating: n }))}>
@@ -884,59 +844,45 @@ export default function AccountPage({ session }: { session: Session | null }) {
                     </button>
                   ))}
                 </div>
-
-                {/* Mood */}
                 <div className="flex gap-2 flex-wrap mb-3">
                   {[
-                    { key: 'fantastic', emoji: '😍', label: 'Fantastisch' },
-                    { key: 'good',      emoji: '😊', label: 'Gut' },
-                    { key: 'ok',        emoji: '😐', label: 'Geht so' },
-                    { key: 'bad',       emoji: '😕', label: 'Nicht gut' },
+                    { key: 'fantastic', label: 'Fantastisch' },
+                    { key: 'good',      label: 'Gut' },
+                    { key: 'ok',        label: 'Geht so' },
+                    { key: 'bad',       label: 'Nicht gut' },
                   ].map(m => (
-                    <button
-                      key={m.key}
-                      onClick={() => setFeedback(f => ({ ...f, mood: m.key }))}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-full border text-sm font-semibold transition
-                        ${feedback.mood === m.key ? 'border-[#C4973A] bg-[#fffbf2] text-[#a87b20]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
-                    >
-                      {m.emoji} {m.label}
+                    <button key={m.key} onClick={() => setFeedback(f => ({ ...f, mood: m.key }))}
+                      className={`px-3 py-2 rounded-full border text-sm font-semibold transition ${feedback.mood === m.key ? 'border-[#C4973A] bg-[#fffbf2] text-[#a87b20]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                      {m.label}
                     </button>
                   ))}
                 </div>
-
-                <textarea
-                  rows={3}
-                  value={feedback.text}
-                  onChange={e => setFeedback(f => ({ ...f, text: e.target.value }))}
-                  placeholder="Was hat dir gefallen? Was können wir besser machen?"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition mb-2"
-                />
+                <textarea rows={3} value={feedback.text} onChange={e => setFeedback(f => ({ ...f, text: e.target.value }))}
+                  placeholder="Was hat dir gefallen? Was koennen wir besser machen?"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] transition mb-2" />
                 <button onClick={sendFeedback} className="w-full py-2.5 bg-[#C4973A] text-white font-bold rounded-xl hover:bg-[#a87b20] transition text-sm">
                   Feedback absenden
                 </button>
               </div>
             )}
 
-            {/* Direktnachrichten */}
             {flags.messages_enabled && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-bold text-gray-900 flex items-center gap-2"><MessageSquare size={16} /> Nachrichten</h3>
-                  <span className="text-[10px] text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full">Antwortzeit &lt; 2 Std.</span>
+                  <span className="text-[10px] text-gray-400 border border-gray-200 px-2 py-0.5 rounded-full">Antwortzeit weniger als 2 Std.</span>
                 </div>
-
-                {/* Chat */}
                 <div className="space-y-3 mb-4 max-h-72 overflow-y-auto">
                   {messages.length === 0 && (
                     <p className="text-sm text-gray-400 text-center py-6">Noch keine Nachrichten. Schreib uns!</p>
                   )}
                   {messages.map(msg => (
                     <div key={msg.id} className={`flex ${msg.direction === 'from_customer' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed
-                        ${msg.direction === 'from_customer'
+                      <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                        msg.direction === 'from_customer'
                           ? 'bg-[#fffbf2] border border-[#C4973A]/20 text-gray-800 rounded-br-sm'
                           : 'bg-gray-100 text-gray-700 rounded-bl-sm'
-                        }`}>
+                      }`}>
                         {msg.message}
                         <div className="text-[10px] text-gray-400 mt-1">
                           {new Date(msg.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
@@ -944,18 +890,13 @@ export default function AccountPage({ session }: { session: Session | null }) {
                       </div>
                     </div>
                   ))}
+                  <div ref={bottomRef} />
                 </div>
-
-                {/* Input */}
                 <div className="flex gap-2">
-                  <textarea
-                    rows={2}
-                    value={msgInput}
-                    onChange={e => setMsgInput(e.target.value)}
+                  <textarea rows={2} value={msgInput} onChange={e => setMsgInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                    placeholder="Schreib uns — Fragen, Sonderwünsche, alles willkommen…"
-                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition"
-                  />
+                    placeholder="Schreib uns - Fragen, Sonderwuensche, alles willkommen..."
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] transition" />
                   <button onClick={sendMessage} className="px-4 py-2 bg-[#1a1a1a] text-white rounded-xl hover:bg-black transition self-end">
                     <Send size={16} />
                   </button>
@@ -963,27 +904,19 @@ export default function AccountPage({ session }: { session: Session | null }) {
               </div>
             )}
 
-            {/* Anregungen */}
             {flags.suggestions_enabled && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2">💡 Wünsche & Anregungen</h3>
+                <h3 className="font-bold text-gray-900 mb-1">Wuensche und Anregungen</h3>
                 <p className="text-sm text-gray-400 mb-3">Welche Eissorten oder Produkte sollen wir anbieten?</p>
-                <textarea
-                  rows={2}
-                  id="suggestionText"
-                  placeholder="z.B. mehr vegane Sorten, glutenfreie Waffeln, Saisonales…"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] focus:ring-2 focus:ring-[#C4973A]/10 transition mb-2"
-                />
-                <button
-                  onClick={async () => {
-                    const el = document.getElementById('suggestionText') as HTMLTextAreaElement
-                    if (!el.value.trim()) return
-                    await supabase.from('customer_suggestions').insert({ user_id: session?.user.id, suggestion: el.value.trim() })
-                    el.value = ''
-                    showToast('💡 Wunsch eingereicht — danke!')
-                  }}
-                  className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:border-[#C4973A] hover:text-[#C4973A] transition"
-                >
+                <textarea rows={2} id="suggestionText" placeholder="z.B. mehr vegane Sorten, glutenfreie Waffeln..."
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] transition mb-2" />
+                <button onClick={async () => {
+                  const el = document.getElementById('suggestionText') as HTMLTextAreaElement
+                  if (!el.value.trim()) return
+                  await supabase.from('customer_suggestions').insert({ user_id: session?.user.id, suggestion: el.value.trim() })
+                  el.value = ''
+                  showToast('Wunsch eingereicht - danke!')
+                }} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:border-[#C4973A] hover:text-[#C4973A] transition">
                   Einreichen
                 </button>
               </div>
@@ -991,75 +924,92 @@ export default function AccountPage({ session }: { session: Session | null }) {
           </div>
         )}
 
-      </div>
-    </div>
-  )
-}
+        {/* TAB: WALLET */}
+        {tab === 'wallet' && (
+          <div className="space-y-4">
 
-// ─────────────────────────────────────────────
-// ADRESS MODAL
-// ─────────────────────────────────────────────
-function AddressModal({ address, isNew, onSave, onClose }: {
-  address: CustomerAddress
-  isNew: boolean
-  onSave: (a: Partial<CustomerAddress>) => void
-  onClose: () => void
-}) {
-  const [draft, setDraft] = useState<Partial<CustomerAddress>>(address)
+            {/* Guthaben Uebersicht */}
+            <div className="grid grid-cols-2 gap-3">
+              {flags.wallet_enabled && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm text-center">
+                  <div className="text-2xl font-black text-[#C4973A] font-serif mb-1">
+                    {(profile?.wallet_balance || 0).toFixed(2)} EUR
+                  </div>
+                  <div className="text-xs text-gray-400 uppercase tracking-widest font-semibold">Guthaben</div>
+                </div>
+              )}
+              {flags.loyalty_enabled && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm text-center">
+                  <div className="text-2xl font-black text-[#C4973A] font-serif mb-1">
+                    {profile?.loyalty_points || 0}
+                  </div>
+                  <div className="text-xs text-gray-400 uppercase tracking-widest font-semibold">Punkte</div>
+                </div>
+              )}
+            </div>
 
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-        <h3 className="font-bold text-gray-900 text-lg mb-4">{isNew ? 'Neue Adresse' : 'Adresse bearbeiten'}</h3>
+            {/* Gutschein einloesen */}
+            {flags.voucher_enabled && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-1">Gutschein einloesen</h3>
+                <p className="text-sm text-gray-400 mb-3">Code eingeben und beim naechsten Checkout abziehen.</p>
+                <div className="flex gap-2">
+                  <input type="text" value={voucherCode} onChange={e => setVoucherCode(e.target.value.toUpperCase())}
+                    placeholder="z.B. SOMMER25"
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-[#C4973A] transition" />
+                  <button onClick={redeemVoucher} className="px-5 py-2.5 bg-[#C4973A] text-white text-sm font-bold rounded-xl hover:bg-[#a87b20] transition">
+                    Einloesen
+                  </button>
+                </div>
+              </div>
+            )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Bezeichnung</label>
-            <select
-              value={draft.label}
-              onChange={e => setDraft(p => ({ ...p, label: e.target.value, icon: e.target.value === 'Zuhause' ? '🏠' : e.target.value === 'Arbeit' ? '🏢' : '📌' }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition"
-            >
-              <option>🏠 Zuhause</option>
-              <option>🏢 Arbeit</option>
-              <option>📌 Sonstige</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Name</label>
-            <input type="text" value={draft.recipient_name || ''} onChange={e => setDraft(p => ({ ...p, recipient_name: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Straße & Hausnummer</label>
-            <input type="text" value={draft.street || ''} onChange={e => setDraft(p => ({ ...p, street: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
-          </div>
-          <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">PLZ</label>
-            <input type="text" value={draft.zip || ''} onChange={e => setDraft(p => ({ ...p, zip: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
-          </div>
-          <div>
-            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Stadt</label>
-            <input type="text" value={draft.city || ''} onChange={e => setDraft(p => ({ ...p, city: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Zusatz (Klingel, Etage…)</label>
-            <input type="text" value={draft.extra || ''} onChange={e => setDraft(p => ({ ...p, extra: e.target.value }))} placeholder="z.B. 3. OG links"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
-          </div>
-        </div>
+            {/* Treuepunkte Stufen */}
+            {flags.loyalty_enabled && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-3">Treuepunkte-Stufen</h3>
+                {[
+                  { icon: '🥉', name: 'Bronze',  pts: '0-499',    reward: 'Gratis Waffelbecher' },
+                  { icon: '🥈', name: 'Silber',  pts: '500-999',  reward: 'Gratis Kugel' },
+                  { icon: '🥇', name: 'Gold',    pts: '1000+',    reward: 'Gratis Lieferung' },
+                  { icon: '💎', name: 'Diamond', pts: '2500+',    reward: '10% auf alles' },
+                ].map(tier => {
+                  const pts = profile?.loyalty_points || 0
+                  const isActive = (tier.name === 'Bronze' && pts < 500) || (tier.name === 'Silber' && pts >= 500 && pts < 1000) || (tier.name === 'Gold' && pts >= 1000 && pts < 2500) || (tier.name === 'Diamond' && pts >= 2500)
+                  return (
+                    <div key={tier.name} className={`flex items-center gap-3 p-3 rounded-xl mb-2 border ${isActive ? 'border-[#C4973A] bg-[#fffbf2]' : 'border-gray-100'}`}>
+                      <span className="text-xl">{tier.icon}</span>
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm text-gray-900">{tier.name} {isActive && '(Du bist hier)'}</div>
+                        <div className="text-xs text-gray-400">{tier.pts} Punkte</div>
+                      </div>
+                      <span className="text-xs font-semibold text-[#C4973A] bg-[#C4973A]/10 px-2 py-1 rounded-full">{tier.reward}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
-        <div className="flex gap-2 justify-end mt-5">
-          <button onClick={onClose} className="px-4 py-2 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition">
-            Abbrechen
-          </button>
-          <button onClick={() => onSave(draft)} className="px-5 py-2 bg-[#C4973A] text-white text-sm font-bold rounded-xl hover:bg-[#a87b20] transition">
-            ✓ Speichern
-          </button>
-        </div>
+            {/* Abo */}
+            {flags.subscription_enabled && (
+              <div className="bg-white rounded-2xl border border-[#C4973A] p-5 shadow-sm" style={{ background: 'linear-gradient(135deg, #fdf8ee, #fffbf5)' }}>
+                <div className="font-bold text-[#C4973A] text-lg mb-1">Simonetti Plus</div>
+                <div className="text-sm text-gray-500 mb-3">2,99 EUR / Monat - 30 Tage kostenlos testen</div>
+                <ul className="space-y-1.5 mb-4">
+                  {['Kostenlose Lieferung ab 10 EUR', '5% Rabatt auf jede Bestellung', 'Doppelte Treuepunkte', 'Prioritaets-Lieferung'].map(perk => (
+                    <li key={perk} className="flex items-center gap-2 text-sm text-gray-700">
+                      <span className="text-[#C4973A] font-bold">+</span> {perk}
+                    </li>
+                  ))}
+                </ul>
+                <button onClick={() => showToast('30 Tage gratis starten!')} className="w-full py-2.5 bg-[#C4973A] text-white font-bold rounded-xl hover:bg-[#a87b20] transition text-sm">
+                  Jetzt 30 Tage gratis testen
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   )

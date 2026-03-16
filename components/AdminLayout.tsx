@@ -9,33 +9,59 @@ interface AdminLayoutProps {
 }
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',   href: '/admin',             icon: '📊' },
-  { label: 'Kanban',      href: '/admin/kanban',      icon: '🗂️' },
-  { label: 'Produkte',    href: '/admin/products',    icon: '🍦' },
-  { label: 'Extras',      href: '/admin/extras',      icon: '➕' },
-  { label: 'Kategorien',  href: '/admin/categories',  icon: '📂' },
-  { label: 'Fahrer',      href: '/admin/drivers',     icon: '🚗' },
-  { label: 'Reports',     href: '/admin/reports',     icon: '📈' },
-  { label: 'Kampagnen',   href: '/admin/campaigns',   icon: '📣' },
-  { label: 'Gutscheine',  href: '/admin/vouchers',    icon: '🎟️' },
-  { label: 'Kunden',      href: '/admin/customers',   icon: '👥' },
-  { label: 'Bewertungen', href: '/admin/reviews',     icon: '⭐' },
-  { label: 'Features',    href: '/admin/features',    icon: '⚡' },
-  { label: 'Kalkulation', href: '/admin/kalkulation', icon: '🧮' },
-  { label: 'Setup',       href: '/admin/settings',    icon: '⚙️' },
+  { label: 'Dashboard',   href: '/admin',               icon: '📊' },
+  { label: 'Kanban',      href: '/admin/kanban',        icon: '🗂️' },
+  { label: 'Produkte',    href: '/admin/products',      icon: '🍦' },
+  { label: 'Extras',      href: '/admin/extras',        icon: '➕' },
+  { label: 'Kategorien',  href: '/admin/categories',    icon: '📂' },
+  { label: 'Fahrer',      href: '/admin/drivers',       icon: '🚗' },
+  { label: 'Reports',     href: '/admin/reports',       icon: '📈' },
+  { label: 'Kampagnen',   href: '/admin/campaigns',     icon: '📣' },
+  { label: 'Gutscheine',  href: '/admin/vouchers',      icon: '🎟️' },
+  { label: 'Kunden',      href: '/admin/customers',     icon: '👥' },
+  { label: 'Bewertungen', href: '/admin/reviews',       icon: '⭐' },
+  { label: 'Nachrichten', href: '/admin/nachrichten',   icon: '💬' },
+  { label: 'Feedback',    href: '/admin/anregungen',    icon: '💡' },
+  { label: 'Features',    href: '/admin/features',      icon: '⚡' },
+  { label: 'Kalkulation', href: '/admin/kalkulation',   icon: '🧮' },
+  { label: 'Setup',       href: '/admin/settings',      icon: '⚙️' },
 ]
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter()
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession]               = useState<any>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [openOrders, setOpenOrders] = useState(0)
+  const [openOrders, setOpenOrders]         = useState(0)
+  const [unreadMessages, setUnreadMessages] = useState(0)
 
   useEffect(() => {
     checkAuth()
     loadOpenOrders()
-    const iv = setInterval(loadOpenOrders, 30000)
-    return () => clearInterval(iv)
+    loadUnreadMessages()
+
+    const iv = setInterval(() => {
+      loadOpenOrders()
+      loadUnreadMessages()
+    }, 30000)
+
+    // Realtime: sofort Badge aktualisieren wenn neue Nachricht kommt
+    const channel = supabase
+      .channel('admin-unread-badge')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'customer_messages',
+      }, (payload: any) => {
+        if (payload.new.direction === 'from_customer') {
+          setUnreadMessages(prev => prev + 1)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      clearInterval(iv)
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const checkAuth = async () => {
@@ -45,8 +71,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   const loadOpenOrders = async () => {
-    const { data } = await supabase.from('orders').select('id').in('status', ['OFFEN'])
+    const { data } = await supabase
+      .from('orders')
+      .select('id')
+      .in('status', ['OFFEN'])
     setOpenOrders(data?.length || 0)
+  }
+
+  const loadUnreadMessages = async () => {
+    const { count } = await supabase
+      .from('customer_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('direction', 'from_customer')
+      .eq('read_by_admin', false)
+    setUnreadMessages(count || 0)
   }
 
   const handleSignOut = async () => {
@@ -57,7 +95,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* ── Horizontale Navigation ── */}
+      {/* Horizontale Navigation */}
       <nav className="bg-[#1a1a1a] text-white shadow-lg sticky top-0 z-40">
         <div className="flex items-center">
 
@@ -70,22 +108,36 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           </Link>
 
-          {/* Nav Items Desktop – scrollable */}
+          {/* Nav Items Desktop */}
           <div className="hidden md:flex items-center overflow-x-auto flex-1 scrollbar-hide">
             {NAV_ITEMS.map(item => {
               const isActive = router.pathname === item.href
+              const isKanban = item.href === '/admin/kanban'
+              const isMessages = item.href === '/admin/nachrichten'
               return (
-                <Link key={item.href} href={item.href}
+                <Link
+                  key={item.href}
+                  href={item.href}
                   className={`relative flex items-center gap-1.5 px-3 py-4 text-xs font-semibold whitespace-nowrap transition border-b-2 ${
                     isActive
                       ? 'border-white text-white'
                       : 'border-transparent text-gray-400 hover:text-white hover:border-gray-500'
-                  }`}>
+                  }`}
+                >
                   <span>{item.icon}</span>
                   <span>{item.label}</span>
-                  {item.href === '/admin/kanban' && openOrders > 0 && (
-                    <span className="bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                      {openOrders}
+
+                  {/* Kanban Badge - offene Bestellungen */}
+                  {isKanban && openOrders > 0 && (
+                    <span className="bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {openOrders > 9 ? '9+' : openOrders}
+                    </span>
+                  )}
+
+                  {/* Nachrichten Badge - ungelesene Nachrichten */}
+                  {isMessages && unreadMessages > 0 && (
+                    <span className="bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center animate-pulse">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
                     </span>
                   )}
                 </Link>
@@ -102,8 +154,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </button>
 
           {/* Logout Desktop */}
-          <button onClick={handleSignOut}
-            className="hidden md:flex items-center gap-1.5 px-4 py-3 text-xs text-gray-400 hover:text-white transition border-l border-gray-700 flex-shrink-0 ml-auto">
+          <button
+            onClick={handleSignOut}
+            className="hidden md:flex items-center gap-1.5 px-4 py-3 text-xs text-gray-400 hover:text-white transition border-l border-gray-700 flex-shrink-0 ml-auto"
+          >
             <LogOut size={14} />
             <span>Abmelden</span>
           </button>
@@ -114,19 +168,30 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <div className="md:hidden border-t border-gray-700 bg-[#1a1a1a] grid grid-cols-3 gap-0">
             {NAV_ITEMS.map(item => {
               const isActive = router.pathname === item.href
+              const isMessages = item.href === '/admin/nachrichten'
               return (
-                <Link key={item.href} href={item.href}
+                <Link
+                  key={item.href}
+                  href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold transition ${
+                  className={`relative flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold transition ${
                     isActive ? 'text-white bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                  }`}>
+                  }`}
+                >
                   <span className="text-lg">{item.icon}</span>
                   <span>{item.label}</span>
+                  {isMessages && unreadMessages > 0 && (
+                    <span className="absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </span>
+                  )}
                 </Link>
               )
             })}
-            <button onClick={handleSignOut}
-              className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-gray-400 hover:text-white hover:bg-gray-800 transition">
+            <button
+              onClick={handleSignOut}
+              className="flex flex-col items-center gap-1 px-2 py-3 text-xs font-semibold text-gray-400 hover:text-white hover:bg-gray-800 transition"
+            >
               <LogOut size={18} />
               <span>Abmelden</span>
             </button>
