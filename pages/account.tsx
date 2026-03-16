@@ -969,10 +969,10 @@ export default function AccountPage({ session }: { session: Session | null }) {
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                 <h3 className="font-bold text-gray-900 mb-3">Treuepunkte-Stufen</h3>
                 {[
-                  { icon: 'ðŸ¥‰', name: 'Bronze',  pts: '0-499',    reward: 'Gratis Waffelbecher' },
-                  { icon: 'ðŸ¥ˆ', name: 'Silber',  pts: '500-999',  reward: 'Gratis Kugel' },
-                  { icon: 'ðŸ¥‡', name: 'Gold',    pts: '1000+',    reward: 'Gratis Lieferung' },
-                  { icon: 'ðŸ’Ž', name: 'Diamond', pts: '2500+',    reward: '10% auf alles' },
+                  { icon: 'Bronze', name: 'Bronze',  pts: '0-499',    reward: 'Gratis Waffelbecher' },
+                  { icon: 'Silber', name: 'Silber',  pts: '500-999',  reward: 'Gratis Kugel' },
+                  { icon: 'Gold', name: 'Gold',    pts: '1000+',    reward: 'Gratis Lieferung' },
+                  { icon: 'Diamond', name: 'Diamond', pts: '2500+',    reward: '10% auf alles' },
                 ].map(tier => {
                   const pts = profile?.loyalty_points || 0
                   const isActive = (tier.name === 'Bronze' && pts < 500) || (tier.name === 'Silber' && pts >= 500 && pts < 1000) || (tier.name === 'Gold' && pts >= 1000 && pts < 2500) || (tier.name === 'Diamond' && pts >= 2500)
