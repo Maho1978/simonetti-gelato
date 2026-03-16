@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -20,6 +20,15 @@ interface CartItem {
   selectedExtras?: any[]
   totalPrice?: number
   cartId?: string
+}
+
+interface AppliedLoyalty {
+  tier_id: string
+  label: string
+  type: string
+  value: number
+  points_used: number
+  discountAmount: number
 }
 
 interface AppliedVoucher {
@@ -171,6 +180,52 @@ function AgbCheckbox({ accepted, onChange }: { accepted: boolean; onChange: (v: 
   )
 }
 
+function LoyaltyRedeemer({ userId, applied, onApply }: { userId: string; applied: any; onApply: (l: any) => void }) {
+  const [tiers, setTiers] = useState<any[]>([])
+  const [points, setPoints] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    fetch(`/api/loyalty?user_id=${userId}`)
+      .then(r => r.json())
+      .then(d => { setPoints(d.points || 0); setTiers(d.rewards || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [userId])
+  if (loading || points === 0) return null
+  if (applied) return (
+    <div className="flex items-center justify-between bg-amber-50 border-2 border-amber-200 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-2 text-amber-700">
+        <Check size={16} /><span className="font-bold">{applied.label}</span>
+        <span className="text-sm">eingeloest ({applied.points_used} Punkte)</span>
+      </div>
+      <button onClick={() => onApply(null)} className="text-amber-600 hover:text-red-500"><X size={16} /></button>
+    </div>
+  )
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-sm font-bold text-amber-800">Treuepunkte einloesen ({points} Punkte)</div>
+        <button onClick={() => setOpen(!open)} className="text-xs text-amber-600 font-semibold">{open ? "Schliessen" : "Anzeigen"}</button>
+      </div>
+      {open && <div className="space-y-2 mt-2">
+        {tiers.filter((t: any) => t.canRedeem).map((t: any) => (
+          <button key={t.key} onClick={() => { onApply({ tier_id: t.key, label: t.label, type: t.type, value: t.value, points_used: t.points, discountAmount: t.type === "free_delivery" ? 3 : t.value }); setOpen(false) }}
+            className="w-full flex items-center justify-between bg-white border border-amber-200 rounded-xl px-4 py-3 hover:border-amber-400 transition text-sm">
+            <span className="font-semibold text-amber-900">{t.label}</span>
+            <span className="text-amber-600 font-bold">{t.points} Punkte</span>
+          </button>
+        ))}
+        {tiers.filter((t: any) => !t.canRedeem).map((t: any) => (
+          <div key={t.key} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 opacity-50 text-sm">
+            <span className="text-gray-600">{t.label}</span>
+            <span className="text-gray-400">noch {t.pointsNeeded} Punkte</span>
+          </div>
+        ))}
+      </div>}
+    </div>
+  )
+}
+
 export default function Checkout({ session }: { session: Session | null }) {
   const router    = useRouter()
   const { guest } = router.query
@@ -183,10 +238,12 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [shopLoading, setShopLoading]   = useState(true)
 
   const [voucher, setVoucher]           = useState<AppliedVoucher | null>(null)
+  const [loyalty, setLoyalty]           = useState<AppliedLoyalty | null>(null)
   const [tip, setTip]                   = useState(0)
   const [showVoucher, setShowVoucher]   = useState(true)
   const [showTip, setShowTip]           = useState(true)
   const [showPayPal, setShowPayPal]     = useState(false)
+  const [flags_loyalty, setFlagsLoyalty] = useState(false)
   const [showCash, setShowCash]         = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'cash'>('stripe')
   const [deliveryFee, setDeliveryFee]   = useState(3.00)
@@ -274,6 +331,7 @@ export default function Checkout({ session }: { session: Session | null }) {
         if (data) {
           setShowVoucher(data.find(f => f.id === 'vouchers')?.enabled ?? true)
           setShowTip(data.find(f => f.id === 'tip_option')?.enabled ?? true)
+        })
           setShowPayPal(data.find(f => f.id === 'payment_paypal')?.enabled ?? false)
         }
       })
@@ -317,7 +375,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   }
 
   const subtotal   = cart.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity), 0)
-  const discount   = voucher?.discountAmount || 0
+  const discount   = (voucher?.discountAmount || 0) + (loyalty?.discountAmount || 0)
   const roundTo10Cents = (val: number) => Math.round(val * 10) / 10
   const grandTotal = roundTo10Cents(Math.max(0, subtotal - discount + effectiveDeliveryFee + tip))
 
@@ -360,6 +418,13 @@ export default function Checkout({ session }: { session: Session | null }) {
     }
     await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) })
     if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
+    if (loyalty?.points_used && session?.user?.id) {
+      await supabase.from('loyalty_transactions').insert({
+        user_id: session.user.id,
+        points: -loyalty.points_used,
+        reason: 'redemption',
+      })
+    }
     localStorage.removeItem('simonetti-cart')
     localStorage.removeItem('cart')
     router.push('/order-success')
@@ -512,6 +577,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
               )}
 
+              {session?.user?.id && (<LoyaltyRedeemer userId={session.user.id} applied={loyalty} onApply={(l) => { setLoyalty(l); setClientSecret(""); createPaymentIntent(cart, voucher, tip) }} />)}
               {(showVoucher || showTip) && (
                 <div className={`grid grid-cols-1 ${showVoucher && showTip ? 'sm:grid-cols-2' : ''} gap-4`}>
                   {showVoucher && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5"><h3 className="font-bold text-sm mb-3 text-gray-700">🎟️ Gutscheincode</h3><VoucherInput subtotal={subtotal} onApply={handleVoucherApply} /></div>}
@@ -820,6 +886,13 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
       const { error: stripeError, paymentIntent } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
       if (stripeError) throw new Error(stripeError.message)
       if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
+    if (loyalty?.points_used && session?.user?.id) {
+      await supabase.from('loyalty_transactions').insert({
+        user_id: session.user.id,
+        points: -loyalty.points_used,
+        reason: 'redemption',
+      })
+    }
       const orderData = {
         user_id: session?.user?.id || null, guest_email: isGuest ? email : null,
         customer_name: name, customer_email: isGuest ? email : session?.user?.email,
