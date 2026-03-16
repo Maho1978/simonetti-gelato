@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { label: 'Reports',     href: '/admin/reports',       icon: '📈' },
   { label: 'Kampagnen',   href: '/admin/campaigns',     icon: '📣' },
   { label: 'Gutscheine',  href: '/admin/vouchers',      icon: '🎟️' },
+  { label: 'Treuepunkte', href: '/admin/loyalty', icon: 'ST' },
   { label: 'Kunden',      href: '/admin/customers',     icon: '👥' },
   { label: 'Bewertungen', href: '/admin/reviews',       icon: '⭐' },
   { label: 'Nachrichten', href: '/admin/nachrichten',   icon: '💬' },
