@@ -593,7 +593,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
   if (loading) return (
     <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
       <div className="text-center">
-        <div className="text-4xl mb-3 animate-spin">ðŸ¦</div>
+        <div className="text-4xl mb-3">ðŸ¦</div>
         <p className="text-gray-400">LÃ¤dt...</p>
       </div>
     </div>
