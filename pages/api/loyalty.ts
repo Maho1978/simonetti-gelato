@@ -6,13 +6,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const REWARDS: Record<string, { points: number; label: string; type: string; value: number }> = {
-  waffle_cup:    { points: 20,  label: 'Gratis Waffelbecher', type: 'free_item',     value: 1.50 },
-  free_scoop:    { points: 60,  label: 'Gratis Kugel',         type: 'free_item',     value: 2.50 },
-  free_delivery: { points: 100, label: 'Gratis Lieferung',     type: 'free_delivery', value: 0    },
-  discount_10:   { points: 250, label: '10% Rabatt',           type: 'discount',      value: 10   },
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     const { user_id } = req.query
@@ -24,22 +17,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', user_id)
       .single()
 
+    const { data: tiers } = await supabaseAdmin
+      .from('loyalty_tiers')
+      .select('*')
+      .order('sort_order')
+
     const points = profile?.loyalty_points || 0
-    const rewards = Object.entries(REWARDS).map(([key, r]) => ({
-      key, ...r,
-      canRedeem:    points >= r.points,
-      pointsNeeded: Math.max(0, r.points - points),
+    const rewards = (tiers || []).map((t: any) => ({
+      key:          t.id,
+      label:        t.reward_label,
+      type:         t.reward_type,
+      value:        t.reward_value,
+      points:       t.points_from,
+      tierName:     t.name,
+      icon:         t.icon,
+      canRedeem:    points >= t.points_from,
+      pointsNeeded: Math.max(0, t.points_from - points),
     }))
 
-    return res.status(200).json({ points, rewards })
+    return res.status(200).json({ points, rewards, tiers })
   }
 
   if (req.method === 'POST') {
     const { user_id, reward_key } = req.body
     if (!user_id || !reward_key) return res.status(400).json({ error: 'Missing params' })
 
-    const reward = REWARDS[reward_key]
-    if (!reward) return res.status(400).json({ error: 'Unknown reward' })
+    const { data: tier } = await supabaseAdmin
+      .from('loyalty_tiers')
+      .select('*')
+      .eq('id', reward_key)
+      .single()
+
+    if (!tier) return res.status(400).json({ error: 'Unknown reward' })
 
     const { data: profile } = await supabaseAdmin
       .from('customer_profiles')
@@ -47,21 +56,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', user_id)
       .single()
 
-    if (!profile || profile.loyalty_points < reward.points) {
+    if (!profile || profile.loyalty_points < tier.points_from) {
       return res.status(400).json({ error: 'Nicht genug Punkte' })
     }
 
     const { error } = await supabaseAdmin
       .from('loyalty_transactions')
-      .insert({ user_id, points: -reward.points, reason: 'redemption' })
+      .insert({ user_id, points: -tier.points_from, reason: 'redemption' })
 
     if (error) return res.status(500).json({ error: error.message })
 
     return res.status(200).json({
-      success: true,
-      reward:  { key: reward_key, label: reward.label, type: reward.type, value: reward.value },
-      pointsUsed:      reward.points,
-      pointsRemaining: profile.loyalty_points - reward.points,
+      success:         true,
+      reward:          { key: reward_key, label: tier.reward_label, type: tier.reward_type, value: tier.reward_value },
+      pointsUsed:      tier.points_from,
+      pointsRemaining: profile.loyalty_points - tier.points_from,
     })
   }
 
