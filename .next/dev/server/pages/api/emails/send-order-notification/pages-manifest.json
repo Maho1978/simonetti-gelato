@@ -1,0 +1,3 @@
+{
+  "/api/emails/send-order-notification": "pages/api/emails/send-order-notification.js"
+}
