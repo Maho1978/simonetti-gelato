@@ -196,7 +196,7 @@ function LoyaltyRedeemer({ userId, applied, onApply }: { userId: string; applied
     <div className="flex items-center justify-between bg-amber-50 border-2 border-amber-200 rounded-xl px-4 py-3">
       <div className="flex items-center gap-2 text-amber-700">
         <Check size={16} /><span className="font-bold">{applied.label}</span>
-        <span className="text-sm">eingeloest ({applied.points_used} Punkte)</span>
+        <span className="text-sm">eingeloest ({applied.points_used > 0 ? applied.points_used + " Punkte" : "Bronze Stufe"})</span>
       </div>
       <button onClick={() => onApply(null)} className="text-amber-600 hover:text-red-500"><X size={16} /></button>
     </div>
@@ -530,7 +530,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
                 <div className="mt-5 pt-4 border-t border-gray-100 space-y-2.5">
                   <div className="flex justify-between text-sm text-gray-500"><span>Zwischensumme</span><span>{subtotal.toFixed(2)} €</span></div>
-                  {discount > 0 && <div className="flex justify-between text-sm font-semibold text-green-600"><span>🎟️ Gutschein ({voucher?.code})</span><span>− {discount.toFixed(2)} €</span></div>}
+                  {discount > 0 && <div className="flex justify-between text-sm font-semibold text-green-600"><span>{loyalty ? "🎖️ Treuepunkte" : `🎟️ Gutschein (${voucher?.code})`}</span><span>− {discount.toFixed(2)} €</span></div>}
                   {orderType === 'delivery' && <div className="flex justify-between text-sm text-gray-500"><span>🚗 Liefergebühr</span><span>{deliveryFee.toFixed(2)} €</span></div>}
                   {orderType === 'pickup'   && <div className="flex justify-between text-sm font-semibold text-green-600"><span>🏪 Abholung</span><span>Kostenlos</span></div>}
                   {tip > 0 && <div className="flex justify-between text-sm text-gray-500"><span>💝 Trinkgeld</span><span>{tip.toFixed(2)} €</span></div>}
