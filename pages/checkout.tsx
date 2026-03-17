@@ -530,7 +530,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
                 <div className="mt-5 pt-4 border-t border-gray-100 space-y-2.5">
                   <div className="flex justify-between text-sm text-gray-500"><span>Zwischensumme</span><span>{subtotal.toFixed(2)} €</span></div>
-                  {discount > 0 && <div className="flex justify-between text-sm font-semibold text-green-600"><span>{loyalty ? "🎖️ Treuepunkte" : `🎟️ Gutschein (${voucher?.code})`}</span><span>− {discount.toFixed(2)} €</span></div>}
+                  {voucher && <div className="flex justify-between text-sm font-semibold text-green-600"><span>Gutschein ({voucher.code})</span><span>- {voucher.discountAmount.toFixed(2)} EUR</span></div>}{loyalty && <div className="flex justify-between text-sm font-semibold text-amber-600"><span>Treuepunkte: {loyalty.label}</span><span>- {loyalty.discountAmount.toFixed(2)} EUR</span></div>}
                   {orderType === 'delivery' && <div className="flex justify-between text-sm text-gray-500"><span>🚗 Liefergebühr</span><span>{deliveryFee.toFixed(2)} €</span></div>}
                   {orderType === 'pickup'   && <div className="flex justify-between text-sm font-semibold text-green-600"><span>🏪 Abholung</span><span>Kostenlos</span></div>}
                   {tip > 0 && <div className="flex justify-between text-sm text-gray-500"><span>💝 Trinkgeld</span><span>{tip.toFixed(2)} €</span></div>}
