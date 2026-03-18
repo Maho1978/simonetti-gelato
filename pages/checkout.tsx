@@ -588,7 +588,7 @@ export default function Checkout({ session }: { session: Session | null }) {
             <div className="lg:col-span-5">
               <div className="sticky top-6 space-y-4">
 
-                {pickupEnabled && (
+                {pickupEnabled && isGuest && paymentMethod === 'cash' && (
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
                     <span className="text-xl">🏪</span>
                     <div className="flex-1">
