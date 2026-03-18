@@ -616,8 +616,8 @@ export default function Checkout({ session }: { session: Session | null }) {
                           <span className="text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-bold">Geschlossen</span>
                         )}
                       </button>
-                      <button type="button" onClick={() => setOrderType('pickup')}
-                        className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all font-semibold text-sm ${orderType === 'pickup' ? 'border-purple-600 bg-purple-600 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
+                      <button type="button" onClick={() => { if (!(isGuest && paymentMethod === 'cash')) setOrderType('pickup') }}
+                        className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all font-semibold text-sm ${isGuest && paymentMethod === 'cash' ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed opacity-50' : orderType === 'pickup' ? 'border-purple-600 bg-purple-600 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                         <span className="text-2xl">🏪</span>
                         <span>Selbst abholen</span>
                         {shopStatus?.pickup.openFrom && (
