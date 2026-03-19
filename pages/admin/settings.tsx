@@ -13,7 +13,6 @@ const DAYS = {
   thursday: 'Donnerstag', friday: 'Freitag', saturday: 'Samstag', sunday: 'Sonntag'
 }
 
-// Default für einen Tag mit getrennten Zeiten
 const DEFAULT_DAY = {
   delivery: { closed: false, open: '14:00', close: '18:30' },
   pickup:   { closed: false, open: '10:00', close: '18:30' },
@@ -31,6 +30,9 @@ const DEFAULT_EMAIL_SETTINGS = {
   order_out_for_delivery: { enabled: true, subject: '🚗 Dein Eis ist unterwegs! #{orderNumber}',                   custom_text: '' },
   order_delivered:        { enabled: true, subject: '✅ Bestellung zugestellt #{orderNumber} - Guten Appetit!',    custom_text: '' },
   new_order_admin:        { enabled: true, subject: '🔔 Neue Bestellung #{orderNumber} - Sofort bearbeiten!',      custom_text: '' },
+  invoice_pdf_enabled:        false,
+  abandoned_cart_enabled:     false,
+  abandoned_cart_hours:       2.5,
 }
 
 const SOCIAL_PLATFORMS = [
@@ -51,9 +53,10 @@ const SOCIAL_PLATFORMS = [
 const DEFAULT_SOCIAL = Object.fromEntries(SOCIAL_PLATFORMS.map(p => [p.id, { url: '', enabled: false }]))
 
 const DEFAULT_PAYMENT_KEYS = {
-  stripe: { mode: 'test', test_public: '', test_secret: '', live_public: '', live_secret: '', webhook_secret: '' },
-  paypal: { mode: 'sandbox', sandbox_client_id: '', sandbox_client_secret: '', live_client_id: '', live_client_secret: '' },
-  wero:   { api_key: '', merchant_id: '', note: 'Wero-Integration kommt sobald die offizielle API verfügbar ist.' }
+  stripe:      { mode: 'test', test_public: '', test_secret: '', live_public: '', live_secret: '', webhook_secret: '' },
+  paypal:      { mode: 'sandbox', sandbox_client_id: '', sandbox_client_secret: '', live_client_id: '', live_client_secret: '' },
+  wero:        { api_key: '', merchant_id: '', note: 'Wero-Integration kommt sobald die offizielle API verfügbar ist.' },
+  google_maps: { api_key: '' },
 }
 
 const DEFAULT_NOTIFY_SETTINGS = {
@@ -65,12 +68,12 @@ const DEFAULT_NOTIFY_SETTINGS = {
 const FEATURE_DEFINITIONS = [
   { id: 'reviews',          icon: '⭐', label: 'Bewertungssystem',          description: 'Kunden können bestellte Produkte mit 1–5 Sternen bewerten.',                           adminLink: '/admin/reviews', adminLabel: 'Bewertungen verwalten →', comingSoon: false },
   { id: 'telegram_notify',  icon: '✈️', label: 'Telegram Benachrichtigung', description: 'Sofort-Benachrichtigung auf dein Telegram bei neuer Bestellung – mit allen Details.', adminLink: null, adminLabel: null, comingSoon: false },
-  { id: 'whatsapp_notify',  icon: '💬', label: 'WhatsApp Benachrichtigung', description: 'WhatsApp-Button im Kanban für direkte Kundenkommunikation. Kostenlos via wa.me Links.', adminLink: null,             adminLabel: null,                      comingSoon: false },
-  { id: 'payment_paypal',   icon: '🅿️', label: 'PayPal',                   description: 'PayPal als Zahlungsmethode im Checkout anzeigen.',                                      adminLink: null,             adminLabel: null,                      comingSoon: false },
-  { id: 'payment_klarna',   icon: '🛒', label: 'Klarna (Ratenkauf)',        description: 'Klarna als Zahlungsmethode im Checkout anzeigen.',                                      adminLink: null,             adminLabel: null,                      comingSoon: true  },
-  { id: 'upsell',           icon: '✨', label: 'Upselling',             description: 'Zeigt Toppings & Tagesspecial dezent unterhalb des Warenkorbs im Checkout.',         adminLink: null,             adminLabel: null,                      comingSoon: false },
-  { id: 'loyalty',          icon: '🎁', label: 'Treueprogramm',             description: 'Jede 10. Bestellung gratis.',                                                           adminLink: null,             adminLabel: null,                      comingSoon: true  },
-  { id: 'favorites',        icon: '❤️', label: 'Favoriten',                 description: 'Kunden können Produkte als Favoriten speichern.',                                       adminLink: null,             adminLabel: null,                      comingSoon: true  },
+  { id: 'whatsapp_notify',  icon: '💬', label: 'WhatsApp Benachrichtigung', description: 'WhatsApp-Button im Kanban für direkte Kundenkommunikation. Kostenlos via wa.me Links.', adminLink: null, adminLabel: null, comingSoon: false },
+  { id: 'payment_paypal',   icon: '🅿️', label: 'PayPal',                   description: 'PayPal als Zahlungsmethode im Checkout anzeigen.',                                      adminLink: null, adminLabel: null, comingSoon: false },
+  { id: 'payment_klarna',   icon: '🛒', label: 'Klarna (Ratenkauf)',        description: 'Klarna als Zahlungsmethode im Checkout anzeigen.',                                      adminLink: null, adminLabel: null, comingSoon: true  },
+  { id: 'upsell',           icon: '✨', label: 'Upselling',                 description: 'Zeigt Toppings & Tagesspecial dezent unterhalb des Warenkorbs im Checkout.',            adminLink: null, adminLabel: null, comingSoon: false },
+  { id: 'loyalty',          icon: '🎁', label: 'Treueprogramm',             description: 'Jede 10. Bestellung gratis.',                                                           adminLink: null, adminLabel: null, comingSoon: true  },
+  { id: 'favorites',        icon: '❤️', label: 'Favoriten',                 description: 'Kunden können Produkte als Favoriten speichern.',                                       adminLink: null, adminLabel: null, comingSoon: true  },
 ]
 
 const DEFAULT_MARKETING = {
@@ -79,8 +82,6 @@ const DEFAULT_MARKETING = {
   welcome_banner_discount: 10,
   welcome_banner_text:     'Als Dankeschön für deinen ersten Besuch schenken wir dir 10% auf deine erste Bestellung!',
 }
-
-// ── Hilfsfunktionen ───────────────────────────────────────────────────────────
 
 function KeyField({ label, value, onChange, placeholder, help, isSecret = false }: {
   label: string; value: string; onChange: (v: string) => void
@@ -165,7 +166,6 @@ function SectionToggle({ enabled, onToggle, icon, label, description, color = 'g
   )
 }
 
-// Kleines Zeit-Input-Feld
 function TimeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <input type="time" value={value} onChange={e => onChange(e.target.value)}
@@ -198,15 +198,14 @@ export default function SettingsPage() {
   const [testEmailAddress, setTestEmailAddress] = useState('bestellung@eiscafe-simonetti.de')
   const [socialLinks, setSocialLinks]           = useState<any>(DEFAULT_SOCIAL)
   const [socialSaving, setSocialSaving]         = useState(false)
-  const [paymentKeys,    setPaymentKeys]    = useState<any>(DEFAULT_PAYMENT_KEYS)
-  const [notifySettings, setNotifySettings] = useState<any>(DEFAULT_NOTIFY_SETTINGS)
-  const [notifySaving,   setNotifySaving]   = useState(false)
+  const [paymentKeys,    setPaymentKeys]        = useState<any>(DEFAULT_PAYMENT_KEYS)
+  const [notifySettings, setNotifySettings]     = useState<any>(DEFAULT_NOTIFY_SETTINGS)
+  const [notifySaving,   setNotifySaving]       = useState(false)
   const [paymentSaving, setPaymentSaving]       = useState(false)
   const [specialHours, setSpecialHours]         = useState<any[]>([])
   const [showModal, setShowModal]               = useState(false)
   const [editingId, setEditingId]               = useState<any>(null)
 
-  // Neues formData mit getrennten Feldern für Lieferung + Abholung
   const [formData, setFormData] = useState({
     date: '', label: '', notes: '',
     delivery_closed: false, delivery_open: '14:00', delivery_close: '18:30',
@@ -216,14 +215,12 @@ export default function SettingsPage() {
   const [features, setFeatures]             = useState<Record<string, boolean>>({})
   const [featuresSaving, setFeaturesSaving] = useState(false)
 
-  // Liefergebiete
   const [deliveryZones, setDeliveryZones] = useState<{ id: string; zip: string; city: string; enabled: boolean }[]>([
     { id: "1", zip: "40764", city: "Langenfeld", enabled: true }
   ])
   const [newZip, setNewZip]   = useState("")
   const [newCity, setNewCity] = useState("")
 
-  // Upselling
   const [upsellEnabled, setUpsellEnabled] = useState(false)
   const [upsellToppings, setUpsellToppings] = useState<{ id: string; name: string; price: number; enabled: boolean }[]>([
     { id: '1', name: 'Schokosoße', price: 0.50, enabled: true },
@@ -262,9 +259,9 @@ export default function SettingsPage() {
       if (data.upsell_enabled != null) setUpsellEnabled(data.upsell_enabled)
       if (data.upsell_toppings?.length) setUpsellToppings(data.upsell_toppings)
       if (data.daily_special) setDailySpecial(data.daily_special)
-      if (data.social_links)        setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
-      if (data.payment_keys)        setPaymentKeys({ ...DEFAULT_PAYMENT_KEYS, ...data.payment_keys })
-      if (data.notify_settings)     setNotifySettings({ ...DEFAULT_NOTIFY_SETTINGS, ...data.notify_settings })
+      if (data.social_links)    setSocialLinks({ ...DEFAULT_SOCIAL, ...data.social_links })
+      if (data.payment_keys)    setPaymentKeys({ ...DEFAULT_PAYMENT_KEYS, ...data.payment_keys })
+      if (data.notify_settings) setNotifySettings({ ...DEFAULT_NOTIFY_SETTINGS, ...data.notify_settings })
       setMarketing({
         welcome_banner_enabled:  data.welcome_banner_enabled  ?? false,
         welcome_banner_code:     data.welcome_banner_code     || 'WILLKOMMEN10',
@@ -291,7 +288,13 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true)
-    const { error } = await supabase.from('shop_settings').update({ ...settings, delivery_zones: deliveryZones, upsell_enabled: upsellEnabled, upsell_toppings: upsellToppings, daily_special: dailySpecial }).eq('id', 'main')
+    const { error } = await supabase.from('shop_settings').update({
+      ...settings,
+      delivery_zones:  deliveryZones,
+      upsell_enabled:  upsellEnabled,
+      upsell_toppings: upsellToppings,
+      daily_special:   dailySpecial,
+    }).eq('id', 'main')
     if (!error) showToast('✅ Einstellungen gespeichert!')
     else showToast('❌ Fehler: ' + error.message)
     setSaving(false)
@@ -330,6 +333,7 @@ export default function SettingsPage() {
     setPaymentSaving(true)
     const { error } = await supabase.from('shop_settings').update({ payment_keys: paymentKeys }).eq('id', 'main')
     if (!error) showToast('✅ Zahlungs-Keys gespeichert!')
+    setPaymentSaving(false)
   }
 
   const saveNotifySettings = async () => {
@@ -338,7 +342,6 @@ export default function SettingsPage() {
     setNotifySaving(false)
     if (!error) showToast('✅ Benachrichtigungs-Einstellungen gespeichert!')
     else showToast('❌ Fehler: ' + error.message)
-    setPaymentSaving(false)
   }
 
   const handleSaveFeatures = async () => {
@@ -360,12 +363,9 @@ export default function SettingsPage() {
     if (!error) setSettings({ ...settings, manual_close: newValue })
   }
 
-  // ── Öffnungszeiten: neues Format mit delivery/pickup ──────────────────────
-  // Liest einen Tag und migriert altes Format on-the-fly
   const getDay = (key: string) => {
     const h = settings.opening_hours[key]
     if (!h) return DEFAULT_DAY
-    // Altes Format: { open, close, closed }
     if (h.open !== undefined && !h.delivery) {
       return {
         delivery: { closed: h.closed ?? false, open: h.open, close: h.close },
@@ -389,18 +389,15 @@ export default function SettingsPage() {
     })
   }
 
-  // ── Kalender ──────────────────────────────────────────────────────────────
   const handleSubmitCalendar = async (e: any) => {
     e.preventDefault()
     const payload = {
       date:  formData.date,
       label: formData.label || null,
       notes: formData.notes || null,
-      // Legacy-Felder für Rückwärtskompatibilität
-      is_closed:    formData.delivery_closed && formData.pickup_closed,
-      custom_open:  formData.delivery_closed ? null : formData.delivery_open,
-      custom_close: formData.delivery_closed ? null : formData.delivery_close,
-      // Neue getrennte Felder
+      is_closed:       formData.delivery_closed && formData.pickup_closed,
+      custom_open:     formData.delivery_closed ? null : formData.delivery_open,
+      custom_close:    formData.delivery_closed ? null : formData.delivery_close,
       delivery_closed: formData.delivery_closed,
       delivery_open:   formData.delivery_closed ? null : formData.delivery_open,
       delivery_close:  formData.delivery_closed ? null : formData.delivery_close,
@@ -480,17 +477,18 @@ export default function SettingsPage() {
         body: JSON.stringify({ type: typeKey, order: testOrder, recipientEmail: testEmailAddress })
       })
       const result = await response.json()
-      if (result.success) showToast('✅ Test-Email gesendet an ' + testEmailAddress)
+      if (result.success) showToast(`✅ Test-Email gesendet${result.pdf ? ' (mit PDF)' : ''} → ${testEmailAddress}`)
       else if (result.skipped) showToast('⚠️ Email ist deaktiviert')
       else showToast('❌ Fehler: ' + result.error)
     } catch (e) { showToast('❌ Fehler beim Senden') }
     setEmailTestSending(null)
   }
 
-  const stripe            = paymentKeys.stripe || DEFAULT_PAYMENT_KEYS.stripe
-  const paypal            = paymentKeys.paypal || DEFAULT_PAYMENT_KEYS.paypal
-  const wero              = paymentKeys.wero   || DEFAULT_PAYMENT_KEYS.wero
-  const isLive            = stripe.mode === 'live'
+  const stripe          = paymentKeys.stripe      || DEFAULT_PAYMENT_KEYS.stripe
+  const paypal          = paymentKeys.paypal      || DEFAULT_PAYMENT_KEYS.paypal
+  const wero            = paymentKeys.wero        || DEFAULT_PAYMENT_KEYS.wero
+  const google_maps_key = paymentKeys.google_maps?.api_key || ''
+  const isLive          = stripe.mode === 'live'
   const activeSocialCount  = Object.values(socialLinks).filter((s: any) => s.enabled && s.url).length
   const activeFeatureCount = FEATURE_DEFINITIONS.filter(f => !f.comingSoon && features[f.id]).length
 
@@ -532,7 +530,6 @@ export default function SettingsPage() {
           {/* ── ALLGEMEIN ── */}
           {activeTab === 'general' && (
             <div className="space-y-6">
-              {/* Shop-Status */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -554,7 +551,6 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              {/* Preise */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><DollarSign size={22} /> Preise & Gebühren</h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -574,7 +570,6 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Lieferdauer */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><Clock size={22} /> Lieferdauer</h2>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -594,7 +589,6 @@ export default function SettingsPage() {
                 <p className="text-sm text-gray-400 mt-3">Kunden sehen: „Lieferung in ca. {settings.delivery_duration_min}–{settings.delivery_duration_max} Minuten"</p>
               </div>
 
-              {/* Vorbestellung */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><Clock size={22} /> Vorbestellung</h2>
                 <div className="flex items-center justify-between mb-4">
@@ -629,7 +623,6 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              {/* Abholung */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-4 flex items-center gap-2"><Store size={22} /> Abholung</h2>
                 <div className="flex items-center justify-between">
@@ -646,12 +639,9 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-
-              {/* Liefergebiete */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-1 flex items-center gap-2">🗺️ Liefergebiete</h2>
                 <p className="text-sm text-gray-400 mb-4">Aktive PLZ-Gebiete werden im Checkout validiert</p>
-
                 <div className="space-y-2 mb-4">
                   {deliveryZones.map(zone => (
                     <div key={zone.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-colors ${zone.enabled ? 'border-green-200 bg-green-50' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
@@ -665,8 +655,7 @@ export default function SettingsPage() {
                         <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${zone.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
                       </button>
                       {deliveryZones.length > 1 && (
-                        <button type="button"
-                          onClick={() => setDeliveryZones(deliveryZones.filter(z => z.id !== zone.id))}
+                        <button type="button" onClick={() => setDeliveryZones(deliveryZones.filter(z => z.id !== zone.id))}
                           className="p-1.5 hover:bg-red-100 rounded-lg text-gray-300 hover:text-red-500 transition">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
                         </button>
@@ -674,7 +663,6 @@ export default function SettingsPage() {
                     </div>
                   ))}
                 </div>
-
                 <div className="flex gap-2">
                   <input type="text" value={newZip} onChange={e => setNewZip(e.target.value)} maxLength={5}
                     placeholder="PLZ" className="w-28 px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm font-mono font-bold" />
@@ -695,7 +683,6 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-400 mt-3">💡 Gespeichert wird mit dem großen "Einstellungen speichern" Button</p>
               </div>
 
-              {/* Upselling */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="font-bold text-xl flex items-center gap-2">✨ Upselling</h2>
@@ -705,11 +692,8 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 <p className="text-sm text-gray-400 mb-5">Dezente "Dazu noch?" Sektion im Warenkorb – ein Klick genügt zum Hinzufügen</p>
-
                 {upsellEnabled && (
                   <div className="space-y-5">
-
-                    {/* Tagesspecial */}
                     <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-bold text-amber-800">⭐ Tagesspecial</span>
@@ -732,8 +716,6 @@ export default function SettingsPage() {
                         </div>
                       )}
                     </div>
-
-                    {/* Toppings */}
                     <div>
                       <p className="font-semibold text-gray-700 mb-2">🍫 Toppings</p>
                       <div className="space-y-2 mb-3">
@@ -789,24 +771,17 @@ export default function SettingsPage() {
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="font-bold text-xl mb-2">Reguläre Öffnungszeiten</h2>
                 <p className="text-sm text-gray-400 mb-5">Getrennte Zeiten für 🚗 Lieferung und 🏪 Abholung</p>
-
-                {/* Legende */}
                 <div className="grid grid-cols-2 gap-3 mb-4 text-xs font-bold">
                   <div className="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-center">🚗 Lieferung</div>
                   <div className="bg-purple-50 text-purple-700 px-3 py-2 rounded-lg text-center">🏪 Abholung</div>
                 </div>
-
                 <div className="space-y-1">
                   {Object.entries(DAYS).map(([key, label]) => {
                     const day = getDay(key)
                     return (
                       <div key={key} className="border border-gray-100 rounded-xl overflow-hidden">
-                        {/* Tagesname */}
-                        <div className="bg-gray-50 px-4 py-2">
-                          <span className="font-bold text-gray-700">{label}</span>
-                        </div>
+                        <div className="bg-gray-50 px-4 py-2"><span className="font-bold text-gray-700">{label}</span></div>
                         <div className="p-3 grid grid-cols-2 gap-3">
-                          {/* Lieferung */}
                           <div className={`rounded-xl p-3 space-y-2 transition-colors ${day.delivery.closed ? 'bg-gray-100' : 'bg-blue-50'}`}>
                             <div className="flex items-center justify-between">
                               <span className={`text-xs font-bold ${day.delivery.closed ? 'text-gray-400' : 'text-blue-700'}`}>🚗 Lieferung</span>
@@ -821,12 +796,8 @@ export default function SettingsPage() {
                                 <span className="text-gray-400 text-xs">–</span>
                                 <TimeInput value={day.delivery.close} onChange={v => updateDayType(key, 'delivery', 'close', v)} />
                               </div>
-                            ) : (
-                              <span className="text-xs text-gray-400 font-semibold">Geschlossen</span>
-                            )}
+                            ) : <span className="text-xs text-gray-400 font-semibold">Geschlossen</span>}
                           </div>
-
-                          {/* Abholung */}
                           <div className={`rounded-xl p-3 space-y-2 transition-colors ${day.pickup.closed ? 'bg-gray-100' : 'bg-purple-50'}`}>
                             <div className="flex items-center justify-between">
                               <span className={`text-xs font-bold ${day.pickup.closed ? 'text-gray-400' : 'text-purple-700'}`}>🏪 Abholung</span>
@@ -841,9 +812,7 @@ export default function SettingsPage() {
                                 <span className="text-gray-400 text-xs">–</span>
                                 <TimeInput value={day.pickup.close} onChange={v => updateDayType(key, 'pickup', 'close', v)} />
                               </div>
-                            ) : (
-                              <span className="text-xs text-gray-400 font-semibold">Geschlossen</span>
-                            )}
+                            ) : <span className="text-xs text-gray-400 font-semibold">Geschlossen</span>}
                           </div>
                         </div>
                       </div>
@@ -851,7 +820,6 @@ export default function SettingsPage() {
                   })}
                 </div>
               </div>
-
               <button onClick={handleSave} disabled={saving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{saving ? 'Speichert...' : 'Öffnungszeiten speichern'}
@@ -872,7 +840,6 @@ export default function SettingsPage() {
                   <Plus size={18} /> Neuer Eintrag
                 </button>
               </div>
-
               {specialHours.length === 0 ? (
                 <div className="text-center py-16 bg-gray-50 rounded-xl">
                   <CalendarIcon size={48} className="mx-auto mb-4 text-gray-300" />
@@ -895,21 +862,17 @@ export default function SettingsPage() {
                                   {entry.label && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">{entry.label}</span>}
                                 </div>
                                 <div className="flex gap-3 flex-wrap">
-                                  {/* Lieferung */}
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-xs text-gray-400">🚗</span>
                                     {(entry.delivery_closed ?? entry.is_closed)
                                       ? <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-semibold">Geschlossen</span>
-                                      : <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">{entry.delivery_open || entry.custom_open} – {entry.delivery_close || entry.custom_close} Uhr</span>
-                                    }
+                                      : <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">{entry.delivery_open || entry.custom_open} – {entry.delivery_close || entry.custom_close} Uhr</span>}
                                   </div>
-                                  {/* Abholung */}
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-xs text-gray-400">🏪</span>
                                     {(entry.pickup_closed ?? entry.is_closed)
                                       ? <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-semibold">Geschlossen</span>
-                                      : <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-semibold">{entry.pickup_open || entry.custom_open} – {entry.pickup_close || entry.custom_close} Uhr</span>
-                                    }
+                                      : <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-semibold">{entry.pickup_open || entry.custom_open} – {entry.pickup_close || entry.custom_close} Uhr</span>}
                                   </div>
                                 </div>
                                 {entry.notes && <p className="text-xs text-gray-400 mt-1.5">💬 {entry.notes}</p>}
@@ -943,7 +906,7 @@ export default function SettingsPage() {
                     onToggle={() => setM('welcome_banner_enabled', !marketing.welcome_banner_enabled)}
                     icon={<Sparkles size={22} />}
                     label="Willkommens-Banner"
-                    description="Popup mit Rabattcode beim ersten Besuch der Seite"
+                    description="Banner mit Rabattcode in der Kunden-App"
                     color="gold"
                   />
                 </div>
@@ -995,6 +958,7 @@ export default function SettingsPage() {
                 <h2 className="text-2xl font-bold flex items-center gap-2"><CreditCard size={24} /> Zahlungsanbieter</h2>
                 <p className="text-gray-500 text-sm mt-1">Klicke auf einen Anbieter um die Zugangsdaten einzugeben.</p>
               </div>
+
               <ProviderCard icon="💳" title="Stripe" badge={isLive ? '🟢 Live-Modus' : '🟡 Test-Modus'}
                 badgeColor={isLive ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}
                 subtitle="Kreditkarte, SEPA, Apple Pay, Google Pay"
@@ -1024,6 +988,7 @@ export default function SettingsPage() {
                 )}
                 <KeyField label="Webhook Secret" value={stripe.webhook_secret} onChange={v => updatePayment('stripe', 'webhook_secret', v)} placeholder="whsec_..." isSecret help="Stripe Dashboard → Entwickler → Webhooks → Signatur-Geheimnis" />
               </ProviderCard>
+
               <ProviderCard icon="🅿️" title="PayPal" badge="Code bereit" badgeColor="bg-blue-100 text-blue-700"
                 subtitle="PayPal Zahlungen" docsUrl="https://developer.paypal.com/dashboard/applications">
                 <div className="flex gap-2 mb-5">
@@ -1046,9 +1011,37 @@ export default function SettingsPage() {
                   </>
                 )}
               </ProviderCard>
+
               <ProviderCard icon="🇩🇪" title="Wero" isComingSoon subtitle="Deutsche P2P-Zahlungsmethode">
                 <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500">{wero.note}</div>
               </ProviderCard>
+
+              {/* ── NEU: Google Maps ── */}
+              <ProviderCard icon="🗺️" title="Google Maps" badge="Optional" badgeColor="bg-blue-100 text-blue-700"
+                subtitle="Live-Tracking Kunden-App – ohne Key: OpenStreetMap (kostenlos). Mit Key: Google Maps + Routing."
+                docsUrl="https://console.cloud.google.com/apis/credentials">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4 text-sm text-blue-700">
+                  <strong>ℹ️ Optional:</strong> Ohne Key wird automatisch <strong>OpenStreetMap</strong> verwendet (kostenlos, kein Account nötig).
+                  Mit Google Maps API Key: schönere Karte + echtes Routing für das Live-Tracking in der Kunden-App.
+                </div>
+                <KeyField
+                  label="Google Maps API Key"
+                  value={paymentKeys.google_maps?.api_key || ''}
+                  onChange={v => updatePayment('google_maps', 'api_key', v)}
+                  placeholder="AIzaSy..."
+                  help="Google Cloud Console → APIs & Services → Credentials → API Key erstellen → Maps JavaScript API aktivieren"
+                />
+                {google_maps_key ? (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                    <CheckCircle size={14} /> Google Maps aktiv — Live-Tracking nutzt Google Maps + Routing
+                  </div>
+                ) : (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
+                    🗺️ Kein Key gesetzt — OpenStreetMap wird verwendet (kostenlos)
+                  </div>
+                )}
+              </ProviderCard>
+
               <button onClick={handleSavePayment} disabled={paymentSaving}
                 className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
                 <Save size={22} />{paymentSaving ? 'Speichert...' : 'Zahlungs-Keys speichern'}
@@ -1069,6 +1062,60 @@ export default function SettingsPage() {
                 <label className="block text-sm font-bold text-blue-800 mb-2">📧 Test-Email senden an:</label>
                 <input type="email" value={testEmailAddress} onChange={e => setTestEmailAddress(e.target.value)}
                   className="w-full px-4 py-2.5 border-2 border-blue-200 rounded-xl text-sm focus:border-blue-500 focus:outline-none bg-white" placeholder="deine@email.de" />
+              </div>
+              <div className={`bg-white rounded-xl border-2 p-6 transition ${emailSettings.invoice_pdf_enabled ? 'border-[#C4973A]' : 'border-gray-200'}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="text-3xl mt-0.5">📄</div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-gray-900">PDF-Rechnung anhängen</span>
+                        {emailSettings.invoice_pdf_enabled
+                          ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✅ Aktiv</span>
+                          : <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Inaktiv</span>}
+                      </div>
+                      <p className="text-sm text-gray-400">Hängt eine PDF-Rechnung an die Bestellbestätigung an.</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setEmailSettings((prev: any) => ({ ...prev, invoice_pdf_enabled: !prev.invoice_pdf_enabled }))}
+                    className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors mt-0.5 ${emailSettings.invoice_pdf_enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${emailSettings.invoice_pdf_enabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+              </div>
+              <div className={`bg-white rounded-xl border-2 p-6 transition ${emailSettings.abandoned_cart_enabled ? 'border-[#C4973A]' : 'border-gray-200'}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="text-3xl mt-0.5">🛒</div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-gray-900">Abandoned Cart E-Mail</span>
+                        {emailSettings.abandoned_cart_enabled
+                          ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">✅ Aktiv</span>
+                          : <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">Inaktiv</span>}
+                      </div>
+                      <p className="text-sm text-gray-400">Sendet automatisch eine E-Mail wenn ein Kunde den Warenkorb verlässt ohne zu bestellen.</p>
+                      {emailSettings.abandoned_cart_enabled && (
+                        <div className="mt-3">
+                          <label className="text-xs font-semibold text-gray-600 block mb-1">⏱ E-Mail senden nach:</label>
+                          <div className="flex gap-2">
+                            {[1.5, 2, 2.5, 3].map(h => (
+                              <button key={h} type="button"
+                                onClick={() => setEmailSettings((prev: any) => ({ ...prev, abandoned_cart_hours: h }))}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition ${emailSettings.abandoned_cart_hours === h ? 'border-[#C4973A] bg-[#C4973A] text-white' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
+                                {h}h
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button onClick={() => setEmailSettings((prev: any) => ({ ...prev, abandoned_cart_enabled: !prev.abandoned_cart_enabled }))}
+                    className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors mt-0.5 ${emailSettings.abandoned_cart_enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${emailSettings.abandoned_cart_enabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
               </div>
               {EMAIL_TYPES.map((emailType) => {
                 const typeSetting = emailSettings[emailType.key] || {}
@@ -1211,81 +1258,68 @@ export default function SettingsPage() {
             </div>
           )}
 
-        {activeTab === 'notify' && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold flex items-center gap-2">📲 Benachrichtigungen</h2>
-              <p className="text-gray-500 text-sm mt-1">Telegram und WhatsApp Zugangsdaten – hier zentral verwalten.</p>
-            </div>
-
-            {/* Telegram */}
-            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-3xl">✈️</span>
-                <div>
-                  <h3 className="font-bold text-gray-900">Telegram Bot</h3>
-                  <p className="text-xs text-gray-400">Bot Token und Chat-ID für Bestellbenachrichtigungen</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Bot Token</label>
-                  <input
-                    type="text"
-                    value={notifySettings.telegram_bot_token || ''}
-                    onChange={e => setNotifySettings({ ...notifySettings, telegram_bot_token: e.target.value })}
-                    placeholder="1234567890:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:outline-none font-mono text-sm"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Erstellen via @BotFather in Telegram</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Chat-ID</label>
-                  <input
-                    type="text"
-                    value={notifySettings.telegram_chat_id || ''}
-                    onChange={e => setNotifySettings({ ...notifySettings, telegram_chat_id: e.target.value })}
-                    placeholder="123456789"
-                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:outline-none font-mono text-sm"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Deine persönliche ID via @userinfobot</p>
-                </div>
-              </div>
-            </div>
-
-            {/* WhatsApp */}
-            <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-3xl">💬</span>
-                <div>
-                  <h3 className="font-bold text-gray-900">WhatsApp</h3>
-                  <p className="text-xs text-gray-400">Telefonnummer für WhatsApp-Links im Kanban</p>
-                </div>
-              </div>
+          {/* ── BENACHRICHTIGUNGEN ── */}
+          {activeTab === 'notify' && (
+            <div className="space-y-6">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Telefonnummer (international, ohne +)</label>
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-2.5 bg-gray-100 border-2 border-gray-200 rounded-xl text-sm font-mono text-gray-500">+</span>
-                  <input
-                    type="text"
-                    value={notifySettings.whatsapp_number || ''}
-                    onChange={e => setNotifySettings({ ...notifySettings, whatsapp_number: e.target.value.replace(/\D/g, '') })}
-                    placeholder="4921731622780"
-                    className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:outline-none font-mono text-sm"
-                  />
-                </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  Vorschau: <span className="font-mono text-gray-600">https://wa.me/{notifySettings.whatsapp_number || '4921731622780'}</span>
-                </p>
+                <h2 className="text-2xl font-bold flex items-center gap-2">📲 Benachrichtigungen</h2>
+                <p className="text-gray-500 text-sm mt-1">Telegram und WhatsApp Zugangsdaten – hier zentral verwalten.</p>
               </div>
+              <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-3xl">✈️</span>
+                  <div>
+                    <h3 className="font-bold text-gray-900">Telegram Bot</h3>
+                    <p className="text-xs text-gray-400">Bot Token und Chat-ID für Bestellbenachrichtigungen</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Bot Token</label>
+                    <input type="text" value={notifySettings.telegram_bot_token || ''}
+                      onChange={e => setNotifySettings({ ...notifySettings, telegram_bot_token: e.target.value })}
+                      placeholder="1234567890:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:outline-none font-mono text-sm" />
+                    <p className="text-xs text-gray-400 mt-1">Erstellen via @BotFather in Telegram</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Chat-ID</label>
+                    <input type="text" value={notifySettings.telegram_chat_id || ''}
+                      onChange={e => setNotifySettings({ ...notifySettings, telegram_chat_id: e.target.value })}
+                      placeholder="123456789"
+                      className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:outline-none font-mono text-sm" />
+                    <p className="text-xs text-gray-400 mt-1">Deine persönliche ID via @userinfobot</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl border-2 border-gray-200 p-6 space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-3xl">💬</span>
+                  <div>
+                    <h3 className="font-bold text-gray-900">WhatsApp</h3>
+                    <p className="text-xs text-gray-400">Telefonnummer für WhatsApp-Links im Kanban</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Telefonnummer (international, ohne +)</label>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-2.5 bg-gray-100 border-2 border-gray-200 rounded-xl text-sm font-mono text-gray-500">+</span>
+                    <input type="text" value={notifySettings.whatsapp_number || ''}
+                      onChange={e => setNotifySettings({ ...notifySettings, whatsapp_number: e.target.value.replace(/\D/g, '') })}
+                      placeholder="4921731622780"
+                      className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-gray-900 focus:outline-none font-mono text-sm" />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Vorschau: <span className="font-mono text-gray-600">https://wa.me/{notifySettings.whatsapp_number || '4921731622780'}</span>
+                  </p>
+                </div>
+              </div>
+              <button onClick={saveNotifySettings} disabled={notifySaving}
+                className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
+                <Save size={22} />{notifySaving ? 'Speichert...' : 'Einstellungen speichern'}
+              </button>
             </div>
-
-            <button onClick={saveNotifySettings} disabled={notifySaving}
-              className="w-full py-4 bg-black text-white font-bold text-lg rounded-xl hover:bg-gray-900 transition disabled:opacity-50 flex items-center justify-center gap-2">
-              <Save size={22} />{notifySaving ? 'Speichert...' : 'Einstellungen speichern'}
-            </button>
-          </div>
-        )}
+          )}
 
         </div>
       </div>
@@ -1298,7 +1332,6 @@ export default function SettingsPage() {
               <h2 className="text-xl font-bold">{editingId ? 'Bearbeiten' : 'Sonderöffnungszeiten'}</h2>
               <button onClick={resetForm} className="p-2 hover:bg-gray-100 rounded-full"><X size={22} /></button>
             </div>
-
             <form onSubmit={handleSubmitCalendar} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1313,8 +1346,6 @@ export default function SettingsPage() {
                     className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none" />
                 </div>
               </div>
-
-              {/* Lieferung */}
               <div className={`rounded-xl p-4 space-y-3 transition-colors ${formData.delivery_closed ? 'bg-gray-100' : 'bg-blue-50'}`}>
                 <div className="flex items-center justify-between">
                   <span className={`font-bold ${formData.delivery_closed ? 'text-gray-400' : 'text-blue-800'}`}>🚗 Lieferung</span>
@@ -1342,8 +1373,6 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-
-              {/* Abholung */}
               <div className={`rounded-xl p-4 space-y-3 transition-colors ${formData.pickup_closed ? 'bg-gray-100' : 'bg-purple-50'}`}>
                 <div className="flex items-center justify-between">
                   <span className={`font-bold ${formData.pickup_closed ? 'text-gray-400' : 'text-purple-800'}`}>🏪 Abholung</span>
@@ -1371,13 +1400,11 @@ export default function SettingsPage() {
                   </div>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-semibold mb-1.5">Notizen</label>
                 <textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })}
                   rows={2} className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-black focus:outline-none text-sm" />
               </div>
-
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={resetForm} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-semibold hover:bg-gray-50">Abbrechen</button>
                 <button type="submit" className="flex-1 py-3 bg-black text-white rounded-xl font-semibold hover:bg-gray-900">
