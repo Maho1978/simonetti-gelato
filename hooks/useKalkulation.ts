@@ -47,18 +47,7 @@ export function useKalkulation() {
   useEffect(() => { load() }, [load])
 
   // â”€â”€ Realtime Subscriptions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  useEffect(() => {
-    const channel = supabase
-      .channel('kalk_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'zutaten' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'betriebskosten' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'produkte' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rezept_positionen' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'kalk_einstellungen' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'kategorien' }, () => load())
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [supabase, load])
+  // Realtime deaktiviert — verhindert Fokus-Verlust beim Tippen
 
   // â”€â”€ CRUD: Einstellungen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const saveEinstellungen = async (data: Partial<KalkEinstellungen>) => {
