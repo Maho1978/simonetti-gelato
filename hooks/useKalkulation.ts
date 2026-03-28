@@ -46,7 +46,7 @@ export function useKalkulation() {
         supabase.from('zutaten').select('*').eq('aktiv', true).order('name'),
         supabase.from('betriebskosten').select('*').eq('aktiv', true).order('kategorie'),
         supabase.from('produkte')
-          .select(`*, rezept_positionen(*, zutat:zutaten(*), basis:basis_rezepte(*))`)
+          .select(`*, rezept_positionen(*, zutat:zutaten(*))`)
           .eq('aktiv', true)
           .order('prod_kategorie'),
         supabase.from('kalk_einstellungen').select('*').single(),
