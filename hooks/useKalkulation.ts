@@ -65,11 +65,12 @@ export function useKalkulation() {
     if (item.id) {
       const { error } = await supabase.from('betriebskosten').update(item).eq('id', item.id)
       if (error) throw error
+      setBetriebskosten(prev => prev.map(b => b.id === item.id ? {...b, ...item} : b))
     } else {
       const { error } = await supabase.from('betriebskosten').insert(item)
       if (error) throw error
+      await load()
     }
-    await load()
   }
 
   const deleteBetriebskosten = async (id: string) => {
@@ -83,11 +84,12 @@ export function useKalkulation() {
     if (item.id) {
       const { error } = await supabase.from('zutaten').update(item).eq('id', item.id)
       if (error) throw error
+      setZutaten(prev => prev.map(z => z.id === item.id ? {...z, ...item} : z))
     } else {
       const { error } = await supabase.from('zutaten').insert({...item, aktiv: true})
       if (error) throw error
+      await load()
     }
-    await load()
   }
 
   const deleteZutat = async (id: string) => {
@@ -102,11 +104,12 @@ export function useKalkulation() {
     if (data.id) {
       const { error } = await supabase.from('produkte').update(data).eq('id', data.id)
       if (error) throw error
+      setProdukte(prev => prev.map(p => p.id === data.id ? {...p, ...data} : p))
     } else {
       const { error } = await supabase.from('produkte').insert({...data, aktiv: true})
       if (error) throw error
+      await load()
     }
-    await load()
   }
 
   const deleteProdukt = async (id: string) => {
