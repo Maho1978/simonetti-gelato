@@ -136,7 +136,7 @@ export default function KalkulationPin({ children }: Props) {
   }
 
   // ── PIN zurücksetzen (nur mit Supabase-Passwort möglich → hier: confirm-Dialog) ──
-  const handleReset = () => {
+  const handleReset = async () => {
     const ok = window.confirm('PIN zurücksetzen? Du musst danach eine neue PIN vergeben.')
     if (ok) {
       await supabase.from('shop_settings').update({ kalk_pin_hash: null }).eq('id', 'main')
