@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
 
 const C = {
   cream:'#FBF6EE', vanilla:'#F2E6CC', caramel:'#C4873A', espresso:'#2C1708',
@@ -7,7 +8,6 @@ const C = {
   red:'#C0392B', green:'#2E7D54', sand:'#E8D5B0',
 }
 
-const PIN_KEY        = 'simo_kalk_pin_hash'
 const SESSION_KEY    = 'simo_kalk_unlocked'
 const TIMEOUT_MIN    = 5          // Minuten bis Auto-Lock
 const MAX_ATTEMPTS   = 5          // danach 30s Sperre
@@ -39,14 +39,17 @@ export default function KalkulationPin({ children }: Props) {
 
   // ── Initialisierung ────────────────────────────────────────────
   useEffect(() => {
-    const pinSet     = !!localStorage.getItem(PIN_KEY)
-    const unlocked   = sessionStorage.getItem(SESSION_KEY)
-    const unlockedAt = unlocked ? parseInt(unlocked) : 0
-    const elapsed    = (Date.now() - unlockedAt) / 1000 / 60
-
-    if (!pinSet)              setPhase('setup')
-    else if (elapsed < TIMEOUT_MIN) setPhase('unlocked')
-    else                      setPhase('locked')
+    const init = async () => {
+      const { data } = await supabase.from('shop_settings').select('kalk_pin_hash').eq('id', 'main').single()
+      const pinSet     = !!data?.kalk_pin_hash
+      const unlocked   = sessionStorage.getItem(SESSION_KEY)
+      const unlockedAt = unlocked ? parseInt(unlocked) : 0
+      const elapsed    = (Date.now() - unlockedAt) / 1000 / 60
+      if (!pinSet)                  setPhase('setup')
+      else if (elapsed < TIMEOUT_MIN) setPhase('unlocked')
+      else                            setPhase('locked')
+    }
+    init()
   }, [])
 
   // ── Auto-Lock nach Inaktivität ─────────────────────────────────
@@ -104,7 +107,7 @@ export default function KalkulationPin({ children }: Props) {
       setError('PINs stimmen nicht überein'); setInput(''); triggerShake(); return
     }
     const hash = await hashPin(input)
-    localStorage.setItem(PIN_KEY, hash)
+    await supabase.from('shop_settings').update({ kalk_pin_hash: hash }).eq('id', 'main')
     sessionStorage.setItem(SESSION_KEY, Date.now().toString())
     setPhase('unlocked')
   }
@@ -113,7 +116,8 @@ export default function KalkulationPin({ children }: Props) {
   const handleUnlock = async () => {
     if (lockout > 0) return
     const hash    = await hashPin(input)
-    const stored  = localStorage.getItem(PIN_KEY)
+    const { data } = await supabase.from('shop_settings').select('kalk_pin_hash').eq('id', 'main').single()
+    const stored  = data?.kalk_pin_hash
     if (hash === stored) {
       sessionStorage.setItem(SESSION_KEY, Date.now().toString())
       setAttempts(0); setInput(''); setPhase('unlocked')
@@ -135,7 +139,7 @@ export default function KalkulationPin({ children }: Props) {
   const handleReset = () => {
     const ok = window.confirm('PIN zurücksetzen? Du musst danach eine neue PIN vergeben.')
     if (ok) {
-      localStorage.removeItem(PIN_KEY)
+      await supabase.from('shop_settings').update({ kalk_pin_hash: null }).eq('id', 'main')
       sessionStorage.removeItem(SESSION_KEY)
       setPhase('setup'); setInput(''); setStep('enter'); setError('')
     }
@@ -172,7 +176,7 @@ export default function KalkulationPin({ children }: Props) {
     if (step === 'enter') { setConfirm(val); setInput(''); setStep('confirm'); setError(''); return }
     if (val !== confirm) { setError('PINs stimmen nicht überein'); setInput(''); triggerShake(); return }
     const hash = await hashPin(val)
-    localStorage.setItem(PIN_KEY, hash)
+    await supabase.from('shop_settings').update({ kalk_pin_hash: hash }).eq('id', 'main')
     sessionStorage.setItem(SESSION_KEY, Date.now().toString())
     setPhase('unlocked')
   }
@@ -180,7 +184,8 @@ export default function KalkulationPin({ children }: Props) {
   const handleUnlockWithVal = async (val: string) => {
     if (lockout > 0) return
     const hash   = await hashPin(val)
-    const stored = localStorage.getItem(PIN_KEY)
+    const { data } = await supabase.from('shop_settings').select('kalk_pin_hash').eq('id', 'main').single()
+    const stored = data?.kalk_pin_hash
     if (hash === stored) {
       sessionStorage.setItem(SESSION_KEY, Date.now().toString())
       setAttempts(0); setInput(''); setPhase('unlocked')
