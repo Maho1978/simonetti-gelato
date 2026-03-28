@@ -1,7 +1,7 @@
 ﻿// hooks/useKalkulation.ts
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabaseAdmin as supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import type { Zutat, Betriebskosten, Produkt, RezeptPosition, KalkEinstellungen } from '@/types/kalkulation'
 import type { Kategorie } from '@/components/kalkulation/KategorienManager'
 
