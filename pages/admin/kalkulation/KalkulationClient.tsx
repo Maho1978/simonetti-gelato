@@ -1,6 +1,7 @@
 ﻿'use client'
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { useKalkulation } from '@/hooks/useKalkulation'
+import type { BasisRezept, BasisPosition } from '@/hooks/useKalkulation'
 import {
   calcProdukt, calcWareneinsatz, calcFixUmlage, classifyProdukt,
   PORTIONEN, PROD_KATS, BETRIEB_KATS, EUR, PCT,
@@ -62,14 +63,17 @@ function TdInput({ value, onChange, type='text', width=100, align='left', step, 
 ════════════════════════════════════════════════════════════ */
 export default function KalkulationClient() {
   const {
-    zutaten, betriebskosten, produkte, einstellungen,
+    zutaten, betriebskosten, produkte, einstellungen, basisRezepte,
     loading, error, betriebGesamt, gesamtPortionen, reload,
+    calcBasisKosten,
     saveEinstellungen, saveBetriebskosten, deleteBetriebskosten,
     saveZutat, deleteZutat, saveProdukt, deleteProdukt,
     saveRezeptPosition, deleteRezeptPosition,
+    saveBasis, deleteBasis, saveBasisPosition, deleteBasisPosition,
   } = useKalkulation()
 
-  const [mainTab,    setMainTab]    = useState<'produkte'|'zutaten'|'betrieb'|'uebersicht'>('produkte')
+  const [mainTab,    setMainTab]    = useState<'produkte'|'zutaten'|'betrieb'|'basis'|'uebersicht'>('produkte')
+  const [aktivBasis, setAktivBasis] = useState<string|null>(null)
   const [aktivProd,  setAktivProd]  = useState<string|null>(null)
   const [prodTab,    setProdTab]    = useState<'rezept'|'detail'>('rezept')
   const [saving,     setSaving]     = useState(false)
@@ -316,7 +320,7 @@ tr:hover td{background:#FFFBF5!important}
 
       {/* MAIN TABS */}
       <div style={{background:C.vanilla,borderBottom:`1px solid ${C.border}`,padding:'8px 28px',display:'flex',gap:5,flexWrap:'wrap'}}>
-        {([['produkte','Produkte & Kalkulation'],['zutaten','Zutaten-Datenbank'],['betrieb','Betriebskosten'],['uebersicht','Gesamtübersicht']] as const).map(([k,l])=>(
+        {([['produkte','Produkte & Kalkulation'],['zutaten','Zutaten-Datenbank'],['betrieb','Betriebskosten'],['basis','🧪 Basis-Rezepte'],['uebersicht','Gesamtübersicht']] as const).map(([k,l])=>(
           <button key={k} style={mTabBtn(mainTab===k)} onClick={()=>setMainTab(k as any)}>{l}</button>
         ))}
         <div style={{marginLeft:'auto',fontSize:12,color:C.muted,alignSelf:'center'}}>
@@ -382,8 +386,8 @@ tr:hover td{background:#FFFBF5!important}
                 <div style={{padding:'13px 17px',display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'}}>
                   <div style={{flex:2,minWidth:150}}>
                     <label style={lbl}>Produktname</label>
-                    <TdInput value={prod.name} width={220} delay={800}
-                      onChange={v=>saveProdukt({id:prod.id,name:v})}/>
+                    <input style={inp} value={prod.name}
+                      onChange={e=>saveProdukt({id:prod.id,name:e.target.value})}/>
                   </div>
                   <div style={{flex:1,minWidth:130}}>
                     <label style={lbl}>Kategorie</label>
@@ -394,8 +398,8 @@ tr:hover td{background:#FFFBF5!important}
                   </div>
                   <div style={{flex:1,minWidth:110}}>
                     <label style={lbl}>Portionen/Monat</label>
-                    <TdInput type="number" value={prod.verkauf_monat??0} width={110} delay={800}
-                      onChange={v=>saveProdukt({id:prod.id,verkauf_monat:parseInt(v)||0})}/>
+                    <input type="number" style={inp} value={prod.verkauf_monat??0}
+                      onChange={e=>saveProdukt({id:prod.id,verkauf_monat:parseInt(e.target.value)||0})}/>
                   </div>
                   {prod.prod_kategorie==='eis' && (
                     <div style={{flex:2,minWidth:230}}>
@@ -764,6 +768,176 @@ tr:hover td{background:#FFFBF5!important}
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+
+        {/* ═══ TAB: BASIS-REZEPTE ════════════════════════════════════════ */}
+        {mainTab==='basis' && (
+          <div style={{display:'grid', gridTemplateColumns:'240px 1fr', gap:17}} className="fade">
+
+            {/* Sidebar */}
+            <div style={card}>
+              <div style={cH}>
+                <span style={cT}>Basis-Rezepte</span>
+                <button onClick={async ()=>{
+                  const res = await saveBasis({name:'Neue Basis', ergibt_menge:1000, ergibt_einheit:'g'}) as any
+                  await reload()
+                  if (res?.id) setAktivBasis(res.id)
+                }} disabled={saving}
+                  style={{background:'none',border:'none',cursor:'pointer',color:C.caramel,fontSize:20,fontWeight:300}}>+</button>
+              </div>
+              <div style={{padding:'8px 9px'}}>
+                {basisRezepte.map(b => {
+                  const kostenProG = calcBasisKosten(b)
+                  return (
+                    <div key={b.id}
+                      className={`prodcard${aktivBasis===b.id?' active':''}`}
+                      onClick={()=>setAktivBasis(b.id)}>
+                      <div style={{fontWeight:600,fontSize:13,color:C.espresso}}>{b.name}</div>
+                      <div style={{fontSize:11,color:C.muted,marginTop:2}}>
+                        {b.ergibt_menge}{b.ergibt_einheit} · {(kostenProG*1000).toFixed(4)} €/kg
+                      </div>
+                    </div>
+                  )
+                })}
+                {basisRezepte.length === 0 && (
+                  <div style={{textAlign:'center',padding:'20px 10px',color:C.muted,fontSize:12}}>
+                    Noch keine Basis-Rezepte
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Editor */}
+            {(() => {
+              const basis = basisRezepte.find(b => b.id === aktivBasis) ?? basisRezepte[0] ?? null
+              if (!basis) return (
+                <div style={{...card,display:'flex',alignItems:'center',justifyContent:'center',color:C.muted,fontSize:13}}>
+                  Basis-Rezept auswählen oder erstellen
+                </div>
+              )
+              const kostenProG = calcBasisKosten(basis)
+              const gesamtkosten = (basis.basis_positionen ?? []).reduce((sum, pos) => {
+                const preis = (pos.zutat as any)?.preis_netto ?? 0
+                return sum + pos.menge * preis / (1-(pos.schwund_pct??0)/100)
+              }, 0)
+              return (
+                <div style={{display:'flex',flexDirection:'column',gap:13}}>
+                  {/* Meta */}
+                  <div style={card}>
+                    <div style={cH}>
+                      <span style={cT}>{basis.name}</span>
+                      <button onClick={()=>run(()=>deleteBasis(basis.id),'Basis gelöscht')}
+                        style={{background:'#FEE2E2',border:'none',borderRadius:6,padding:'4px 12px',color:C.red,cursor:'pointer',fontSize:11,fontWeight:600}}>
+                        Löschen
+                      </button>
+                    </div>
+                    <div style={{padding:'13px 17px',display:'flex',gap:12,flexWrap:'wrap'}}>
+                      <div style={{flex:2,minWidth:150}}>
+                        <label style={lbl}>Name</label>
+                        <TdInput value={basis.name} width={220} delay={800}
+                          onChange={v=>saveBasis({id:basis.id, name:v})}/>
+                      </div>
+                      <div style={{flex:1,minWidth:100}}>
+                        <label style={lbl}>Ergibt Menge</label>
+                        <TdInput type="number" value={basis.ergibt_menge} width={100} delay={800}
+                          onChange={v=>saveBasis({id:basis.id, ergibt_menge:parseFloat(v)||0})}/>
+                      </div>
+                      <div style={{flex:1,minWidth:80}}>
+                        <label style={lbl}>Einheit</label>
+                        <select style={{...sel,padding:'8px 11px'}} value={basis.ergibt_einheit}
+                          onChange={e=>saveBasis({id:basis.id, ergibt_einheit:e.target.value})}>
+                          {['g','kg','L','ml','Stk'].map(u=><option key={u}>{u}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Zutaten der Basis */}
+                  <div style={card}>
+                    <div style={cH}>
+                      <span style={cT}>Zutaten</span>
+                      <div style={{fontSize:12,color:C.muted}}>
+                        Gesamtkosten: <strong style={{color:C.caramel}}>{gesamtkosten.toFixed(4)} €</strong>
+                        &nbsp;·&nbsp;
+                        <strong style={{color:C.caramel}}>{(kostenProG*1000).toFixed(4)} €/kg</strong>
+                      </div>
+                    </div>
+                    <div style={{overflowX:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                        <thead><tr>
+                          <th style={th}>Zutat</th>
+                          <th style={{...th,textAlign:'right'}}>Menge</th>
+                          <th style={th}>Einheit</th>
+                          <th style={{...th,textAlign:'right'}}>Schwund %</th>
+                          <th style={{...th,textAlign:'right'}}>Preis/Einheit</th>
+                          <th style={{...th,textAlign:'right'}}>Kosten</th>
+                          <th style={th}/>
+                        </tr></thead>
+                        <tbody>
+                          {(basis.basis_positionen ?? []).map(pos => {
+                            const preis = (pos.zutat as any)?.preis_netto ?? 0
+                            const kosten = pos.menge * preis / (1-(pos.schwund_pct??0)/100)
+                            return (
+                              <tr key={pos.id}>
+                                <td style={td}>
+                                  <select style={{...sel,width:160}} value={pos.zutat_id??''}
+                                    onChange={e=>{
+                                      const z2 = zutaten.find(z=>z.id===e.target.value)
+                                      saveBasisPosition({id:pos.id, zutat_id:e.target.value, zutat_name:z2?.name, einheit:z2?.einheit??pos.einheit})
+                                    }}>
+                                    {zutaten.map(z2=><option key={z2.id} value={z2.id}>{z2.name}</option>)}
+                                  </select>
+                                </td>
+                                <td style={{...td,textAlign:'right'}}>
+                                  <TdInput type="number" step="0.001" value={pos.menge} width={70} align="right"
+                                    onChange={v=>saveBasisPosition({id:pos.id, menge:parseFloat(v)||0})}/>
+                                </td>
+                                <td style={td}><span style={{fontSize:12,color:C.muted}}>{pos.einheit}</span></td>
+                                <td style={{...td,textAlign:'right'}}>
+                                  <TdInput type="number" step="1" value={pos.schwund_pct??0} width={50} align="right"
+                                    onChange={v=>saveBasisPosition({id:pos.id, schwund_pct:parseFloat(v)||0})}/>
+                                </td>
+                                <td style={{...td,textAlign:'right',color:C.muted,fontSize:11}}>{preis.toFixed(4)} €</td>
+                                <td style={{...td,textAlign:'right',fontWeight:600,color:C.caramel}}>{kosten.toFixed(4)} €</td>
+                                <td style={td}><button className="dbt" onClick={()=>deleteBasisPosition(pos.id)}>×</button></td>
+                              </tr>
+                            )
+                          })}
+                          <tr style={{background:C.vanilla}}>
+                            <td colSpan={5} style={{...td,fontWeight:700}}>Gesamt → {basis.ergibt_menge} {basis.ergibt_einheit}</td>
+                            <td style={{...td,fontWeight:700,fontSize:14,color:C.caramel,textAlign:'right'}}>{gesamtkosten.toFixed(4)} €</td>
+                            <td/>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{padding:'5px 13px 12px'}}>
+                      <button className="abt" onClick={async ()=>{
+                        const firstZutat = zutaten[0]
+                        if (!firstZutat) { showToast('Zuerst Zutaten anlegen'); return }
+                        await saveBasisPosition({
+                          basis_id: basis.id,
+                          zutat_id: firstZutat.id,
+                          zutat_name: firstZutat.name,
+                          einheit: firstZutat.einheit,
+                          menge: 100,
+                          schwund_pct: 0,
+                          sort_order: (basis.basis_positionen?.length ?? 0) + 1,
+                        })
+                      }}>+ Zutat hinzufügen</button>
+                    </div>
+                  </div>
+
+                  {/* Info Box */}
+                  <div style={{padding:'14px 17px',background:'#FFFBF0',border:`1px solid ${C.sand}`,borderRadius:10,fontSize:13,color:C.coffee}}>
+                    💡 <strong>Verwendung in Produkten:</strong> Wähle im Produkt-Rezept diese Basis als Zutat aus.
+                    Der Preis wird automatisch aus dem Rezept berechnet: <strong>{(kostenProG*1000).toFixed(4)} €/kg</strong>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         )}
 
