@@ -382,8 +382,8 @@ tr:hover td{background:#FFFBF5!important}
                 <div style={{padding:'13px 17px',display:'flex',gap:12,alignItems:'flex-end',flexWrap:'wrap'}}>
                   <div style={{flex:2,minWidth:150}}>
                     <label style={lbl}>Produktname</label>
-                    <input style={inp} value={prod.name}
-                      onChange={e=>saveProdukt({id:prod.id,name:e.target.value})}/>
+                    <TdInput value={prod.name} width={220} delay={800}
+                      onChange={v=>saveProdukt({id:prod.id,name:v})}/>
                   </div>
                   <div style={{flex:1,minWidth:130}}>
                     <label style={lbl}>Kategorie</label>
@@ -394,8 +394,8 @@ tr:hover td{background:#FFFBF5!important}
                   </div>
                   <div style={{flex:1,minWidth:110}}>
                     <label style={lbl}>Portionen/Monat</label>
-                    <input type="number" style={inp} value={prod.verkauf_monat??0}
-                      onChange={e=>saveProdukt({id:prod.id,verkauf_monat:parseInt(e.target.value)||0})}/>
+                    <TdInput type="number" value={prod.verkauf_monat??0} width={110} delay={800}
+                      onChange={v=>saveProdukt({id:prod.id,verkauf_monat:parseInt(v)||0})}/>
                   </div>
                   {prod.prod_kategorie==='eis' && (
                     <div style={{flex:2,minWidth:230}}>
