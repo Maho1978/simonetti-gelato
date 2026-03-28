@@ -62,11 +62,13 @@ function TdInput({ value, onChange, type='text', width=100, align='left', step, 
 ════════════════════════════════════════════════════════════ */
 export default function KalkulationClient() {
   const {
-    zutaten, betriebskosten, produkte, einstellungen,
+    zutaten, betriebskosten, produkte, einstellungen, basisRezepte,
     loading, error, betriebGesamt, gesamtPortionen, reload,
+    calcBasisKosten,
     saveEinstellungen, saveBetriebskosten, deleteBetriebskosten,
     saveZutat, deleteZutat, saveProdukt, deleteProdukt,
     saveRezeptPosition, deleteRezeptPosition,
+    saveBasis, deleteBasis, saveBasisPosition, deleteBasisPosition,
   } = useKalkulation()
 
   const [mainTab,    setMainTab]    = useState<'produkte'|'zutaten'|'betrieb'|'uebersicht'>('produkte')
