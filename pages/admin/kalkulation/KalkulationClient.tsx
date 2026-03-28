@@ -894,7 +894,12 @@ tr:hover td{background:#FFFBF5!important}
                                   <TdInput type="number" step="0.001" value={pos.menge} width={70} align="right"
                                     onChange={v=>saveBasisPosition({id:pos.id, menge:parseFloat(v)||0})}/>
                                 </td>
-                                <td style={td}><span style={{fontSize:12,color:C.muted}}>{pos.einheit}</span></td>
+                                <td style={td}>
+                                  <select style={sel} value={pos.einheit}
+                                    onChange={e=>saveBasisPosition({id:pos.id, einheit:e.target.value})}>
+                                    {['g','kg','L','ml','Stk','EL','TL'].map(u=><option key={u}>{u}</option>)}
+                                  </select>
+                                </td>
                                 <td style={{...td,textAlign:'right'}}>
                                   <TdInput type="number" step="1" value={pos.schwund_pct??0} width={50} align="right"
                                     onChange={v=>saveBasisPosition({id:pos.id, schwund_pct:parseFloat(v)||0})}/>
