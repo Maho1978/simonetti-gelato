@@ -2,13 +2,24 @@
 import type { Produkt, RezeptPosition, Zutat, KalkEinstellungen, ProduktKalkulation } from '@/types/kalkulation'
 
 export const PORTIONEN = [
-  { key: '1k',  label: '1 Kugel',     faktor: 0.4 },
-  { key: '2k',  label: '2 Kugeln',    faktor: 0.7 },
-  { key: '3k',  label: '3 Kugeln',    faktor: 1.0 },
-  { key: '500', label: '500g Becher', faktor: 2.8 },
-  { key: '1kg', label: '1kg Becher',  faktor: 5.5 },
-  { key: '1',   label: '1 Portion',   faktor: 1.0 },
+  { key: '1k',   label: '1 Kugel',     faktor: 0.4  },
+  { key: '2k',   label: '2 Kugeln',    faktor: 0.7  },
+  { key: '3k',   label: '3 Kugeln',    faktor: 1.0  },
+  { key: '500',  label: '500g Becher', faktor: 2.8  },
+  { key: '1kg',  label: '1kg Becher',  faktor: 5.5  },
+  { key: '250ml',label: '250ml',       faktor: 0.25 },
+  { key: '500ml',label: '500ml',       faktor: 0.5  },
+  { key: '1L',   label: '1 Liter',     faktor: 1.0  },
+  { key: '1',    label: '1 Portion',   faktor: 1.0  },
 ] as const
+
+// Portionen je Kategorie
+export const PORTIONEN_BY_KAT: Record<string, string[]> = {
+  eis:      ['1k','2k','3k','500','1kg'],
+  brot:     ['1'],
+  getraenk: ['250ml','500ml','1L','1'],
+  snack:    ['250ml','500ml','1L','1','500','1kg'],
+}
 
 export const PROD_KATS = [
   { key: 'eis',      label: 'Eis & Eiskrem',      icon: '🍦' },
