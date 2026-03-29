@@ -1,6 +1,8 @@
 // lib/kalkulation.ts
 import type { Produkt, RezeptPosition, Zutat, KalkEinstellungen, ProduktKalkulation } from '@/types/kalkulation'
 
+// Portionen: faktor = Vielfaches der Basis-Rezeptmenge
+// Bei freier Eingabe wird port_menge + port_einheit genutzt
 export const PORTIONEN = [
   { key: '1k',   label: '1 Kugel',     faktor: 0.4  },
   { key: '2k',   label: '2 Kugeln',    faktor: 0.7  },
@@ -10,16 +12,11 @@ export const PORTIONEN = [
   { key: '250ml',label: '250ml',       faktor: 0.25 },
   { key: '500ml',label: '500ml',       faktor: 0.5  },
   { key: '1L',   label: '1 Liter',     faktor: 1.0  },
+  { key: 'free', label: 'Frei',        faktor: 1.0  },
   { key: '1',    label: '1 Portion',   faktor: 1.0  },
 ] as const
 
-// Portionen je Kategorie
-export const PORTIONEN_BY_KAT: Record<string, string[]> = {
-  eis:      ['1k','2k','3k','500','1kg'],
-  brot:     ['1'],
-  getraenk: ['250ml','500ml','1L','1'],
-  snack:    ['250ml','500ml','1L','1','500','1kg'],
-}
+export const PORT_EINHEITEN = ['g','kg','ml','L','Stk'] as const
 
 export const PROD_KATS = [
   { key: 'eis',      label: 'Eis & Eiskrem',      icon: '🍦' },
@@ -44,9 +41,28 @@ export function calcPositionKosten(pos: RezeptPosition, portFaktor: number): num
   return rohkosten / (1 - (pos.schwund_pct ?? 0) / 100)
 }
 
+/** Konvertiert Menge in kg/L für einheitliche Berechnung */
+export function toBaseUnit(menge: number, einheit: string): number {
+  switch (einheit) {
+    case 'g':  return menge / 1000
+    case 'kg': return menge
+    case 'ml': return menge / 1000
+    case 'L':  return menge
+    default:   return menge
+  }
+}
+
+/** Berechnet Portionsfaktor aus freier Menge+Einheit */
+export function calcPortionFaktor(produkt: Produkt): number {
+  if (produkt.port_key === 'free' && (produkt as any).port_menge && (produkt as any).port_einheit) {
+    return toBaseUnit((produkt as any).port_menge, (produkt as any).port_einheit)
+  }
+  return getPortionFaktor(produkt.port_key)
+}
+
 /** Gesamter Wareneinsatz eines Produkts */
 export function calcWareneinsatz(produkt: Produkt): number {
-  const pF = getPortionFaktor(produkt.port_key)
+  const pF = calcPortionFaktor(produkt)
   return (produkt.rezept_positionen ?? []).reduce((sum, pos) => {
     return sum + calcPositionKosten(pos, pF)
   }, 0)
