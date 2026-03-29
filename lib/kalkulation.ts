@@ -54,9 +54,8 @@ export function toBaseUnit(menge: number, einheit: string): number {
 
 /** Berechnet Portionsfaktor aus freier Menge+Einheit */
 export function calcPortionFaktor(produkt: Produkt): number {
-  if (produkt.port_key === 'free' && (produkt as any).port_menge && (produkt as any).port_einheit) {
-    return toBaseUnit((produkt as any).port_menge, (produkt as any).port_einheit)
-  }
+  // Bei freier Eingabe: Rezeptmengen sind bereits Gesamtmengen → faktor = 1
+  if (produkt.port_key === 'free') return 1
   return getPortionFaktor(produkt.port_key)
 }
 

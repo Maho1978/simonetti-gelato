@@ -447,10 +447,8 @@ tr:hover td{background:#FFFBF5!important}
                       </tr></thead>
                       <tbody>
                         {(prod.rezept_positionen??[]).map(pos => {
-                          const portMenge = (prod as any).port_menge ?? 1
-                          const portEinheit = (prod as any).port_einheit ?? 'kg'
-                          const toBase = (m: number, e: string) => e==='g'?m/1000:e==='ml'?m/1000:m
-                          const portFaktor = prod.port_key==='free' ? toBase(portMenge,portEinheit) : (PORTIONEN.find(p=>p.key===prod.port_key)?.faktor??1)
+                          // Bei freier Eingabe: Mengen im Rezept sind bereits die Gesamtmenge → faktor=1
+                          const portFaktor = prod.port_key==='free' ? 1 : (PORTIONEN.find(p=>p.key===prod.port_key)?.faktor??1)
                           const isBasis = !!pos.basis_id
                           const basisItem = isBasis ? basisRezepte.find(b=>b.id===pos.basis_id) : null
                           const z = pos.zutat
