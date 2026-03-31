@@ -77,6 +77,7 @@ export default function KalkulationClient() {
   const [prodTab,    setProdTab]    = useState<'rezept'|'detail'>('rezept')
   const [saving,     setSaving]     = useState(false)
   const [toast,      setToast]      = useState<string|null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const toastTimer = useRef<any>(null)
 
   /* ── Einstellungen lokal (sofort im UI, debounced save) ── */
@@ -257,6 +258,18 @@ tr:hover td{background:#FFFBF5!important}
 .toggle-group button:first-child{border-right:1px solid ${C.border}}
 .fade{animation:fadeIn 0.2s ease}
 .toast{position:fixed;top:20px;right:24px;padding:11px 20px;background:${C.espresso};color:${C.vanilla};border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;z-index:9999;animation:slideIn 0.25s ease;box-shadow:0 4px 16px rgba(0,0,0,0.25)}
+.kalk-sidebar-toggle{display:none;background:${C.espresso};color:${C.vanilla};border:none;border-radius:7px;padding:8px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:10px}
+@media(max-width:768px){
+  .kalk-main-tabs{padding:6px 8px!important;gap:3px!important}
+  .kalk-main-tabs button{font-size:12px!important;padding:7px 12px!important}
+  .kalk-grid-produkte{grid-template-columns:1fr!important}
+  .kalk-grid-betrieb{grid-template-columns:1fr!important}
+  .kalk-grid-basis{grid-template-columns:1fr!important}
+  .kalk-grid-uebersicht-kpi{grid-template-columns:1fr 1fr!important}
+  .kalk-sidebar-toggle{display:block}
+  .kalk-sidebar-mobile-hidden{display:none!important}
+  .kalk-sidebar-mobile-hidden.open{display:block!important}
+}
 `
 
   /* ── RENDER ──────────────────────────────────────────────── */
@@ -268,7 +281,7 @@ tr:hover td{background:#FFFBF5!important}
       {toast && <div className="toast">{toast}</div>}
 
       {/* HEADER */}
-      <div style={{background:C.espresso,padding:'14px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`3px solid ${C.caramel}`,flexWrap:'wrap',gap:10}}>
+      <div style={{background:C.espresso,padding:'12px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:`3px solid ${C.caramel}`,flexWrap:'wrap',gap:8}}>
         <div>
           <div style={{fontFamily:"'Playfair Display',serif",color:C.vanilla,fontSize:20,fontWeight:700}}>Eiscafé Simonetti</div>
           <div style={{color:C.caramel,fontSize:11,letterSpacing:'2px',textTransform:'uppercase',marginTop:1}}>Produktdeckungskalkulation</div>
@@ -318,7 +331,7 @@ tr:hover td{background:#FFFBF5!important}
       </div>
 
       {/* MAIN TABS */}
-      <div style={{background:C.vanilla,borderBottom:`1px solid ${C.border}`,padding:'8px 28px',display:'flex',gap:5,flexWrap:'wrap'}}>
+      <div className="kalk-main-tabs" style={{background:C.vanilla,borderBottom:`1px solid ${C.border}`}}>
         {([['produkte','Produkte & Kalkulation'],['zutaten','Zutaten-Datenbank'],['betrieb','Betriebskosten'],['basis','🧪 Basis-Rezepte'],['uebersicht','Gesamtübersicht']] as const).map(([k,l])=>(
           <button key={k} style={mTabBtn(mainTab===k)} onClick={()=>setMainTab(k as any)}>{l}</button>
         ))}
@@ -327,14 +340,18 @@ tr:hover td{background:#FFFBF5!important}
         </div>
       </div>
 
-      <div style={{maxWidth:1300,margin:'0 auto',padding:'20px 16px'}}>
+      <div style={{maxWidth:1300,margin:'0 auto',padding:'16px 12px'}}>
 
         {/* ═══ TAB: PRODUKTE ══════════════════════════════════════════════ */}
         {mainTab==='produkte' && prod && kalk && (
-          <div style={{display:'grid',gridTemplateColumns:'220px 1fr 285px',gap:17}} className="fade">
+          <div className="kalk-grid-produkte fade">
 
             {/* Sidebar */}
-            <div style={card}>
+            <div>
+              <button className="kalk-sidebar-toggle" onClick={()=>setSidebarOpen(o=>!o)}>
+                {sidebarOpen ? '▲ Produkte ausblenden' : '▼ Produkte wählen'}
+              </button>
+              <div className={`kalk-sidebar-mobile-hidden${sidebarOpen?' open':''}`} style={card}>
               <div style={{...cH,paddingBottom:10}}>
                 <span style={cT}>Produkte</span>
               </div>
@@ -365,6 +382,7 @@ tr:hover td{background:#FFFBF5!important}
                   )
                 })}
               </div>
+            </div>
             </div>
 
             {/* Editor */}
@@ -690,7 +708,7 @@ tr:hover td{background:#FFFBF5!important}
 
         {/* ═══ TAB: BETRIEBSKOSTEN ════════════════════════════════════════ */}
         {mainTab==='betrieb' && (
-          <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:17}} className="fade">
+          <div className="kalk-grid-betrieb fade">
             <div style={card}>
               <div style={cH}>
                 <span style={cT}>Monatliche Betriebskosten</span>
@@ -780,7 +798,7 @@ tr:hover td{background:#FFFBF5!important}
 
         {/* ═══ TAB: BASIS-REZEPTE ════════════════════════════════════════ */}
         {mainTab==='basis' && (
-          <div style={{display:'grid', gridTemplateColumns:'240px 1fr', gap:17}} className="fade">
+          <div className="kalk-grid-basis fade">
             <div style={card}>
               <div style={cH}>
                 <span style={cT}>Basis-Rezepte</span>
@@ -871,7 +889,7 @@ tr:hover td{background:#FFFBF5!important}
         {mainTab==='uebersicht' && (
           <div className="fade">
             {/* KPI */}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:18}}>
+            <div className="kalk-grid-uebersicht-kpi">
               {[
                 {l:'Monatl. Umsatz (Plan)', v:EUR(monatUmsatz),           sub:'bei empf. Preisen',    col:C.green},
                 {l:'Betriebskosten/Monat',  v:EUR(betriebGesamt),         sub:`${betriebskosten.length} Positionen`, col:C.red},
