@@ -26,6 +26,7 @@ const NAV_ITEMS = [
   { label: 'Features',    href: '/admin/features',      icon: '⚡' },
   { label: 'Kalkulation', href: '/admin/kalkulation',   icon: '🧮' },
   { label: 'Inventar',    href: '/admin/inventar',      icon: '🗄️' },
+  { label: 'System',      href: '/admin/system',        icon: '🤖' },
   { label: 'Setup',       href: '/admin/settings',      icon: '⚙️' },
 ]
 
@@ -206,5 +207,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </div>
   )
 }
+
 
 
