@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { label: 'Feedback',    href: '/admin/anregungen',    icon: '💡' },
   { label: 'Features',    href: '/admin/features',      icon: '⚡' },
   { label: 'Kalkulation', href: '/admin/kalkulation',   icon: '🧮' },
+  { label: 'Inventar',    href: '/admin/inventar',      icon: '🗄️' },
   { label: 'Setup',       href: '/admin/settings',      icon: '⚙️' },
 ]
 
