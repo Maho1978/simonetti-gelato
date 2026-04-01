@@ -264,6 +264,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [email,  setEmail]  = useState(session?.user?.email || '')
   const [phone,  setPhone]  = useState('')
   const [street, setStreet] = useState('')
+  const [hausnr, setHausnr] = useState('')
   const [zip,    setZip]    = useState('40764')
   const [city,   setCity]   = useState('Langenfeld')
   const [notes,  setNotes]  = useState('')
@@ -408,7 +409,7 @@ export default function Checkout({ session }: { session: Session | null }) {
       delivery_fee:      effectiveDeliveryFee,
       tip,
       total:             grandTotal,
-      delivery_address:  orderType === 'pickup' ? null : { name, street, zip, city },
+      delivery_address:  orderType === 'pickup' ? null : { name, street: `${street} ${hausnr}`.trim(), zip, city },
       notes:             [notes, cashChangeNote ? `Wechselgeld für: ${cashChangeNote}` : '', loyalty?.note || ''].filter(Boolean).join(' | ') || null,
       payment_intent_id: paymentId,
       payment_method:    method,
@@ -444,7 +445,7 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const isFormValid = orderType === 'pickup'
     ? !!(name.trim() && phone.trim() && (!isGuest || email.trim()))
-    : !!(name.trim() && phone.trim() && street.trim() && (!isGuest || email.trim()))
+    : !!(name.trim() && phone.trim() && street.trim() && hausnr.trim() && (!isGuest || email.trim()))
 
   const paymentOptions = [
     { id: 'stripe', label: '💳 Karte / SEPA', always: true },
@@ -675,9 +676,15 @@ export default function Checkout({ session }: { session: Session | null }) {
                   </Field>
                   {orderType === 'delivery' && (
                     <>
-                      <Field label="Straße & Hausnummer" required>
-                        <StreetInput street={street} setStreet={setStreet} inputClass={inputClass} />
-                      </Field>
+                      <div style={{display:'grid', gridTemplateColumns:'1fr 100px', gap:'8px'}}>
+                        <Field label="Straße" required>
+                          <StreetInput street={street} setStreet={setStreet} inputClass={inputClass} />
+                        </Field>
+                        <Field label="Hausnummer" required>
+                          <input type="text" value={hausnr} onChange={e => setHausnr(e.target.value)}
+                            placeholder="12a" className={inputClass} />
+                        </Field>
+                      </div>
                       {deliveryZones.filter(z => z.enabled).length > 1 ? (
                         <Field label="Liefergebiet" required>
                           <select value={zip} onChange={e => {
@@ -747,7 +754,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                           session={session} isGuest={isGuest} cart={cart} total={grandTotal} subtotal={subtotal}
                           shopOpenForType={shopOpenForType} minimumOrder={effectiveMinimumOrder} deliveryFee={effectiveDeliveryFee}
                           voucher={voucher} tip={tip} name={name} email={email} phone={phone}
-                          street={street} zip={zip} city={city} notes={notes} orderType={orderType}
+                          street={`${street} ${hausnr}`.trim()} zip={zip} city={city} notes={notes} orderType={orderType}
                           isPreorder={shopStatus?.isPreorder ?? false}
                           agbAccepted={agbAccepted}
                         />
@@ -867,7 +874,7 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
 
   const isFormValid = orderType === 'pickup'
     ? !!(name.trim() && phone.trim() && (!isGuest || email.trim()))
-    : !!(name.trim() && phone.trim() && street.trim() && (!isGuest || email.trim()))
+    : !!(name.trim() && phone.trim() && street.trim() && hausnr.trim() && (!isGuest || email.trim()))
 
   const isBlocked = shopOpenForType === false || subtotal < minimumOrder || !isFormValid || !agbAccepted
 
