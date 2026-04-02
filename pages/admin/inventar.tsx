@@ -157,7 +157,7 @@ export default function InventarAdmin({ session }: { session: Session | null }) 
               Bestellbedarf
             </a>
             <a
-              href="/admin/inventar/artikel-neu"
+              href="/admin/inventar/artikel"
               className="px-4 py-2 text-sm font-bold text-white rounded-xl hover:bg-[#a87b20] transition"
               style={{ background: '#C4973A' }}
             >
