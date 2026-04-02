@@ -1,4 +1,5 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useRouter } from 'next/router'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/AdminLayout'
 import {
@@ -678,6 +679,7 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
 }
 
 export default function KanbanPage() {
+  const router = useRouter()
   const [orders, setOrders]             = useState<Record<string, any[]>>({ OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] })
   const [loading, setLoading]           = useState(true)
   const [drivers, setDrivers]           = useState<any[]>([])
@@ -935,7 +937,7 @@ export default function KanbanPage() {
               </div>
             </div>
             <button
-              onClick={() => window.location.href = '/admin/reports'}
+              onClick={() => router.push('/admin/reports')}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border-2 border-gray-200 hover:border-black transition">
               <TrendingUp size={15} /> Reports
             </button>
