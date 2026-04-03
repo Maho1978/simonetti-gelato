@@ -158,10 +158,11 @@ export default function InventarAdmin({ session }: { session: Session | null }) 
             </a>
             <a
               href="/admin/inventar/lieferanten"
-             className="px-4 py-2 text-sm font-semibold border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition"
-             >
+              className="px-4 py-2 text-sm font-semibold border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition"
+            >
               Lieferanten
-             </a>
+            </a>
+            <a
               href="/admin/inventar/artikel"
               className="px-4 py-2 text-sm font-bold text-white rounded-xl hover:bg-[#a87b20] transition"
               style={{ background: '#C4973A' }}
