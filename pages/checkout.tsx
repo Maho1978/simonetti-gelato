@@ -265,6 +265,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [phone,  setPhone]  = useState('')
   const [street, setStreet] = useState('')
   const [hausnr, setHausnr] = useState('')
+  const [hausnr, setHausnr] = useState('')
   const [zip,    setZip]    = useState('40764')
   const [city,   setCity]   = useState('Langenfeld')
   const [notes,  setNotes]  = useState('')
