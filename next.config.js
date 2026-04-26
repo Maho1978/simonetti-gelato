@@ -11,5 +11,6 @@ const nextConfig = {
     unoptimized: true,
     domains: ['localhost', 'flydacnsbsnpwpqezuof.supabase.co'],
   },
+}
 
 module.exports = nextConfig
