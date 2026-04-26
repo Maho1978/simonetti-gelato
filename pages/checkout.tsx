@@ -860,7 +860,7 @@ function StreetInput({ street, setStreet, inputClass }: { street: string; setStr
   )
 }
 
-function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted }: {
+function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, tip, name, email, phone, street, hausnr, zip, city, notes, orderType, isPreorder, agbAccepted }: {
   session: Session | null; isGuest: boolean; cart: CartItem[]; total: number; subtotal: number
   shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number; voucher: AppliedVoucher | null
   tip: number; name: string; email: string; phone: string; street: string; hausnr: string; zip: string; city: string; notes: string
