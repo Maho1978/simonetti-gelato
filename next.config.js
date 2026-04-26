@@ -8,8 +8,8 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true,
     domains: ['localhost', 'flydacnsbsnpwpqezuof.supabase.co'],
   },
-}
 
 module.exports = nextConfig
