@@ -754,7 +754,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                           session={session} isGuest={isGuest} cart={cart} total={grandTotal} subtotal={subtotal}
                           shopOpenForType={shopOpenForType} minimumOrder={effectiveMinimumOrder} deliveryFee={effectiveDeliveryFee}
                           voucher={voucher} tip={tip} name={name} email={email} phone={phone}
-                          street={`${street} ${hausnr}`.trim()} zip={zip} city={city} notes={notes} orderType={orderType}
+                          street={street} hausnr={hausnr} zip={zip} city={city} notes={notes} orderType={orderType}
                           isPreorder={shopStatus?.isPreorder ?? false}
                           agbAccepted={agbAccepted}
                         />
@@ -863,7 +863,7 @@ function StreetInput({ street, setStreet, inputClass }: { street: string; setStr
 function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted }: {
   session: Session | null; isGuest: boolean; cart: CartItem[]; total: number; subtotal: number
   shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number; voucher: AppliedVoucher | null
-  tip: number; name: string; email: string; phone: string; street: string; zip: string; city: string; notes: string
+  tip: number; name: string; email: string; phone: string; street: string; hausnr: string; zip: string; city: string; notes: string
   orderType: string; isPreorder: boolean; agbAccepted: boolean
 }) {
   const stripe   = useStripe()
@@ -905,7 +905,7 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
         customer_phone: phone || null, items: cart, subtotal,
         discount: voucher?.discountAmount || 0, voucher_code: voucher?.code || null, voucher_id: voucher?.id || null,
         delivery_fee: deliveryFee, tip, total,
-        delivery_address: orderType === 'pickup' ? null : { name, street, zip, city },
+        delivery_address: orderType === 'pickup' ? null : { name, street: `${street} ${hausnr}`.trim(), zip, city },
         notes: notes || null, payment_intent_id: paymentIntent?.id, payment_method: 'stripe',
         order_type: orderType, status: 'OFFEN',
       }
