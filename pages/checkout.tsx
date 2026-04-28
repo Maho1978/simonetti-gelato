@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
-// v2.1 - hausnr fix
+// v2.2 - hausnr fix, street autocomplete removed
 import { useRouter } from 'next/router'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -7,8 +7,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import Navbar from '@/components/Navbar'
-import { AlertCircle, Tag, X, Check, Loader2, MapPin, CreditCard, User, Clock, Plus, Minus, Trash2, Banknote, ShoppingBag } from 'lucide-react'
-import { searchStreets, type Street } from '@/lib/langenfeld-streets'
+import { AlertCircle, Tag, X, Check, Loader2, CreditCard, User, Clock, Plus, Minus, Trash2, Banknote } from 'lucide-react'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -30,6 +29,7 @@ interface AppliedLoyalty {
   value: number
   points_used: number
   discountAmount: number
+  note?: string
 }
 
 interface AppliedVoucher {
@@ -155,7 +155,6 @@ function TipSelector({ subtotal, onTipChange }: { subtotal: number; onTipChange:
   )
 }
 
-// ── AGB Checkbox ─────────────────────────────────────────────
 function AgbCheckbox({ accepted, onChange }: { accepted: boolean; onChange: (v: boolean) => void }) {
   return (
     <div
@@ -168,20 +167,16 @@ function AgbCheckbox({ accepted, onChange }: { accepted: boolean; onChange: (v: 
       </div>
       <p className="text-sm text-gray-700 leading-relaxed">
         Ich habe die{' '}
-        <a href="/agb" target="_blank" onClick={e => e.stopPropagation()} className="font-semibold text-gray-900 underline hover:text-gray-600">
-          AGB
-        </a>
+        <a href="/agb" target="_blank" onClick={e => e.stopPropagation()} className="font-semibold text-gray-900 underline hover:text-gray-600">AGB</a>
         {' '}und die{' '}
-        <a href="/datenschutz" target="_blank" onClick={e => e.stopPropagation()} className="font-semibold text-gray-900 underline hover:text-gray-600">
-          Datenschutzerklärung
-        </a>
+        <a href="/datenschutz" target="_blank" onClick={e => e.stopPropagation()} className="font-semibold text-gray-900 underline hover:text-gray-600">Datenschutzerklärung</a>
         {' '}gelesen und akzeptiere diese. <span className="text-red-400">*</span>
       </p>
     </div>
   )
 }
 
-function LoyaltyRedeemer({ userId, applied, onApply }: { userId: string; applied: any; onApply: (l: any) => void }) {
+function LoyaltyRedeemer({ userId, applied, onApply }: { userId: string; applied: AppliedLoyalty | null; onApply: (l: AppliedLoyalty | null) => void }) {
   const [tiers, setTiers] = useState<any[]>([])
   const [points, setPoints] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -197,7 +192,7 @@ function LoyaltyRedeemer({ userId, applied, onApply }: { userId: string; applied
     <div className="flex items-center justify-between bg-amber-50 border-2 border-amber-200 rounded-xl px-4 py-3">
       <div className="flex items-center gap-2 text-amber-700">
         <Check size={16} /><span className="font-bold">{applied.label}</span>
-        <span className="text-sm">eingeloest ({applied.points_used > 0 ? applied.points_used + " Punkte" : "Bronze Stufe"})</span>
+        <span className="text-sm">eingelöst ({applied.points_used > 0 ? applied.points_used + ' Punkte' : 'Bronze Stufe'})</span>
       </div>
       <button onClick={() => onApply(null)} className="text-amber-600 hover:text-red-500"><X size={16} /></button>
     </div>
@@ -205,12 +200,16 @@ function LoyaltyRedeemer({ userId, applied, onApply }: { userId: string; applied
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-sm font-bold text-amber-800">Treuepunkte einloesen ({points} Punkte)</div>
-        <button onClick={() => setOpen(!open)} className="text-xs text-amber-600 font-semibold">{open ? "Schliessen" : "Anzeigen"}</button>
+        <div className="text-sm font-bold text-amber-800">Treuepunkte einlösen ({points} Punkte)</div>
+        <button onClick={() => setOpen(!open)} className="text-xs text-amber-600 font-semibold">{open ? 'Schließen' : 'Anzeigen'}</button>
       </div>
       {open && <div className="space-y-2 mt-2">
         {tiers.filter((t: any) => t.canRedeem).map((t: any) => (
-          <button key={t.key} onClick={() => { const discountAmount = t.type === "free_delivery" ? 3 : t.value; onApply({ tier_id: t.key, label: t.label, type: t.type, value: t.value, points_used: t.points, discountAmount, note: t.type === "free_item" ? `Treuepunkte: ${t.label} (Sorte bitte in Anmerkungen angeben)` : "" }); setOpen(false) }}
+          <button key={t.key} onClick={() => {
+            const discountAmount = t.type === 'free_delivery' ? 3 : t.value
+            onApply({ tier_id: t.key, label: t.label, type: t.type, value: t.value, points_used: t.points, discountAmount, note: t.type === 'free_item' ? `Treuepunkte: ${t.label} (Sorte bitte in Anmerkungen angeben)` : '' })
+            setOpen(false)
+          }}
             className="w-full flex items-center justify-between bg-white border border-amber-200 rounded-xl px-4 py-3 hover:border-amber-400 transition text-sm">
             <span className="font-semibold text-amber-900">{t.label}</span>
             <span className="text-amber-600 font-bold">{t.points} Punkte</span>
@@ -244,7 +243,6 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [showVoucher, setShowVoucher]   = useState(true)
   const [showTip, setShowTip]           = useState(true)
   const [showPayPal, setShowPayPal]     = useState(false)
-  const [flags_loyalty, setFlagsLoyalty] = useState(false)
   const [showCash, setShowCash]         = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'cash'>('stripe')
   const [deliveryFee, setDeliveryFee]   = useState(3.00)
@@ -257,7 +255,6 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [upsellToppings, setUpsellToppings] = useState<{ id: string; name: string; price: number; enabled: boolean }[]>([])
   const [dailySpecial, setDailySpecial] = useState<{ enabled: boolean; name: string; description: string; price: number } | null>(null)
 
-  // ── NEU: AGB akzeptiert ──
   const [agbAccepted, setAgbAccepted]   = useState(false)
   const [cashNote, setCashNote]         = useState('')
 
@@ -315,11 +312,11 @@ export default function Checkout({ session }: { session: Session | null }) {
         if (data.pickup_enabled)          setPickupEnabled(true)
         if (data.cash_payment_enabled && !isGuest) {
           supabase.auth.getSession().then(({ data: { session: s } }) => { if (s) setShowCash(true) })
+        }
         if (data.delivery_zones?.length) setDeliveryZones(data.delivery_zones)
         if (data.upsell_enabled) setUpsellEnabled(true)
         if (data.upsell_toppings?.length) setUpsellToppings(data.upsell_toppings)
         if (data.daily_special?.enabled) setDailySpecial(data.daily_special)
-        }
         const keys = data.payment_keys
         if (keys?.paypal) {
           const mode     = keys.paypal.mode || 'sandbox'
@@ -456,6 +453,9 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const shopCompletelyClosed = shopStatus !== null && !shopStatus.isOpen && !shopStatus.isPreorder
 
+  // combined street string passed down to StripeForm
+  const fullStreet = `${street} ${hausnr}`.trim()
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar session={session} cartCount={0} onCartClick={() => {}} />
@@ -532,7 +532,8 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
                 <div className="mt-5 pt-4 border-t border-gray-100 space-y-2.5">
                   <div className="flex justify-between text-sm text-gray-500"><span>Zwischensumme</span><span>{subtotal.toFixed(2)} €</span></div>
-                  {voucher && <div className="flex justify-between text-sm font-semibold text-green-600"><span>Gutschein ({voucher.code})</span><span>- {voucher.discountAmount.toFixed(2)} EUR</span></div>}{loyalty && <div className="flex justify-between text-sm font-semibold text-amber-600"><span>Treuepunkte: {loyalty.label}</span><span>- {loyalty.discountAmount.toFixed(2)} EUR</span></div>}
+                  {voucher && <div className="flex justify-between text-sm font-semibold text-green-600"><span>Gutschein ({voucher.code})</span><span>- {voucher.discountAmount.toFixed(2)} EUR</span></div>}
+                  {loyalty && <div className="flex justify-between text-sm font-semibold text-amber-600"><span>Treuepunkte: {loyalty.label}</span><span>- {loyalty.discountAmount.toFixed(2)} EUR</span></div>}
                   {orderType === 'delivery' && <div className="flex justify-between text-sm text-gray-500"><span>🚗 Liefergebühr</span><span>{deliveryFee.toFixed(2)} €</span></div>}
                   {orderType === 'pickup'   && <div className="flex justify-between text-sm font-semibold text-green-600"><span>🏪 Abholung</span><span>Kostenlos</span></div>}
                   {tip > 0 && <div className="flex justify-between text-sm text-gray-500"><span>💝 Trinkgeld</span><span>{tip.toFixed(2)} €</span></div>}
@@ -578,7 +579,10 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
               )}
 
-              {session?.user?.id ? (<LoyaltyRedeemer userId={session.user.id} applied={loyalty} onApply={(l) => { setLoyalty(l); setClientSecret(""); createPaymentIntent(cart, voucher, tip) }} />) : null}
+              {session?.user?.id ? (
+                <LoyaltyRedeemer userId={session.user.id} applied={loyalty} onApply={(l) => { setLoyalty(l); setClientSecret(''); createPaymentIntent(cart, voucher, tip) }} />
+              ) : null}
+
               {(showVoucher || showTip) && (
                 <div className={`grid grid-cols-1 ${showVoucher && showTip ? 'sm:grid-cols-2' : ''} gap-4`}>
                   {showVoucher && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5"><h3 className="font-bold text-sm mb-3 text-gray-700">🎟️ Gutscheincode</h3><VoucherInput subtotal={subtotal} onApply={handleVoucherApply} /></div>}
@@ -677,13 +681,25 @@ export default function Checkout({ session }: { session: Session | null }) {
                   </Field>
                   {orderType === 'delivery' && (
                     <>
-                      <div style={{display:'grid', gridTemplateColumns:'1fr 100px', gap:'8px'}}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: '8px' }}>
                         <Field label="Straße" required>
-                          <StreetInput street={street} setStreet={setStreet} inputClass={inputClass} />
+                          <input
+                            type="text"
+                            value={street}
+                            onChange={e => setStreet(e.target.value)}
+                            placeholder="Hauptstraße"
+                            className={inputClass}
+                            autoComplete="street-address"
+                          />
                         </Field>
                         <Field label="Hausnummer" required>
-                          <input type="text" value={hausnr} onChange={e => setHausnr(e.target.value)}
-                            placeholder="12a" className={inputClass} />
+                          <input
+                            type="text"
+                            value={hausnr}
+                            onChange={e => setHausnr(e.target.value)}
+                            placeholder="12a"
+                            className={inputClass}
+                          />
                         </Field>
                       </div>
                       {deliveryZones.filter(z => z.enabled).length > 1 ? (
@@ -741,7 +757,6 @@ export default function Checkout({ session }: { session: Session | null }) {
                       ))}
                     </div>
 
-                    {/* ── AGB Checkbox ── */}
                     <AgbCheckbox accepted={agbAccepted} onChange={setAgbAccepted} />
                     {!agbAccepted && (
                       <p className="text-xs text-red-500 flex items-center gap-1.5">
@@ -754,9 +769,10 @@ export default function Checkout({ session }: { session: Session | null }) {
                         <StripeForm
                           session={session} isGuest={isGuest} cart={cart} total={grandTotal} subtotal={subtotal}
                           shopOpenForType={shopOpenForType} minimumOrder={effectiveMinimumOrder} deliveryFee={effectiveDeliveryFee}
-                          voucher={voucher} tip={tip} name={name} email={email} phone={phone}
-                          street={`${street} ${hausnr}`.trim()} zip={zip} city={city} notes={notes} orderType={orderType}
-                          isPreorder={shopStatus?.isPreorder ?? false}
+                          voucher={voucher} loyalty={loyalty} tip={tip}
+                          name={name} email={email} phone={phone}
+                          street={fullStreet} zip={zip} city={city} notes={notes}
+                          orderType={orderType} isPreorder={shopStatus?.isPreorder ?? false}
                           agbAccepted={agbAccepted}
                         />
                       </Elements>
@@ -792,7 +808,6 @@ export default function Checkout({ session }: { session: Session | null }) {
                             <p className="text-green-700">Bitte halte den Betrag von <b>{grandTotal.toFixed(2)} €</b> passend bereit.</p>
                           </div>
                         </div>
-                        {/* Wechselgeld-Feld */}
                         <div>
                           <p className="text-xs font-semibold text-gray-500 mb-2">💶 Mit welchem Schein zahlst du? <span className="font-normal text-gray-400">(optional)</span></p>
                           <div className="flex gap-2 flex-wrap mb-2">
@@ -804,13 +819,8 @@ export default function Checkout({ session }: { session: Session | null }) {
                               </button>
                             ))}
                           </div>
-                          <input
-                            type="text"
-                            value={cashNote}
-                            onChange={e => setCashNote(e.target.value)}
-                            placeholder="Oder freitext, z.B. 200 €..."
-                            className={inputClass}
-                          />
+                          <input type="text" value={cashNote} onChange={e => setCashNote(e.target.value)}
+                            placeholder="Oder freitext, z.B. 200 €..." className={inputClass} />
                         </div>
                         {(!isFormValid || !agbAccepted) && (
                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
@@ -835,35 +845,10 @@ export default function Checkout({ session }: { session: Session | null }) {
   )
 }
 
-function StreetInput({ street, setStreet, inputClass }: { street: string; setStreet: (v: string) => void; inputClass: string }) {
-  const [suggestions, setSuggestions] = useState<Street[]>([])
-  const [show, setShow]               = useState(false)
-  return (
-    <div className="relative">
-      <input type="text" value={street}
-        onChange={e => { setStreet(e.target.value); setSuggestions(searchStreets(e.target.value)); setShow(true) }}
-        onBlur={() => setTimeout(() => setShow(false), 150)}
-        onFocus={() => street.length >= 2 && setShow(true)}
-        required placeholder="z.B. Hauptstraße 5" className={inputClass} autoComplete="off" />
-      {show && suggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          {suggestions.map((s, i) => (
-            <button key={i} type="button" onMouseDown={() => { setStreet(s.name + ' '); setShow(false) }}
-              className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition flex items-center gap-2">
-              <MapPin size={13} className="text-gray-400 flex-shrink-0" />
-              <span className="font-medium text-gray-800">{s.name}</span>
-              {s.district && <span className="text-xs text-gray-400 ml-auto">{s.district}</span>}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted }: {
+function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, loyalty, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted }: {
   session: Session | null; isGuest: boolean; cart: CartItem[]; total: number; subtotal: number
-  shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number; voucher: AppliedVoucher | null
+  shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number
+  voucher: AppliedVoucher | null; loyalty: AppliedLoyalty | null
   tip: number; name: string; email: string; phone: string; street: string; zip: string; city: string; notes: string
   orderType: string; isPreorder: boolean; agbAccepted: boolean
 }) {
@@ -873,9 +858,10 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
 
+  // street is already the combined "Straße Hausnr" string from parent
   const isFormValid = orderType === 'pickup'
     ? !!(name.trim() && phone.trim() && (!isGuest || email.trim()))
-    : !!(name.trim() && phone.trim() && street.trim() && hausnr.trim() && (!isGuest || email.trim()))
+    : !!(name.trim() && phone.trim() && street.trim() && (!isGuest || email.trim()))
 
   const isBlocked = shopOpenForType === false || subtotal < minimumOrder || !isFormValid || !agbAccepted
 
@@ -893,13 +879,13 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
       const { error: stripeError, paymentIntent } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
       if (stripeError) throw new Error(stripeError.message)
       if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
-    if (loyalty?.points_used && session?.user?.id) {
-      await supabase.from('loyalty_transactions').insert({
-        user_id: session.user.id,
-        points: -loyalty.points_used,
-        reason: 'redemption',
-      })
-    }
+      if (loyalty?.points_used && session?.user?.id) {
+        await supabase.from('loyalty_transactions').insert({
+          user_id: session.user.id,
+          points: -loyalty.points_used,
+          reason: 'redemption',
+        })
+      }
       const orderData = {
         user_id: session?.user?.id || null, guest_email: isGuest ? email : null,
         customer_name: name, customer_email: isGuest ? email : session?.user?.email,
@@ -907,7 +893,8 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
         discount: voucher?.discountAmount || 0, voucher_code: voucher?.code || null, voucher_id: voucher?.id || null,
         delivery_fee: deliveryFee, tip, total,
         delivery_address: orderType === 'pickup' ? null : { name, street, zip, city },
-        notes: notes || null, payment_intent_id: paymentIntent?.id, payment_method: 'stripe',
+        notes: [notes, loyalty?.note || ''].filter(Boolean).join(' | ') || null,
+        payment_intent_id: paymentIntent?.id, payment_method: 'stripe',
         order_type: orderType, status: 'OFFEN',
       }
       await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) })
