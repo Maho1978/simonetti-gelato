@@ -76,9 +76,15 @@ function formatAddress(addr: any): string {
   return String(addr)
 }
 
+let _audioCtx: AudioContext | null = null
+function getAudioCtx(): AudioContext {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+  if (_audioCtx.state === 'suspended') _audioCtx.resume()
+  return _audioCtx
+}
 function playSound(volume: number = 1.0) {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const ctx = getAudioCtx()
     const vol = Math.max(0.1, Math.min(2.0, volume))
     const pattern = [880, 1100]
     for (let i = 0; i < 3; i++) {
