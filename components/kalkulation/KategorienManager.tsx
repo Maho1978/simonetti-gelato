@@ -1,6 +1,6 @@
 ﻿'use client'
 import { useState } from 'react'
-import { supabaseAdmin as supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase"
 
 const C = {
   cream:'#FBF6EE', vanilla:'#F2E6CC', caramel:'#C4873A', espresso:'#2C1708',
