@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
+// v2.1 - hausnr fix
 import { useRouter } from 'next/router'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
