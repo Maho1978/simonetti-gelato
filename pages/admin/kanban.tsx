@@ -704,7 +704,13 @@ export default function KanbanPage() {
   const soundRef   = useRef(soundEnabled)
   const volumeRef  = useRef(soundVolume)
   const showAllRef = useRef(showAllDays)
-  const popupRef   = useRef(popupOrder)
+  const popupRef = useRef(popupOrder)
+  // AudioContext beim ersten Klick entsperren
+  useEffect(() => {
+    const unlock = () => { getAudioCtx(); document.removeEventListener('click', unlock) }
+    document.addEventListener('click', unlock)
+    return () => document.removeEventListener('click', unlock)
+  }, [])
   useEffect(() => { soundRef.current   = soundEnabled  }, [soundEnabled])
   useEffect(() => { volumeRef.current  = soundVolume   }, [soundVolume])
   useEffect(() => { showAllRef.current = showAllDays   }, [showAllDays])
@@ -1026,3 +1032,6 @@ export default function KanbanPage() {
     </AdminLayout>
   )
 }
+
+
+
