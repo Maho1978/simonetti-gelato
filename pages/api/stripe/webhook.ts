@@ -142,18 +142,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         console.log('✅ Zahlung erfolgreich:', paymentIntent.id)
 
-        // Prüfen ob Bestellung schon existiert (Duplikat-Schutz)
+        // Prüfen ob Bestellung schon existiert (vom Checkout direkt gespeichert)
         const { data: existing } = await supabase
           .from('orders')
-          .select('id')
+          .select('*')
           .eq('payment_intent_id', paymentIntent.id)
           .single()
 
         if (existing) {
-          console.log('Bestellung existiert bereits – überspringe')
+          console.log('Bestellung existiert bereits - sende Bestaetigungs-Email:', existing.id)
+          // Bestätigungs-Email an Kunden senden
+          if (existing.customer_email) {
+            try {
+              await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/emails/send-order-notification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'order_confirmed',
+                  order: existing,
+                  recipientEmail: existing.customer_email,
+                })
+              })
+              console.log('✅ Bestaetigungs-Email gesendet an:', existing.customer_email)
+            } catch (e) {
+              console.error('Bestaetigungs-Email fehlgeschlagen:', e)
+            }
+          }
+          // Admin-Email
+          const adminEmail = process.env.ADMIN_EMAIL || 'bestellung@eiscafe-simonetti.de'
+          try {
+            await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/emails/send-order-notification`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'new_order_admin',
+                order: existing,
+                recipientEmail: adminEmail,
+              })
+            })
+          } catch (e) {
+            console.error('Admin-Email fehlgeschlagen:', e)
+          }
           break
         }
 
+        // Bestellung existiert noch nicht (Fallback - sollte nicht vorkommen)
         let items = []
         try {
           items = JSON.parse(meta.items || '[]')
@@ -209,7 +242,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
 
-        const adminEmail = process.env.ADMIN_EMAIL || 'info@eiscafe-simonetti.de'
+        const adminEmail = process.env.ADMIN_EMAIL || 'bestellung@eiscafe-simonetti.de'
         try {
           await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/emails/send-order-notification`, {
             method: 'POST',
