@@ -65,8 +65,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     return res.status(200).json({ received: true })
   } catch (err: any) {
-    console.error(`❌ Fehler bei ${event.type}:`, err.message)
-    return res.status(500).json({ error: 'Internal webhook error' })
+    // Stripe-Richtlinie: immer 200 antworten nach erfolgreicher Signaturprüfung.
+    // 5xx würde Stripe veranlassen, den Webhook bis zu 72h zu wiederholen.
+    console.error(`❌ Fehler bei ${event.type}:`, err.message, err)
+    return res.status(200).json({ received: true, warning: 'Handler error logged' })
   }
 }
 
