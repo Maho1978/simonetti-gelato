@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/AdminLayout'
-import { Send, Eye, Users, Search, CheckSquare, Square, Loader2, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react'
+import { Send, Eye, Users, Search, CheckSquare, Square, Loader2, CheckCircle, AlertCircle, ChevronDown, Smartphone, Bell } from 'lucide-react'
+
+// ── Push Subscriber Typ ───────────────────────────────────────────────────────
+interface PushSubscriber { user_id: string; token: string; name: string; email: string }
+type PushAudience = 'all' | 'manual'
 
 // ── Typen ────────────────────────────────────────────────────────────────────
 type CampaignType = 'free' | 'new_flavors' | 'promo' | 'seasonal'
@@ -136,6 +140,11 @@ const AUDIENCE_LABELS: Record<Audience, string> = {
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
 export default function Campaigns() {
   const router = useRouter()
+
+  // ── Tab State ──
+  const [activeTab, setActiveTab] = useState<'email' | 'push'>('email')
+
+  // ── E-Mail State (unverändert) ──
   const [customers, setCustomers]       = useState<Customer[]>([])
   const [selected,  setSelected]        = useState<Set<string>>(new Set())
   const [search,    setSearch]          = useState('')
@@ -144,6 +153,17 @@ export default function Campaigns() {
   const [result,    setResult]          = useState<{ ok: boolean; sent: number; failed: number } | null>(null)
   const [knownEmails, setKnownEmails]   = useState<Set<string>>(new Set())
   const [loadingCustomers, setLoadingC] = useState(true)
+
+  // ── Push State ──
+  const [pushTitle,    setPushTitle]    = useState('')
+  const [pushBody,     setPushBody]     = useState('')
+  const [pushAudience, setPushAudience] = useState<PushAudience>('all')
+  const [pushSending,  setPushSending]  = useState(false)
+  const [pushResult,   setPushResult]   = useState<{ ok: boolean; sent: number; failed: number; message?: string } | null>(null)
+  const [subscribers,  setSubscribers]  = useState<PushSubscriber[]>([])
+  const [subSearch,    setSubSearch]    = useState('')
+  const [selectedSubs, setSelectedSubs] = useState<Set<string>>(new Set())
+  const [loadingSubs,  setLoadingSubs]  = useState(false)
 
   const [campaign, setCampaign] = useState<CampaignState>({
     type: 'new_flavors', audience: 'all',
@@ -157,6 +177,16 @@ export default function Campaigns() {
   } as CampaignState)
 
   useEffect(() => { loadCustomers() }, [])
+
+  useEffect(() => {
+    if (activeTab !== 'push' || subscribers.length > 0) return
+    setLoadingSubs(true)
+    fetch('/api/push/subscribers')
+      .then(r => r.json())
+      .then(d => setSubscribers(d.subscribers || []))
+      .catch(() => {})
+      .finally(() => setLoadingSubs(false))
+  }, [activeTab])
 
   const loadCustomers = async () => {
     setLoadingC(true)
@@ -223,6 +253,27 @@ export default function Campaigns() {
     setSending(false)
   }
 
+  // ── Push ─────────────────────────────────────────────────────────────────────
+  const filteredSubs = subscribers.filter(s =>
+    s.name.toLowerCase().includes(subSearch.toLowerCase()) ||
+    s.email.toLowerCase().includes(subSearch.toLowerCase())
+  )
+  const pushRecipientCount = pushAudience === 'all' ? subscribers.length : selectedSubs.size
+
+  const handlePushSend = async () => {
+    if (!pushTitle.trim() || !pushBody.trim()) { alert('Bitte Titel und Nachricht eingeben'); return }
+    if (pushRecipientCount === 0) { alert('Keine Empfänger'); return }
+    if (!confirm(`Push-Nachricht an ${pushRecipientCount} App-Nutzer senden?`)) return
+    setPushSending(true); setPushResult(null)
+    const payload: any = { title: pushTitle, body: pushBody }
+    if (pushAudience === 'manual') payload.user_ids = [...selectedSubs]
+    try {
+      const res = await fetch('/api/push/send-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      setPushResult(await res.json())
+    } catch { setPushResult({ ok: false, sent: 0, failed: 0, message: 'Netzwerkfehler' }) }
+    finally { setPushSending(false) }
+  }
+
   const previewHtml = buildEmailHtml(campaign, true)
 
   return (
@@ -230,22 +281,132 @@ export default function Campaigns() {
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">📣 E-Mail Kampagnen</h1>
-            <p className="text-gray-400 text-sm mt-0.5">{customers.length} Kunden · {recipients.length} Empfänger ausgewählt</p>
+            <h1 className="text-3xl font-bold text-gray-900">📣 Kampagnen</h1>
+            <p className="text-gray-400 text-sm mt-0.5">
+              {activeTab === 'email'
+                ? `${customers.length} Kunden · ${recipients.length} Empfänger`
+                : `${subscribers.length} App-Nutzer · ${pushRecipientCount} ausgewählt`}
+            </p>
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => setShowPreview(!showPreview)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">
-              <Eye size={16} /> {showPreview ? 'Editor' : 'Vorschau'}
+          {/* Tab-Switcher */}
+          <div className="flex items-center bg-gray-100 rounded-xl p-1 gap-1">
+            <button onClick={() => setActiveTab('email')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${activeTab === 'email' ? 'bg-white shadow text-[#4a5d54]' : 'text-gray-500 hover:text-gray-700'}`}>
+              <Send size={15}/> E-Mail
             </button>
-            <button onClick={handleSend} disabled={sending || recipients.length === 0}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#4a5d54] text-white rounded-xl text-sm font-bold hover:bg-[#3a4d44] transition disabled:opacity-50">
-              {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-              {sending ? 'Wird gesendet...' : `Senden (${recipients.length})`}
+            <button onClick={() => setActiveTab('push')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${activeTab === 'push' ? 'bg-white shadow text-[#4a5d54]' : 'text-gray-500 hover:text-gray-700'}`}>
+              <Smartphone size={15}/> App Push
+              {subscribers.length > 0 && <span className="bg-[#4a5d54] text-white text-xs px-1.5 py-0.5 rounded-full">{subscribers.length}</span>}
             </button>
           </div>
+        </div>
+
+        {/* ── PUSH TAB ── */}
+        {activeTab === 'push' && (
+          <div className="space-y-5 max-w-3xl">
+            {pushResult && (
+              <div className={`flex items-center gap-3 p-4 rounded-xl ${pushResult.ok ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                {pushResult.ok ? <CheckCircle size={20} className="text-green-600"/> : <AlertCircle size={20} className="text-red-500"/>}
+                <span className="text-sm font-semibold">
+                  {pushResult.ok
+                    ? `✅ ${pushResult.sent} Push-Nachrichten gesendet${pushResult.failed > 0 ? `, ${pushResult.failed} fehlgeschlagen` : ''}${pushResult.message ? ` · ${pushResult.message}` : ''}`
+                    : `❌ Fehler: ${pushResult.message || 'Unbekannt'}`}
+                </span>
+              </div>
+            )}
+            {/* Zielgruppe */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Zielgruppe</p>
+              <div className="flex gap-3">
+                {([
+                  { key: 'all'    as PushAudience, label: 'Alle App-Nutzer',   icon: <Bell size={15}/>,       count: subscribers.length },
+                  { key: 'manual' as PushAudience, label: 'Manuell auswählen', icon: <Users size={15}/>,      count: selectedSubs.size },
+                ]).map(a => (
+                  <button key={a.key} onClick={() => setPushAudience(a.key)}
+                    className={`flex-1 flex items-center justify-between px-4 py-3 rounded-xl border-2 text-sm font-semibold transition ${pushAudience === a.key ? 'border-[#4a5d54] bg-[#f0f5f3] text-[#4a5d54]' : 'border-gray-100 text-gray-500 hover:border-gray-200'}`}>
+                    <span className="flex items-center gap-2">{a.icon}{a.label}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${pushAudience === a.key ? 'bg-[#4a5d54] text-white' : 'bg-gray-100 text-gray-400'}`}>{a.count}</span>
+                  </button>
+                ))}
+              </div>
+              {/* Manuelle Auswahl */}
+              {pushAudience === 'manual' && (
+                <div className="mt-4 border-t border-gray-100 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">App-Nutzer auswählen</p>
+                    <button onClick={() => setSelectedSubs(selectedSubs.size === filteredSubs.length ? new Set() : new Set(filteredSubs.map(s => s.user_id)))}
+                      className="text-xs text-[#4a5d54] font-semibold hover:underline">
+                      {selectedSubs.size === filteredSubs.length ? 'Alle abwählen' : 'Alle wählen'}
+                    </button>
+                  </div>
+                  <div className="relative mb-3">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300"/>
+                    <input value={subSearch} onChange={e => setSubSearch(e.target.value)} placeholder="Name oder E-Mail..."
+                      className="w-full pl-8 pr-4 py-2.5 border-2 border-gray-100 rounded-xl focus:border-[#4a5d54] focus:outline-none text-sm"/>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto space-y-1">
+                    {loadingSubs ? (
+                      <div className="text-center py-6 text-gray-300 text-sm flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin"/> Laden...</div>
+                    ) : filteredSubs.length === 0 ? (
+                      <div className="text-center py-6 text-gray-300 text-sm">Keine App-Nutzer gefunden</div>
+                    ) : filteredSubs.map(s => {
+                      const isSel = selectedSubs.has(s.user_id)
+                      return (
+                        <button key={s.user_id} onClick={() => { const n = new Set(selectedSubs); isSel ? n.delete(s.user_id) : n.add(s.user_id); setSelectedSubs(n) }}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${isSel ? 'bg-[#f0f5f3]' : 'hover:bg-gray-50'}`}>
+                          {isSel ? <CheckSquare size={16} className="text-[#4a5d54] flex-shrink-0"/> : <Square size={16} className="text-gray-300 flex-shrink-0"/>}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-gray-700 truncate">{s.name}</div>
+                            <div className="text-xs text-gray-400 truncate">{s.email || s.user_id.slice(0,8)+'…'}</div>
+                          </div>
+                          <Smartphone size={13} className="text-gray-300 flex-shrink-0"/>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Nachricht */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Nachricht</p>
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1.5 block">Titel <span className="text-red-400">*</span></label>
+                <input value={pushTitle} onChange={e => setPushTitle(e.target.value)} placeholder="z.B. Neue Eissorten sind da! 🍦" maxLength={65}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#4a5d54] focus:outline-none text-sm"/>
+                <p className="text-xs text-gray-300 mt-1 text-right">{pushTitle.length}/65</p>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-600 mb-1.5 block">Nachricht <span className="text-red-400">*</span></label>
+                <textarea value={pushBody} onChange={e => setPushBody(e.target.value)} placeholder="z.B. Frische neue Sorten warten auf dich!" rows={3} maxLength={200}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#4a5d54] focus:outline-none text-sm resize-none"/>
+                <p className="text-xs text-gray-300 mt-1 text-right">{pushBody.length}/200</p>
+              </div>
+              <button onClick={handlePushSend} disabled={pushSending || !pushTitle.trim() || !pushBody.trim() || pushRecipientCount === 0}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#4a5d54] text-white rounded-xl text-sm font-bold hover:bg-[#3a4d44] transition disabled:opacity-50 disabled:cursor-not-allowed">
+                {pushSending ? <><Loader2 size={16} className="animate-spin"/> Wird gesendet…</> : <><Send size={16}/> Push an {pushRecipientCount} App-Nutzer senden</>}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── E-MAIL TAB ── */}
+        {activeTab === 'email' && <>
+
+        {/* E-Mail Aktionen */}
+        <div className="flex gap-3 mb-6 justify-end">
+          <button onClick={() => setShowPreview(!showPreview)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">
+            <Eye size={16} /> {showPreview ? 'Editor' : 'Vorschau'}
+          </button>
+          <button onClick={handleSend} disabled={sending || recipients.length === 0}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#4a5d54] text-white rounded-xl text-sm font-bold hover:bg-[#3a4d44] transition disabled:opacity-50">
+            {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            {sending ? 'Wird gesendet...' : `Senden (${recipients.length})`}
+          </button>
         </div>
 
         {/* Result Banner */}
@@ -462,6 +623,9 @@ export default function Campaigns() {
 
           </div>
         </div>
+
+        </> /* Ende E-Mail Tab */}
+
       </div>
     </AdminLayout>
   )
