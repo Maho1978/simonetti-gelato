@@ -7,6 +7,11 @@ import {
   Bell, BellOff, Check, Phone, Package, XCircle, Printer,
   TrendingUp, CreditCard, Banknote, ShoppingBag
 } from 'lucide-react'
+import {
+  WhereIsDriverButton,
+  TrackingOverviewButton,
+  ChangeDriverDropdown,
+} from '@/components/KanbanTracking'
 
 const COLUMNS = [
   { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-50',   border: 'border-blue-200',   icon: '👨‍🍳' },
@@ -663,6 +668,20 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
               {drivers.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
           )}
+          {order.driver_id && (
+            <>
+              <WhereIsDriverButton
+                driverId={order.driver_id}
+                driverName={drivers.find((d: any) => d.id === order.driver_id)?.name}
+              />
+              <ChangeDriverDropdown
+                orderId={order.id}
+                currentDriverId={order.driver_id}
+                drivers={drivers}
+                onAssign={onAssignDriver}
+              />
+            </>
+          )}
           <button onClick={onMarkDelivered}
             className="w-full py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition">
             ✅ Als geliefert markieren
@@ -953,6 +972,7 @@ export default function KanbanPage() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border-2 border-gray-200 hover:border-black transition">
               <TrendingUp size={15} /> Reports
             </button>
+            <TrackingOverviewButton drivers={drivers} />
             <div className="flex items-center gap-2">
               <button onClick={() => setSoundEnabled(!soundEnabled)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition border-2 ${soundEnabled ? 'border-yellow-300 text-yellow-700 bg-yellow-50' : 'border-gray-200 text-gray-400'}`}>
