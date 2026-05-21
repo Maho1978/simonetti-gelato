@@ -16,9 +16,12 @@ interface Order {
   status: string
   items: any[]
   user_id: string | null
-  email: string
+  customer_email?: string
+  guest_email?: string
   order_type?: string
 }
+
+const orderEmail = (o: Order) => o.customer_email || o.guest_email || ''
 
 const COLORS = ['#4a5d54', '#8da399', '#c4a882', '#e8b89a', '#f0d4c0', '#b8cfc9']
 
@@ -103,7 +106,7 @@ export default function Reports({ session }: { session: Session | null }) {
       ['ID', 'Datum', 'Uhrzeit', 'Gesamt', 'Status', 'Typ', 'Email'],
       ...orders.map(o => {
         const d = new Date(o.created_at)
-        return [o.id.slice(0,8), d.toLocaleDateString('de'), d.toLocaleTimeString('de',{hour:'2-digit',minute:'2-digit'}), o.total.toFixed(2), o.status, o.order_type || 'lieferung', o.email]
+        return [o.id.slice(0,8), d.toLocaleDateString('de'), d.toLocaleTimeString('de',{hour:'2-digit',minute:'2-digit'}), o.total.toFixed(2), o.status, o.order_type || 'lieferung', orderEmail(o)]
       })
     ]
     const blob = new Blob([rows.map(r => r.join(';')).join('\n')], { type: 'text/csv;charset=utf-8;' })
@@ -121,27 +124,22 @@ export default function Reports({ session }: { session: Session | null }) {
   const prevAvg     = prevOrders.length ? prevRevenue / prevOrders.length : 0
   const avgTrend    = prevAvg > 0 ? Math.round((avgOrder - prevAvg) / prevAvg * 100) : 0
 
-  const uniqueCustomers    = useMemo(() => new Set(orders.map(o => o.email)).size, [orders])
-  const prevUniqueCustomers= useMemo(() => new Set(prevOrders.map(o => o.email)).size, [prevOrders])
+  const uniqueCustomers    = useMemo(() => new Set(orders.map(o => orderEmail(o))).size, [orders])
+  const prevUniqueCustomers= useMemo(() => new Set(prevOrders.map(o => orderEmail(o))).size, [prevOrders])
   const custTrend          = prevUniqueCustomers > 0 ? Math.round((uniqueCustomers - prevUniqueCustomers) / prevUniqueCustomers * 100) : 0
 
   const orderTrend = prevOrders.length > 0 ? Math.round((orders.length - prevOrders.length) / prevOrders.length * 100) : 0
 
   // Neue vs Stammkunden
-  const allPrevEmails = useMemo(async () => {
-    const { data } = await supabase.from('orders').select('email').lt('created_at', getDateRange(range).start.toISOString())
-    return new Set((data || []).map((o: any) => o.email))
-  }, [range])
-
   const [knownEmails, setKnownEmails] = useState<Set<string>>(new Set())
   useEffect(() => {
-    supabase.from('orders').select('email').lt('created_at', getDateRange(range).start.toISOString()).then(({ data }) => {
-      setKnownEmails(new Set((data || []).map((o: any) => o.email)))
+    supabase.from('orders').select('customer_email, guest_email').lt('created_at', getDateRange(range).start.toISOString()).then(({ data }) => {
+      setKnownEmails(new Set((data || []).map((o: any) => o.customer_email || o.guest_email || '').filter(Boolean)))
     })
   }, [range])
 
-  const neukunden     = orders.filter(o => !knownEmails.has(o.email))
-  const stammkunden   = orders.filter(o => knownEmails.has(o.email))
+  const neukunden     = orders.filter(o => !knownEmails.has(orderEmail(o)))
+  const stammkunden   = orders.filter(o => knownEmails.has(orderEmail(o)))
   const neukundenRate = orders.length ? Math.round(neukunden.length / orders.length * 100) : 0
 
   // Umsatz-Verlauf Chart
