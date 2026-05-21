@@ -192,8 +192,8 @@ export default function Campaigns() {
     setLoadingC(true)
 
     const [{ data: profiles }, { data: orders }] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, email'),
-      supabase.from('orders').select('email, customer_name, created_at').order('created_at'),
+      supabase.from('customer_profiles').select('id, full_name, email'),
+      supabase.from('orders').select('email, customer_name, created_at').order('created_at', { ascending: true }),
     ])
 
     const map: Record<string, Customer> = {}
