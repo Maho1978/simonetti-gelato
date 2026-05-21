@@ -225,6 +225,12 @@ export default function Campaigns() {
     c.email.toLowerCase().includes(search.toLowerCase()) || c.name.toLowerCase().includes(search.toLowerCase())
   )
 
+  const displayCustomers = campaign.audience === 'new'
+    ? customers.filter(c => c.orderCount === 1 && (c.email.toLowerCase().includes(search.toLowerCase()) || c.name.toLowerCase().includes(search.toLowerCase())))
+    : campaign.audience === 'returning'
+    ? customers.filter(c => c.orderCount > 1 && (c.email.toLowerCase().includes(search.toLowerCase()) || c.name.toLowerCase().includes(search.toLowerCase())))
+    : filteredCustomers
+
   const resolveRecipients = (): string[] => {
     switch (campaign.audience) {
       case 'all':       return customers.map(c => c.email)
@@ -565,28 +571,32 @@ export default function Campaigns() {
               </div>
             </div>
 
-            {/* Manuelle Auswahl */}
-            {campaign.audience === 'manual' && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Kunden auswählen</p>
+            {/* Empfänger-Liste — immer sichtbar */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Empfänger</p>
+                {campaign.audience === 'manual' && (
                   <button onClick={() => {
                     if (selected.size === filteredCustomers.length) setSelected(new Set())
                     else setSelected(new Set(filteredCustomers.map(c => c.email)))
                   }} className="text-xs text-[#4a5d54] font-semibold hover:underline">
                     {selected.size === filteredCustomers.length ? 'Alle abwählen' : 'Alle wählen'}
                   </button>
-                </div>
-                <div className="relative mb-3">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
-                  <input value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Suchen..."
-                    className="w-full pl-8 pr-4 py-2.5 border-2 border-gray-100 rounded-xl focus:border-[#4a5d54] focus:outline-none text-sm" />
-                </div>
-                <div className="max-h-64 overflow-y-auto space-y-1">
-                  {loadingCustomers ? (
-                    <div className="text-center py-6 text-gray-300 text-sm">Laden...</div>
-                  ) : filteredCustomers.map(c => {
+                )}
+              </div>
+              <div className="relative mb-3">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
+                <input value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Suchen..."
+                  className="w-full pl-8 pr-4 py-2.5 border-2 border-gray-100 rounded-xl focus:border-[#4a5d54] focus:outline-none text-sm" />
+              </div>
+              <div className="max-h-64 overflow-y-auto space-y-1">
+                {loadingCustomers ? (
+                  <div className="text-center py-6 text-gray-300 text-sm">Laden...</div>
+                ) : displayCustomers.length === 0 ? (
+                  <div className="text-center py-6 text-gray-300 text-sm">Keine Kunden gefunden</div>
+                ) : displayCustomers.map(c => {
+                  if (campaign.audience === 'manual') {
                     const isSelected = selected.has(c.email)
                     return (
                       <button key={c.email} onClick={() => {
@@ -602,10 +612,22 @@ export default function Campaigns() {
                         <span className="text-xs text-gray-300 flex-shrink-0">{c.orderCount}×</span>
                       </button>
                     )
-                  })}
-                </div>
+                  }
+                  return (
+                    <div key={c.email} className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-default">
+                      <span className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
+                        <span className="w-2 h-2 rounded-full bg-green-400 block" />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-gray-700 truncate">{c.name}</div>
+                        <div className="text-xs text-gray-400 truncate">{c.email}</div>
+                      </div>
+                      <span className="text-xs text-gray-300 flex-shrink-0">{c.orderCount}×</span>
+                    </div>
+                  )
+                })}
               </div>
-            )}
+            </div>
 
             {/* Zusammenfassung */}
             <div className="bg-[#f0f5f3] rounded-2xl p-5">
