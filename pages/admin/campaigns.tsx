@@ -193,7 +193,7 @@ export default function Campaigns() {
 
     const [regRes, { data: orders }] = await Promise.all([
       fetch('/api/admin/registered-customers').then(r => r.json()).catch(() => ({ users: [] })),
-      supabase.from('orders').select('email, customer_name, created_at'),
+      supabase.from('orders').select('customer_email, guest_email, customer_name, created_at'),
     ])
 
     const map: Record<string, Customer> = {}
@@ -206,13 +206,14 @@ export default function Campaigns() {
 
     // Bestellungen zählen — Gast-Kunden werden neu angelegt
     ;(orders || []).forEach((o: any) => {
-      if (!o.email) return
-      if (!map[o.email]) {
-        map[o.email] = { email: o.email, name: o.customer_name || o.email, orderCount: 0, lastOrder: o.created_at }
+      const email = o.customer_email || o.guest_email
+      if (!email) return
+      if (!map[email]) {
+        map[email] = { email, name: o.customer_name || email, orderCount: 0, lastOrder: o.created_at }
       }
-      map[o.email].orderCount++
-      if (!map[o.email].lastOrder || o.created_at > map[o.email].lastOrder) {
-        map[o.email].lastOrder = o.created_at
+      map[email].orderCount++
+      if (!map[email].lastOrder || o.created_at > map[email].lastOrder) {
+        map[email].lastOrder = o.created_at
       }
     })
 
