@@ -190,25 +190,32 @@ export default function Campaigns() {
 
   const loadCustomers = async () => {
     setLoadingC(true)
-    const { data } = await supabase.from('orders').select('email, customer_name, created_at').order('created_at')
-    if (!data) { setLoadingC(false); return }
 
-    // Group by email
+    const [{ data: profiles }, { data: orders }] = await Promise.all([
+      supabase.from('profiles').select('id, full_name, email'),
+      supabase.from('orders').select('email, customer_name, created_at').order('created_at'),
+    ])
+
     const map: Record<string, Customer> = {}
-    data.forEach((o: any) => {
-      if (!o.email) return
-      if (!map[o.email]) map[o.email] = { email: o.email, name: o.customer_name || o.email, orderCount: 0, lastOrder: o.created_at }
-      map[o.email].orderCount++
-      if (o.created_at > map[o.email].lastOrder) map[o.email].lastOrder = o.created_at
+
+    // Registrierte Kunden aus profiles (orderCount startet bei 0)
+    ;(profiles || []).forEach((p: any) => {
+      if (!p.email) return
+      map[p.email] = { email: p.email, name: p.full_name || p.email, orderCount: 0, lastOrder: '' }
     })
 
-    // Find first-timers vs returning
-    const emailsSeen = new Set<string>()
-    const firstOrder: Record<string, string> = {}
-    data.forEach((o: any) => {
+    // Bestellungen zählen — überschreibt Namen für bekannte Emails nicht
+    ;(orders || []).forEach((o: any) => {
       if (!o.email) return
-      if (!firstOrder[o.email]) firstOrder[o.email] = o.created_at
+      if (!map[o.email]) {
+        map[o.email] = { email: o.email, name: o.customer_name || o.email, orderCount: 0, lastOrder: o.created_at }
+      }
+      map[o.email].orderCount++
+      if (!map[o.email].lastOrder || o.created_at > map[o.email].lastOrder) {
+        map[o.email].lastOrder = o.created_at
+      }
     })
+
     setKnownEmails(new Set(Object.keys(map)))
     setCustomers(Object.values(map).sort((a, b) => b.orderCount - a.orderCount))
     setLoadingC(false)
