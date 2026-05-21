@@ -193,7 +193,7 @@ export default function Campaigns() {
 
     const [regRes, { data: orders }] = await Promise.all([
       fetch('/api/admin/registered-customers').then(r => r.json()).catch(() => ({ users: [] })),
-      supabase.from('orders').select('email, customer_name, created_at').order('created_at', { ascending: true }),
+      supabase.from('orders').select('email, customer_name, created_at'),
     ])
 
     const map: Record<string, Customer> = {}
