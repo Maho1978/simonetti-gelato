@@ -191,20 +191,20 @@ export default function Campaigns() {
   const loadCustomers = async () => {
     setLoadingC(true)
 
-    const [{ data: profiles }, { data: orders }] = await Promise.all([
-      supabase.from('customer_profiles').select('id, full_name, email'),
+    const [regRes, { data: orders }] = await Promise.all([
+      fetch('/api/admin/registered-customers').then(r => r.json()).catch(() => ({ users: [] })),
       supabase.from('orders').select('email, customer_name, created_at').order('created_at', { ascending: true }),
     ])
 
     const map: Record<string, Customer> = {}
 
-    // Registrierte Kunden aus profiles (orderCount startet bei 0)
-    ;(profiles || []).forEach((p: any) => {
-      if (!p.email) return
-      map[p.email] = { email: p.email, name: p.full_name || p.email, orderCount: 0, lastOrder: '' }
+    // Registrierte Kunden aus Auth (haben Email, aber ggf. noch keine Bestellung)
+    ;((regRes.users || []) as { email: string; name: string }[]).forEach(u => {
+      if (!u.email) return
+      map[u.email] = { email: u.email, name: u.name || u.email, orderCount: 0, lastOrder: '' }
     })
 
-    // Bestellungen zählen — überschreibt Namen für bekannte Emails nicht
+    // Bestellungen zählen — Gast-Kunden werden neu angelegt
     ;(orders || []).forEach((o: any) => {
       if (!o.email) return
       if (!map[o.email]) {
