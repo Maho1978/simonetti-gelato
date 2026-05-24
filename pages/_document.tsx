@@ -12,7 +12,8 @@ export default function Document() {
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
         <link rel="canonical" href="https://www.eiscafe-simonetti.de" />
         <meta name="google-site-verification" content="bqsyTeKIMKQc23aJ7bTaW093sAdp1XjUSgZ_lcEtCeM" />
-        <meta name="theme-color" content="#4a5d54" />
+        <meta name="theme-color" content="#c8a96e" />
+        <link rel="manifest" href="/manifest.json" />
 
         {/* ── Open Graph (WhatsApp, Facebook, LinkedIn) ── */}
         <meta property="og:type" content="website" />
