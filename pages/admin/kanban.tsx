@@ -669,18 +669,12 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
             </select>
           )}
           {order.driver_id && (
-            <>
-              <WhereIsDriverButton
-                driverId={order.driver_id}
-                driverName={drivers.find((d: any) => d.id === order.driver_id)?.name}
-              />
-              <ChangeDriverDropdown
-                orderId={order.id}
-                currentDriverId={order.driver_id}
-                drivers={drivers}
-                onAssign={onAssignDriver}
-              />
-            </>
+            <ChangeDriverDropdown
+              orderId={order.id}
+              currentDriverId={order.driver_id}
+              drivers={drivers}
+              onAssign={onAssignDriver}
+            />
           )}
           <button onClick={onMarkDelivered}
             className="w-full py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700 transition">
