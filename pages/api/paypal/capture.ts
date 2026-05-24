@@ -35,10 +35,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const captureData = await captureRes.json();
 
     if (captureData.status === 'COMPLETED') {
+      const captureId = captureData.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
       await supabase.from('orders').update({
         payment_status: 'paid',
         status: 'IN_BEARBEITUNG',
         paid_at: new Date().toISOString(),
+        paypal_capture_id: captureId,
       }).eq('id', orderId as string);
 
       return res.redirect(302, `${process.env.NEXT_PUBLIC_SITE_URL}/bestellung/erfolg?id=${orderId}`);

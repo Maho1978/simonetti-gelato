@@ -12,6 +12,7 @@ import {
   TrackingOverviewButton,
   ChangeDriverDropdown,
 } from '@/components/KanbanTracking'
+import OrderCorrectionModal from '@/components/OrderCorrectionModal'
 
 const COLUMNS = [
   { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-50',   border: 'border-blue-200',   icon: '👨‍🍳' },
@@ -427,7 +428,7 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
   )
 }
 
-function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, colIdx }: any) {
+function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onOpenCorrection, colIdx }: any) {
   const [waText, setWaText] = useState('')
   const [waEnabled, setWaEnabled] = useState(true)
   const status   = COLUMNS[colIdx]?.id
@@ -586,6 +587,14 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
               </button>
             )}
           </div>
+
+          {order.status !== 'OFFEN' && onOpenCorrection && (
+            <button
+              onClick={onOpenCorrection}
+              className="w-full py-2.5 border-2 border-amber-300 bg-amber-50 text-amber-800 rounded-xl font-bold text-sm hover:bg-amber-100 transition">
+              ✏️ Bestellung korrigieren
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -709,6 +718,7 @@ export default function KanbanPage() {
   const [rejectTarget, setRejectTarget] = useState<any>(null)
   const [newOrderBanner, setNewOrderBanner] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [correctionOrder, setCorrectionOrder] = useState<any>(null)
 
   const knownIds    = useRef<Set<string>>(new Set())
   const isFirstLoad = useRef(true)
@@ -898,6 +908,15 @@ export default function KanbanPage() {
           onMoveRight={() => moveOrder(selectedOrder.id, COLUMNS.findIndex(c => c.id === selectedOrder.status), 1)}
           onMarkDelivered={() => markDelivered(selectedOrder.id)}
           onAssignDriver={assignDriver}
+          onOpenCorrection={() => { setCorrectionOrder(selectedOrder); setSelectedOrder(null) }}
+        />
+      )}
+      {correctionOrder && (
+        <OrderCorrectionModal
+          order={correctionOrder}
+          onClose={() => setCorrectionOrder(null)}
+          onPrint={(updatedOrder) => printOrder(updatedOrder)}
+          onRefreshed={() => loadOrders()}
         />
       )}
       {rejectTarget && (
