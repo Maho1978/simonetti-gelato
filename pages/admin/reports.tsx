@@ -8,6 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
 import { Download, TrendingUp, Euro, ShoppingBag, Users, ArrowUp, ArrowDown, Minus } from 'lucide-react'
+import PwaInstallCount from '@/components/PwaInstallCount'
 
 interface Order {
   id: string
@@ -219,6 +220,8 @@ export default function Reports({ session }: { session: Session | null }) {
     <AdminLayout>
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
+
+        <PwaInstallCount />
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

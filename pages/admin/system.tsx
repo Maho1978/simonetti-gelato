@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/AdminLayout'
 import { Session } from '@supabase/supabase-js'
-import PwaInstallCount from '@/components/PwaInstallCount'
 
 type Feature = {
   id: string
@@ -67,7 +66,6 @@ export default function SystemFeaturesAdmin({ session }: { session: Session | nu
 
   return (
     <AdminLayout session={session}>
-      <PwaInstallCount />
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl text-sm font-semibold">
           {toast}

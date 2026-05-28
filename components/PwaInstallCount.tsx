@@ -11,6 +11,6 @@ export default function PwaInstallCount() {
       .then(({ count: c }) => setCount(c ?? 0))
   }, [])
 
-  if (count === null) return null
+  if (count === null) return <div>📱 Lade...</div>
   return <div>📱 {count} PWA Installationen</div>
 }
