@@ -47,6 +47,16 @@ export default function PwaInstallBanner() {
     const onInstalled = () => {
       setVisible(false)
       setDeferredPrompt(null)
+      const ua = window.navigator.userAgent || ''
+      const isIPhoneOrIPad = /iPhone|iPad|iPod/.test(ua)
+      const isIPadOS = ua.includes('Mac') && 'ontouchend' in document
+      const isAndroid = /Android/.test(ua)
+      const platform = (isIPhoneOrIPad || isIPadOS) ? 'ios' : isAndroid ? 'android' : 'desktop'
+      fetch('/api/pwa-install', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform }),
+      }).catch(() => {})
     }
 
     window.addEventListener('beforeinstallprompt', onBeforeInstall)
