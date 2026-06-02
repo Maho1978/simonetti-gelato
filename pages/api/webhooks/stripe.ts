@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 // ⚠️ PFLICHT: bodyParser aus – Stripe braucht rohen Request-Body zur Signaturprüfung
 export const config = { api: { bodyParser: false } }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-04-10' })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' })
 
 // Service-Role-Client – umgeht RLS, darf alles schreiben
 const supabase = createClient(
@@ -115,18 +115,29 @@ async function onPaymentSucceeded(pi: Stripe.PaymentIntent) {
   const orderId = pi.metadata?.order_id
   if (!orderId) return
 
-  const { error } = await supabase
+  const { data: order, error } = await supabase
     .from('orders')
     .update({
+      status:            'OFFEN',
       payment_status:    'paid',
       payment_intent_id: pi.id,
       payment_method:    pi.payment_method_types?.[0] || 'card',
       paid_at:           new Date().toISOString(),
     })
     .eq('id', orderId)
+    .select()
+    .single()
 
   if (error) { console.error('DB-Fehler payment_intent.succeeded:', error); throw error }
   console.log(`💳 PaymentIntent succeeded für Bestellung ${orderId}`)
+
+  // E-Mails nur senden wenn kein Stripe Checkout Session (App-Flow nutzt checkout.session.completed)
+  if (order && !order.stripe_session_id) {
+    await Promise.allSettled([
+      order.customer_email && sendEmail('order_confirmed', order, order.customer_email),
+      sendEmail('new_order_admin', order, process.env.ADMIN_EMAIL || 'info@eiscafe-simonetti.de'),
+    ])
+  }
 }
 
 async function onPaymentFailed(pi: Stripe.PaymentIntent) {

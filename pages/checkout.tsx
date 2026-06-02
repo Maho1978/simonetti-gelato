@@ -242,6 +242,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [tip, setTip]                   = useState(0)
   const [showVoucher, setShowVoucher]   = useState(true)
   const [showTip, setShowTip]           = useState(true)
+  const [showStripe, setShowStripe]     = useState(true)
   const [showPayPal, setShowPayPal]     = useState(false)
   const [showCash, setShowCash]         = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'cash'>('stripe')
@@ -325,12 +326,16 @@ export default function Checkout({ session }: { session: Session | null }) {
         }
       })
 
-    supabase.from('feature_toggles').select('id, enabled').in('id', ['vouchers', 'tip_option', 'payment_paypal'])
+    supabase.from('feature_toggles').select('id, enabled').in('id', ['vouchers', 'tip_option', 'paypal', 'stripe_enabled'])
       .then(({ data }) => {
         if (data) {
           setShowVoucher(data.find(f => f.id === 'vouchers')?.enabled ?? true)
           setShowTip(data.find(f => f.id === 'tip_option')?.enabled ?? true)
-          setShowPayPal(data.find(f => f.id === 'payment_paypal')?.enabled ?? false)
+          const paypalOn = data.find(f => f.id === 'paypal')?.enabled ?? false
+          const stripeOn = data.find(f => f.id === 'stripe_enabled')?.enabled ?? true
+          setShowPayPal(paypalOn)
+          setShowStripe(stripeOn)
+          if (!stripeOn) setPaymentMethod(paypalOn ? 'paypal' : 'cash')
         }
       })
 
@@ -446,10 +451,10 @@ export default function Checkout({ session }: { session: Session | null }) {
     : !!(name.trim() && phone.trim() && street.trim() && hausnr.trim() && (!isGuest || email.trim()))
 
   const paymentOptions = [
-    { id: 'stripe', label: '💳 Karte / SEPA', always: true },
+    { id: 'stripe', label: '💳 Karte / SEPA', show: showStripe },
     { id: 'paypal', label: '🅿️ PayPal',       show: showPayPal && !!paypalClientId },
     { id: 'cash',   label: '💵 Barzahlung',    show: showCash },
-  ].filter(o => o.always || o.show)
+  ].filter(o => o.show)
 
   const shopCompletelyClosed = shopStatus !== null && !shopStatus.isOpen && !shopStatus.isPreorder
 
@@ -773,7 +778,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                           name={name} email={email} phone={phone}
                           street={fullStreet} zip={zip} city={city} notes={notes}
                           orderType={orderType} isPreorder={shopStatus?.isPreorder ?? false}
-                          agbAccepted={agbAccepted}
+                          agbAccepted={agbAccepted} clientSecret={clientSecret}
                         />
                       </Elements>
                     )}
@@ -845,12 +850,12 @@ export default function Checkout({ session }: { session: Session | null }) {
   )
 }
 
-function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, loyalty, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted }: {
+function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, loyalty, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted, clientSecret }: {
   session: Session | null; isGuest: boolean; cart: CartItem[]; total: number; subtotal: number
   shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number
   voucher: AppliedVoucher | null; loyalty: AppliedLoyalty | null
   tip: number; name: string; email: string; phone: string; street: string; zip: string; city: string; notes: string
-  orderType: string; isPreorder: boolean; agbAccepted: boolean
+  orderType: string; isPreorder: boolean; agbAccepted: boolean; clientSecret: string
 }) {
   const stripe   = useStripe()
   const elements = useElements()
@@ -875,17 +880,9 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
     } catch {}
     if (!stripe || !elements) return
     setLoading(true); setError('')
+    let pendingOrderId: string | null = null
     try {
-      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
-      if (stripeError) throw new Error(stripeError.message)
-      if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
-      if (loyalty?.points_used && session?.user?.id) {
-        await supabase.from('loyalty_transactions').insert({
-          user_id: session.user.id,
-          points: -loyalty.points_used,
-          reason: 'redemption',
-        })
-      }
+      // 1. Bestellung PENDING anlegen — verhindert Race Condition mit Stripe-Webhook
       const orderData = {
         user_id: session?.user?.id || null, guest_email: isGuest ? email : null,
         customer_name: name, customer_email: isGuest ? email : session?.user?.email,
@@ -894,10 +891,43 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
         delivery_fee: deliveryFee, tip, total,
         delivery_address: orderType === 'pickup' ? null : { name, street, zip, city },
         notes: [notes, loyalty?.note || ''].filter(Boolean).join(' | ') || null,
-        payment_intent_id: paymentIntent?.id, payment_method: 'stripe',
-        order_type: orderType, status: 'OFFEN',
+        payment_method: 'stripe', order_type: orderType, status: 'PENDING',
       }
-      await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) })
+      const orderRes = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) })
+      const { order } = await orderRes.json()
+      pendingOrderId = order?.id ?? null
+
+      // 2. PaymentIntent-Metadata mit order_id verknüpfen
+      if (pendingOrderId && clientSecret) {
+        const piId = clientSecret.split('_secret_')[0]
+        await fetch('/api/stripe/payment-intent-metadata', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentIntentId: piId, orderId: pendingOrderId }),
+        })
+      }
+
+      // 3. Zahlung bestätigen
+      const { error: stripeError } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
+      if (stripeError) {
+        // Bestellung stornieren wenn Zahlung fehlschlägt
+        if (pendingOrderId) {
+          await fetch(`/api/orders/${pendingOrderId}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'STORNIERT' }),
+          })
+        }
+        throw new Error(stripeError.message)
+      }
+
+      // 4. Bonus-/Treuepunkte buchen
+      if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
+      if (loyalty?.points_used && session?.user?.id) {
+        await supabase.from('loyalty_transactions').insert({
+          user_id: session.user.id, points: -loyalty.points_used, reason: 'redemption',
+        })
+      }
+
+      // 5. Webhook setzt Bestellung auf OFFEN — hier nur Cart leeren und weiterleiten
       localStorage.removeItem('simonetti-cart'); localStorage.removeItem('cart')
       router.push('/order-success')
     } catch (err: any) { setError(err.message || 'Zahlung fehlgeschlagen') } finally { setLoading(false) }

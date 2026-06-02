@@ -10,7 +10,7 @@ interface Feature {
   enabled: boolean
 }
 
-const PAYMENT_FEATURES = ['card', 'sepa', 'giropay', 'sofort', 'apple_pay', 'google_pay', 'paypal', 'cash', 'wero']
+const PAYMENT_FEATURES = ['stripe_enabled', 'card', 'sepa', 'giropay', 'sofort', 'apple_pay', 'google_pay', 'paypal', 'cash', 'wero']
 
 // NEU: Kunden-Portal Features — aus feature_flags Tabelle
 const CUSTOMER_PORTAL_FEATURES: Feature[] = [
@@ -36,6 +36,7 @@ const CUSTOMER_FEATURE_IDS = CUSTOMER_PORTAL_FEATURES.map(f => f.id)
 
 const FEATURE_ICONS: Record<string, string> = {
   // Zahlungsmethoden
+  stripe_enabled:      '🏧',
   card:                '💳',
   sepa:                '🏦',
   giropay:             '⚡',
@@ -72,6 +73,7 @@ const FEATURE_ICONS: Record<string, string> = {
 }
 
 const FEATURE_EXTRAS: Record<string, string> = {
+  stripe_enabled:      '💡 Deaktiviert alle Stripe-Zahlungen: Karte, SEPA, Apple Pay, Google Pay',
   paypal:              '💡 Code bereit – Toggle AN und Kunden sehen PayPal sofort',
   cash:                '💡 Nur für eingeloggte Kunden sichtbar – kein Gast-Checkout',
   wero:                '🔜 Kommt bald – deutsche P2P-Zahlungsmethode (Deutsche Bank, Commerzbank etc.)',
@@ -88,6 +90,7 @@ const FEATURE_EXTRAS: Record<string, string> = {
 }
 
 const DEFAULT_SHOP_FEATURES: Feature[] = [
+  { id: 'stripe_enabled',      name: 'Stripe (Kartenzahlung)',    description: 'Alle Stripe-Zahlungen: Karte, SEPA, Apple Pay, Google Pay', enabled: true },
   { id: 'tip_option',          name: 'Trinkgeld-Option',         description: 'Trinkgeld-Auswahl im Checkout anzeigen',            enabled: true  },
   { id: 'vouchers',            name: 'Gutscheine',                description: 'Gutscheinfeld im Checkout ein- oder ausblenden',     enabled: true  },
   { id: 'guest_checkout',      name: 'Gast-Checkout',             description: 'Bestellen ohne Konto möglich',                      enabled: true  },
