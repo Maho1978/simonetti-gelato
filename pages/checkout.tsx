@@ -882,7 +882,7 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
     setLoading(true); setError('')
     let pendingOrderId: string | null = null
     try {
-      // 1. Bestellung PENDING anlegen — verhindert Race Condition mit Stripe-Webhook
+      // 1. Bestellung AUSSTEHEND anlegen — verhindert Race Condition mit Stripe-Webhook
       const orderData = {
         user_id: session?.user?.id || null, guest_email: isGuest ? email : null,
         customer_name: name, customer_email: isGuest ? email : session?.user?.email,
@@ -891,11 +891,13 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
         delivery_fee: deliveryFee, tip, total,
         delivery_address: orderType === 'pickup' ? null : { name, street, zip, city },
         notes: [notes, loyalty?.note || ''].filter(Boolean).join(' | ') || null,
-        payment_method: 'stripe', order_type: orderType, status: 'PENDING',
+        payment_method: 'stripe', order_type: orderType, status: 'AUSSTEHEND',
       }
       const orderRes = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) })
+      if (!orderRes.ok) throw new Error('Bestellung konnte nicht angelegt werden. Bitte erneut versuchen.')
       const { order } = await orderRes.json()
       pendingOrderId = order?.id ?? null
+      if (!pendingOrderId) throw new Error('Bestellung konnte nicht angelegt werden. Bitte erneut versuchen.')
 
       // 2. PaymentIntent-Metadata mit order_id verknüpfen
       if (pendingOrderId && clientSecret) {
