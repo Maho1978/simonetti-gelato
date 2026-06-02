@@ -909,7 +909,11 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
       }
 
       // 3. Zahlung bestätigen
-      const { error: stripeError } = await stripe.confirmPayment({ elements, redirect: 'if_required' })
+      const { error: stripeError } = await stripe.confirmPayment({
+        elements,
+        redirect: 'if_required',
+        confirmParams: { return_url: `${window.location.origin}/order-success` },
+      })
       if (stripeError) {
         // Bestellung stornieren wenn Zahlung fehlschlägt
         if (pendingOrderId) {
