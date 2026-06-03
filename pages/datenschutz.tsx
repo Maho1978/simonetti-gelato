@@ -1,6 +1,10 @@
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 
+export async function getServerSideProps() {
+  return { props: {} }
+}
+
 export default function Datenschutz() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#fdfcfb' }}>
@@ -108,7 +112,7 @@ export default function Datenschutz() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>4b. E-Mail-Versand</h2>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>4a. E-Mail-Versand</h2>
             <h3 className="text-xl font-semibold mb-3" style={{ color: '#4a5d54' }}>Brevo</h3>
             <p className="text-gray-700 leading-relaxed mb-4">
               Wir nutzen Brevo für den Versand von Bestellbestätigungen und transaktionalen E-Mails.
@@ -123,9 +127,9 @@ export default function Datenschutz() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>4a. Datentransfer in die USA</h2>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>4b. Datentransfer in die USA</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              Einige unserer Dienstleister (Vercel, Stripe, Supabase, PayPal) haben ihren Sitz in den USA.
+              Einige unserer Dienstleister (Vercel, Stripe, Supabase) haben ihren Sitz in den USA.
               Die Datenübertragung erfolgt auf Basis der EU-Standardvertragsklauseln (SCC) gemäß Art. 46 Abs. 2 lit. c DSGVO.
             </p>
           </section>
