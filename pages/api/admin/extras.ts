@@ -1,7 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+
+async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) return false
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(auth.slice(7))
+  return !error && !!user && user.email === process.env.ADMIN_EMAIL
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (!await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' })
   const { productId } = req.query
 
   if (req.method === 'GET') {
