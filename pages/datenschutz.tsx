@@ -78,9 +78,20 @@ export default function Datenschutz() {
             </p>
             <p className="text-gray-700 leading-relaxed mb-4">
               Anbieter: Stripe Inc., 510 Townsend Street, San Francisco, CA 94103, USA<br />
-              Datenschutzerklärung: 
+              Datenschutzerklärung:
               <a href="https://stripe.com/de/privacy" target="_blank" className="text-blue-600 hover:underline ml-1">
                 https://stripe.com/de/privacy
+              </a>
+            </p>
+            <h3 className="text-xl font-semibold mb-3" style={{ color: '#4a5d54' }}>PayPal</h3>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Wir nutzen PayPal als Zahlungsdienstleister für die Abwicklung von Zahlungen über unseren Webshop.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Anbieter: PayPal (Europe) S.à r.l. et Cie, S.C.A., 22-24 Boulevard Royal, L-2449 Luxemburg<br />
+              Datenschutzerklärung:
+              <a href="https://www.paypal.com/de/webapps/mpp/ua/privacy-full" target="_blank" className="text-blue-600 hover:underline ml-1">
+                https://www.paypal.com/de/webapps/mpp/ua/privacy-full
               </a>
             </p>
           </section>
