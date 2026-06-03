@@ -105,6 +105,9 @@ export default function DriversPage() {
 
     setSaving(true)
 
+    const { data: { session: adminSession } } = await supabase.auth.getSession()
+    const authHeader = `Bearer ${adminSession?.access_token || ''}`
+
     try {
       if (editingDriver) {
         // ── BEARBEITEN ──────────────────────────────
@@ -123,7 +126,7 @@ export default function DriversPage() {
         if (form.password && editingDriver.user_id) {
           const response = await fetch('/api/admin/update-driver-password', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
             body: JSON.stringify({ userId: editingDriver.user_id, password: form.password })
           })
           if (!response.ok) {
@@ -144,7 +147,7 @@ export default function DriversPage() {
         // 1. Supabase Auth User erstellen
         const response = await fetch('/api/admin/create-driver', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
           body: JSON.stringify({
             email: form.email,
             password: form.password,
@@ -188,12 +191,14 @@ export default function DriversPage() {
 
   const handleDelete = async (driver: Driver) => {
     setSaving(true)
+    const { data: { session: adminSession } } = await supabase.auth.getSession()
+    const authHeader = `Bearer ${adminSession?.access_token || ''}`
     try {
       // Auth User löschen falls vorhanden
       if (driver.user_id) {
         await fetch('/api/admin/delete-driver', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
           body: JSON.stringify({ userId: driver.user_id })
         })
       }
