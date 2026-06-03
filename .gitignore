@@ -6,7 +6,10 @@
 *.tsbuildinfo
 next-env.d.ts
 *.deb
+*.bak
 *.backup
+*.bak.*
+*.backup-*
 
 # next-pwa generated artifacts
 public/sw.js
