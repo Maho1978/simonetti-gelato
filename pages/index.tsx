@@ -188,6 +188,8 @@ export default function Home() {
             </div>
           )}
 
+          <p className="text-center text-xs text-gray-400 mb-8">Alle Preise inkl. gesetzlicher MwSt.</p>
+
           {loading ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4 animate-pulse">🍦</div>

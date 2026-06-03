@@ -127,7 +127,7 @@ export default function AGB() {
         </div>
 
         <div className="mt-12 pt-8 border-t" style={{ borderColor: '#e5e7eb' }}>
-          <p className="text-sm text-gray-500">Stand: Februar 2026</p>
+          <p className="text-sm text-gray-500">Stand: Juni 2026</p>
           <div className="mt-4 flex gap-4">
             <Link href="/impressum" className="text-sm hover:underline" style={{ color: '#4a5d54' }}>
               Impressum
