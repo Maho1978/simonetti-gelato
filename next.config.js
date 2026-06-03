@@ -20,6 +20,19 @@ const nextConfig = {
     domains: ['localhost', 'flydacnsbsnpwpqezuof.supabase.co'],
   },
   turbopack: {},
+  async headers() {
+    return [
+      {
+        source: '/datenschutz',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
+      },
+    ]
+  },
 }
 
 module.exports = withPWA(nextConfig)
