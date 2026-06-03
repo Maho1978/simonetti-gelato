@@ -43,7 +43,7 @@ export default function Impressum() {
           <section>
             <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>Verantwortlich für den Inhalt</h2>
             <p className="text-gray-700 leading-relaxed">
-              Nach § 55 Abs. 2 RStV:<br />
+              Nach § 18 Abs. 2 MStV:<br />
               Mahmut Duran<br />
               Konrad-Adenauer-Platz 2<br />
               40764 Langenfeld

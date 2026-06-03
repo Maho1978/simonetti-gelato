@@ -94,6 +94,25 @@ export default function Datenschutz() {
                 https://www.paypal.com/de/webapps/mpp/ua/privacy-full
               </a>
             </p>
+            <h3 className="text-xl font-semibold mb-3 mt-6" style={{ color: '#4a5d54' }}>Supabase</h3>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Wir nutzen Supabase zur Speicherung von Bestelldaten, Kundendaten und Loyalitätspunkten.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Anbieter: Supabase Inc., 970 Tresser Blvd, Stamford, CT 06901, USA<br />
+              Datenschutzerklärung:
+              <a href="https://supabase.com/privacy" target="_blank" className="text-blue-600 hover:underline ml-1">
+                https://supabase.com/privacy
+              </a>
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>4a. Datentransfer in die USA</h2>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Einige unserer Dienstleister (Vercel, Stripe, Supabase, PayPal) haben ihren Sitz in den USA.
+              Die Datenübertragung erfolgt auf Basis der EU-Standardvertragsklauseln (SCC) gemäß Art. 46 Abs. 2 lit. c DSGVO.
+            </p>
           </section>
 
           <section>
@@ -133,7 +152,15 @@ export default function Datenschutz() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>7. Ihre Rechte</h2>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>7. Speicherdauer</h2>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Bestelldaten und Buchungsbelege werden gemäß § 147 AO 10 Jahre aufbewahrt.
+              Kundendaten ohne Bestellbezug werden nach 3 Jahren gelöscht, sofern keine gesetzliche Aufbewahrungspflicht besteht.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>8. Ihre Rechte</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
               Sie haben folgende Rechte:
             </p>
@@ -148,10 +175,18 @@ export default function Datenschutz() {
             <p className="text-gray-700 leading-relaxed mb-4">
               Zur Ausübung Ihrer Rechte kontaktieren Sie uns unter: info@eiscafe-simonetti.de
             </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Sie haben außerdem das Recht, sich bei der zuständigen Datenschutzaufsichtsbehörde zu beschweren:
+              Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (LDI NRW),
+              Postfach 20 04 44, 40102 Düsseldorf,{' '}
+              <a href="https://www.ldi.nrw.de" target="_blank" className="text-blue-600 hover:underline">
+                www.ldi.nrw.de
+              </a>
+            </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>8. Kontakt</h2>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>9. Kontakt</h2>
             <p className="text-gray-700 leading-relaxed">
               Bei Fragen zum Datenschutz kontaktieren Sie uns unter:<br />
               E-Mail: info@eiscafe-simonetti.de<br />

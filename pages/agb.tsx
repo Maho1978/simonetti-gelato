@@ -52,7 +52,7 @@ export default function AGB() {
               - giropay<br />
               - Sofort-Überweisung<br />
               - Apple Pay / Google Pay<br />
-              - PayPal (falls aktiviert)
+              - PayPal
             </p>
           </section>
 
@@ -75,8 +75,27 @@ export default function AGB() {
           <section className="mb-8">
             <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>7. Gewährleistung</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              Sollten Sie mit der Qualität nicht zufrieden sein, kontaktieren Sie uns bitte umgehend. 
-              Wir finden eine Lösung.
+              Es gelten die gesetzlichen Gewährleistungsrechte. Bei Mängeln haben Sie das Recht auf Nacherfüllung
+              (Nachlieferung oder Nachbesserung). Schlägt die Nacherfüllung fehl, können Sie vom Vertrag zurücktreten
+              oder den Kaufpreis mindern. Die gesetzliche Gewährleistungsfrist beträgt zwei Jahre.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Bei offensichtlichen Qualitätsmängeln kontaktieren Sie uns bitte umgehend unter info@eiscafe-simonetti.de
+              oder telefonisch.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold mb-4" style={{ color: '#4a5d54' }}>7a. Allergene &amp; Lebensmittelinformationen</h2>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Gemäß EU-Verordnung Nr. 1169/2011 (LMIV) informieren wir über die 14 kennzeichnungspflichtigen
+              Hauptallergene. Informationen zu Allergenen und Unverträglichkeiten erhalten Sie auf Anfrage
+              telefonisch unter +49 (0) 2173 1622780 oder direkt im Café.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Wir weisen darauf hin, dass wir eine Kreuzkontamination in unserer Küche nicht vollständig
+              ausschließen können. Personen mit schweren Allergien oder Unverträglichkeiten bitten wir,
+              vor der Bestellung Kontakt mit uns aufzunehmen.
             </p>
           </section>
 
