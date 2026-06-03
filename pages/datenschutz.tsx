@@ -196,7 +196,7 @@ export default function Datenschutz() {
         </div>
 
         <div className="mt-12 pt-8 border-t" style={{ borderColor: '#e5e7eb' }}>
-          <p className="text-sm text-gray-500 mb-4">Stand: Februar 2026</p>
+          <p className="text-sm text-gray-500 mb-4">Stand: Juni 2026</p>
           <div className="flex gap-4">
             <Link href="/agb" className="text-sm hover:underline" style={{ color: '#4a5d54' }}>
               AGB
