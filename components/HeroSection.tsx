@@ -31,6 +31,7 @@ export default function HeroSection() {
               Jetzt bestellen
             </button>
           </Link>
+          <p className="mt-4 text-sm text-gray-300">🕐 Lieferung in 30–45 Minuten · Mindestbestellwert 15 €</p>
         </div>
       </section>
 
