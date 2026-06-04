@@ -117,7 +117,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   STORNIERT:      { label: 'Storniert',      color: 'text-red-700',    bg: 'bg-red-100',    icon: XCircle     },
 }
 
-const ALLERGEN_LIST = ['Nuesse', 'Laktose', 'Gluten', 'Eier', 'Soja', 'Erdbeeren', 'Schokolade', 'Alkohol']
+const ALLERGEN_LIST = ['Nüsse', 'Laktose', 'Gluten', 'Eier', 'Soja', 'Erdbeeren', 'Schokolade', 'Alkohol']
 
 function formatAddress(addr: any): string {
   if (!addr) return '-'
@@ -217,7 +217,7 @@ function OrderCard({ order, flags, onReorder }: {
               <div className="flex justify-between text-gray-500"><span>Zwischensumme</span><span>{order.subtotal.toFixed(2)} EUR</span></div>
             )}
             {order.order_type !== 'pickup' && (
-              <div className="flex justify-between text-gray-500"><span>Liefergebuehr</span><span>{(order.delivery_fee ?? 3).toFixed(2)} EUR</span></div>
+              <div className="flex justify-between text-gray-500"><span>Liefergebühr</span><span>{(order.delivery_fee ?? 3).toFixed(2)} EUR</span></div>
             )}
             {order.tip > 0 && (
               <div className="flex justify-between text-gray-500"><span>Trinkgeld</span><span>{order.tip.toFixed(2)} EUR</span></div>
@@ -289,7 +289,7 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
           Standard
         </span>
       )}
-      <div className="text-2xl mb-2">{address.icon || 'ðŸ“'}</div>
+      <div className="text-2xl mb-2">{address.icon || '📍'}</div>
       <div className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">{address.label}</div>
       <div className="font-semibold text-gray-900 text-sm mb-1">{address.recipient_name}</div>
       <div className="text-sm text-gray-500 leading-relaxed">
@@ -307,7 +307,7 @@ function AddressCard({ address, onEdit, onDelete, onSetDefault }: {
               Als Standard
             </button>
             <button onClick={() => onDelete(address.id)} className="flex items-center gap-1 text-xs font-semibold text-red-400 border border-red-100 rounded-lg px-2.5 py-1.5 hover:bg-red-50 transition">
-              <Trash2 size={11} /> Loeschen
+              <Trash2 size={11} /> Löschen
             </button>
           </>
         )}
@@ -336,7 +336,7 @@ function AddressModal({ address, isNew, onSave, onClose }: {
             <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Bezeichnung</label>
             <select
               value={draft.label}
-              onChange={e => setDraft(p => ({ ...p, label: e.target.value, icon: e.target.value === 'Zuhause' ? 'ðŸ ' : e.target.value === 'Arbeit' ? 'ðŸ¢' : 'ðŸ“Œ' }))}
+              onChange={e => setDraft(p => ({ ...p, label: e.target.value, icon: e.target.value === 'Zuhause' ? '🏠' : e.target.value === 'Arbeit' ? '🏢' : '📌' }))}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition"
             >
               <option>Zuhause</option>
@@ -350,7 +350,7 @@ function AddressModal({ address, isNew, onSave, onClose }: {
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
           </div>
           <div className="col-span-2">
-            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Strasse und Hausnummer</label>
+            <label className="block text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Straße und Hausnummer</label>
             <input type="text" value={draft.street || ''} onChange={e => setDraft(p => ({ ...p, street: e.target.value }))}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#C4973A] transition" />
           </div>
@@ -523,7 +523,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
   const deleteAddress = async (id: string) => {
     await supabase.from('customer_addresses').delete().eq('id', id)
     setAddresses(prev => prev.filter(a => a.id !== id))
-    showToast('Adresse geloescht')
+    showToast('Adresse gelöscht')
   }
 
   const setDefaultAddress = async (id: string) => {
@@ -571,12 +571,12 @@ export default function AccountPage({ session }: { session: Session | null }) {
         .eq('code', voucherCode.toUpperCase())
         .eq('is_active', true)
         .single()
-      if (!data) { showToast('UngÃ¼ltiger oder abgelaufener Code'); return }
+      if (!data) { showToast('Ungültiger oder abgelaufener Code'); return }
       if (data.valid_until && new Date(data.valid_until) < new Date()) { showToast('Gutschein abgelaufen'); return }
-      if (data.current_uses >= data.max_uses) { showToast('Gutschein bereits ausgeschoepft'); return }
+      if (data.current_uses >= data.max_uses) { showToast('Gutschein bereits ausgeschöpft'); return }
       showToast(`Gutschein aktiviert! ${data.discount_type === 'percentage' ? data.discount_value + '%' : data.discount_value + ' EUR'} Rabatt`)
       setVoucherCode('')
-    } catch (e) { showToast('UngÃ¼ltiger Code') }
+    } catch (e) { showToast('Ungültiger Code') }
   }
 
   const toggleAllergy = (allergen: string) => {
@@ -593,8 +593,8 @@ export default function AccountPage({ session }: { session: Session | null }) {
   if (loading) return (
     <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
       <div className="text-center">
-        <div className="text-4xl mb-3">ðŸ¦</div>
-        <p className="text-gray-400">LÃ¤dt...</p>
+        <div className="text-4xl mb-3">🍦</div>
+        <p className="text-gray-400">Lädt...</p>
       </div>
     </div>
   )
@@ -702,7 +702,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Lieferadressen</h2>
               <button
-                onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Zuhause', icon: 'ðŸ ', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
+                onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Zuhause', icon: '🏠', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
                 className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white text-sm font-bold rounded-xl hover:bg-black transition"
               >
                 <Plus size={14} /> Neue Adresse
@@ -719,7 +719,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
                   <AddressCard key={addr.id} address={addr} onEdit={a => { setAddrModal(a); setAddrNew(false) }} onDelete={deleteAddress} onSetDefault={setDefaultAddress} />
                 ))}
                 <button
-                  onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Sonstige', icon: 'ðŸ“Œ', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
+                  onClick={() => { setAddrNew(true); setAddrModal({ id: '', label: 'Sonstige', icon: '📌', recipient_name: userName, street: '', zip: '', city: '', is_default: false }) }}
                   className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-4 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#C4973A] hover:text-[#C4973A] hover:bg-[#fffbf2] transition min-h-[140px]"
                 >
                   <Plus size={24} />
@@ -736,7 +736,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2"><User size={16} /> Persoenliche Daten</h3>
+                <h3 className="font-bold text-gray-900 flex items-center gap-2"><User size={16} /> Persönliche Daten</h3>
                 {!editingProfile ? (
                   <button onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 border border-gray-200 px-3 py-1.5 rounded-lg hover:border-[#C4973A] hover:text-[#C4973A] transition">
                     <Edit2 size={12} /> Bearbeiten
@@ -773,10 +773,10 @@ export default function AccountPage({ session }: { session: Session | null }) {
             {flags.allergy_profile && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2"><AlertTriangle size={16} className="text-red-500" /> Allergie und Ernaehrung</h3>
-                  <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">Wird an Kueche gesendet</span>
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2"><AlertTriangle size={16} className="text-red-500" /> Allergie und Ernährung</h3>
+                  <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">Wird an Küche gesendet</span>
                 </div>
-                <p className="text-sm text-gray-400 mb-3">Waehle deine Allergene - automatisch bei jeder Bestellung.</p>
+                <p className="text-sm text-gray-400 mb-3">Wähle deine Allergene - automatisch bei jeder Bestellung.</p>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {ALLERGEN_LIST.map(a => {
                     const active = (profileDraft.allergies || []).includes(a)
@@ -801,10 +801,10 @@ export default function AccountPage({ session }: { session: Session | null }) {
 
             <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3 text-sm text-gray-600">
-                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">ðŸ”’</div>
-                Passwort aendern oder zuruecksetzen
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">🔑</div>
+                Passwort ändern oder zurücksetzen
               </div>
-              <Link href="/auth/forgot-password" className="text-sm font-semibold text-[#C4973A] hover:text-[#a87c2a] transition">Aendern</Link>
+              <Link href="/auth/forgot-password" className="text-sm font-semibold text-[#C4973A] hover:text-[#a87c2a] transition">Ändern</Link>
             </div>
 
             {flags.referral_enabled && profile?.referral_code && (
@@ -822,7 +822,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
 
             <div className="bg-white rounded-2xl border border-red-100 p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-red-500 font-semibold flex items-center gap-2"><Trash2 size={14} /> Konto loeschen</div>
+                <div className="text-sm text-red-500 font-semibold flex items-center gap-2"><Trash2 size={14} /> Konto löschen</div>
                 <button onClick={() => showToast('Bitte kontaktiere uns: info@eiscafe-simonetti.de')} className="text-sm font-semibold text-red-400 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition">
                   Anfragen
                 </button>
@@ -858,7 +858,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
                   ))}
                 </div>
                 <textarea rows={3} value={feedback.text} onChange={e => setFeedback(f => ({ ...f, text: e.target.value }))}
-                  placeholder="Was hat dir gefallen? Was koennen wir besser machen?"
+                  placeholder="Was hat dir gefallen? Was können wir besser machen?"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] transition mb-2" />
                 <button onClick={sendFeedback} className="w-full py-2.5 bg-[#C4973A] text-white font-bold rounded-xl hover:bg-[#a87b20] transition text-sm">
                   Feedback absenden
@@ -895,7 +895,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
                 <div className="flex gap-2">
                   <textarea rows={2} value={msgInput} onChange={e => setMsgInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                    placeholder="Schreib uns - Fragen, Sonderwuensche, alles willkommen..."
+                    placeholder="Schreib uns - Fragen, Sonderwünsche, alles willkommen..."
                     className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] transition" />
                   <button onClick={sendMessage} className="px-4 py-2 bg-[#1a1a1a] text-white rounded-xl hover:bg-black transition self-end">
                     <Send size={16} />
@@ -906,7 +906,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
 
             {flags.suggestions_enabled && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <h3 className="font-bold text-gray-900 mb-1">Wuensche und Anregungen</h3>
+                <h3 className="font-bold text-gray-900 mb-1">Wünsche und Anregungen</h3>
                 <p className="text-sm text-gray-400 mb-3">Welche Eissorten oder Produkte sollen wir anbieten?</p>
                 <textarea rows={2} id="suggestionText" placeholder="z.B. mehr vegane Sorten, glutenfreie Waffeln..."
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#C4973A] transition mb-2" />
@@ -948,17 +948,17 @@ export default function AccountPage({ session }: { session: Session | null }) {
               )}
             </div>
 
-            {/* Gutschein einloesen */}
+            {/* Gutschein einlösen */}
             {flags.voucher_enabled && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-                <h3 className="font-bold text-gray-900 mb-1">Gutschein einloesen</h3>
-                <p className="text-sm text-gray-400 mb-3">Code eingeben und beim naechsten Checkout abziehen.</p>
+                <h3 className="font-bold text-gray-900 mb-1">Gutschein einlösen</h3>
+                <p className="text-sm text-gray-400 mb-3">Code eingeben und beim nächsten Checkout abziehen.</p>
                 <div className="flex gap-2">
                   <input type="text" value={voucherCode} onChange={e => setVoucherCode(e.target.value.toUpperCase())}
                     placeholder="z.B. SOMMER25"
                     className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:border-[#C4973A] transition" />
                   <button onClick={redeemVoucher} className="px-5 py-2.5 bg-[#C4973A] text-white text-sm font-bold rounded-xl hover:bg-[#a87b20] transition">
-                    Einloesen
+                    Einlösen
                   </button>
                 </div>
               </div>
@@ -996,7 +996,7 @@ export default function AccountPage({ session }: { session: Session | null }) {
                 <div className="font-bold text-[#C4973A] text-lg mb-1">Simonetti Plus</div>
                 <div className="text-sm text-gray-500 mb-3">2,99 EUR / Monat - 30 Tage kostenlos testen</div>
                 <ul className="space-y-1.5 mb-4">
-                  {['Kostenlose Lieferung ab 10 EUR', '5% Rabatt auf jede Bestellung', 'Doppelte Treuepunkte', 'Prioritaets-Lieferung'].map(perk => (
+                  {['Kostenlose Lieferung ab 10 EUR', '5% Rabatt auf jede Bestellung', 'Doppelte Treuepunkte', 'Prioritäts-Lieferung'].map(perk => (
                     <li key={perk} className="flex items-center gap-2 text-sm text-gray-700">
                       <span className="text-[#C4973A] font-bold">+</span> {perk}
                     </li>
