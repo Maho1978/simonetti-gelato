@@ -93,7 +93,7 @@ export default function NachrichtenAdmin({ session }: { session: Session | null 
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-gray-400">
-              Konversation auswaehlen
+              Konversation auswählen
             </div>
           )}
         </div>

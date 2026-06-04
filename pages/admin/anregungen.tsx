@@ -30,7 +30,7 @@ export default function AnregungenAdmin({ session }: { session: Session | null }
         <div className="flex gap-2 mb-6">
           {[
             { key: 'feedback',    label: 'Bewertungen' },
-            { key: 'suggestions', label: 'Wuensche' },
+            { key: 'suggestions', label: 'Wünsche' },
             { key: 'allergies',   label: 'Allergien' },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key as any)}
@@ -60,7 +60,7 @@ export default function AnregungenAdmin({ session }: { session: Session | null }
 
         {tab === 'suggestions' && (
           <div className="space-y-3">
-            {suggestions.length === 0 && <p className="text-gray-400 text-sm">Noch keine Wuensche</p>}
+            {suggestions.length === 0 && <p className="text-gray-400 text-sm">Noch keine Wünsche</p>}
             {suggestions.map(s => (
               <div key={s.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-start justify-between gap-4">
                 <div className="flex-1">

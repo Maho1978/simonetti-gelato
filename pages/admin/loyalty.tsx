@@ -89,7 +89,7 @@ export default function LoyaltyAdmin({ session }: { session: Session | null }) {
                 <div className="font-bold text-gray-700 w-20">{tier.name}</div>
                 <div className="text-sm text-gray-400 flex-1">
                   {tier.points_from} - {tier.points_to ?? 'inf'} Punkte erreichen |
-                  {tier.redeem_points} Punkte einloesen
+                  {tier.redeem_points} Punkte einlösen
                 </div>
                 <div className="text-sm font-semibold text-[#C4973A]">{tier.reward_label}</div>
                 <div className="text-sm text-gray-500">{tier.reward_value} EUR</div>
@@ -132,7 +132,7 @@ export default function LoyaltyAdmin({ session }: { session: Session | null }) {
 
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
           <p className="font-bold mb-1">Punkte manuell vergeben</p>
-          <p className="text-amber-600">Gehe zu <a href="/admin/customers" className="underline font-bold">Kunden</a> und waehle einen Kunden aus um Punkte manuell zu vergeben.</p>
+          <p className="text-amber-600">Gehe zu <a href="/admin/customers" className="underline font-bold">Kunden</a> und wähle einen Kunden aus um Punkte manuell zu vergeben.</p>
         </div>
       </div>
     </AdminLayout>
