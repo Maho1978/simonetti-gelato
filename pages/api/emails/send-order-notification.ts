@@ -304,7 +304,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         html    = emailOutForDelivery(order)
         break
       case 'order_delivered':
-        subject = getSubject(`🎉 Zugestellt! Guten Appetit! #${orderNr}`)
+        subject = getSubject(`🍦 Wie war dein Eis? Kurz bewerten & anderen helfen!`)
         html    = emailDelivered(order)
         break
       case 'order_rejected':
