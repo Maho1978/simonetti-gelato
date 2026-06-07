@@ -14,6 +14,7 @@ const PAGE_SIZE = 20
 export default function WatermarkPreviewPage() {
   const [products, setProducts]     = useState<Product[]>([])
   const [token, setToken]           = useState<string | null>(null)
+  const [configCb, setConfigCb]     = useState<string>('')   // cache-buster from config.updated_at
   const [page, setPage]             = useState(0)
   const [loading, setLoading]       = useState(true)
   const [total, setTotal]           = useState(0)
@@ -30,6 +31,13 @@ export default function WatermarkPreviewPage() {
         .not('image_url', 'is', null)
 
       setTotal(count ?? 0)
+
+      // Cache-buster: use config updated_at so browser reloads when settings change
+      const cfgRes = await fetch('/api/admin/watermark-config')
+      if (cfgRes.ok) {
+        const cfg = await cfgRes.json()
+        setConfigCb(cfg.updated_at ?? '')
+      }
     }
     init()
   }, [])
@@ -54,7 +62,8 @@ export default function WatermarkPreviewPage() {
   }
 
   function previewUrl(imageUrl: string) {
-    return `/api/admin/watermark-preview?imageUrl=${encodeURIComponent(imageUrl)}&token=${token}`
+    const cb = configCb ? `&cb=${encodeURIComponent(configCb)}` : ''
+    return `/api/admin/watermark-preview?imageUrl=${encodeURIComponent(imageUrl)}&token=${token}${cb}`
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE)

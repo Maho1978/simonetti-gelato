@@ -1,52 +1,120 @@
 import sharp from 'sharp'
 
+export interface WatermarkConfig {
+  text: string
+  font_size_percent: number   // 1–20, % of image width
+  opacity: number             // 0–1
+  position: 'center' | 'bottom-right' | 'top-left' | 'tile'
+  rotation: number            // -90–90 degrees
+  color: string               // hex, e.g. '#FFFFFF'
+  shadow_enabled: boolean
+  shadow_color: string        // hex, e.g. '#000000'
+  font_weight: 'normal' | 'bold'
+}
+
+export const DEFAULT_CONFIG: WatermarkConfig = {
+  text:              'Eiscafé Simonetti',
+  font_size_percent: 7,
+  opacity:           0.3,
+  position:          'center',
+  rotation:          -30,
+  color:             '#FFFFFF',
+  shadow_enabled:    true,
+  shadow_color:      '#000000',
+  font_weight:       'bold',
+}
+
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function textElement(
+  x: number,
+  y: number,
+  anchor: string,
+  baseline: string,
+  fontSize: number,
+  cfg: WatermarkConfig,
+  rx: number,
+  ry: number,
+): string {
+  const strokePart = cfg.shadow_enabled
+    ? `stroke="${escapeXml(cfg.shadow_color)}" stroke-width="2" paint-order="stroke fill"`
+    : ''
+  return `<text
+    x="${x}" y="${y}"
+    text-anchor="${anchor}"
+    dominant-baseline="${baseline}"
+    font-family="DejaVu Sans, Arial, sans-serif"
+    font-size="${fontSize}"
+    font-weight="${cfg.font_weight}"
+    fill="${escapeXml(cfg.color)}"
+    ${strokePart}
+    opacity="${cfg.opacity}"
+    transform="rotate(${cfg.rotation}, ${rx}, ${ry})"
+  >${escapeXml(cfg.text)}</text>`
+}
+
+function buildSvg(width: number, height: number, fontSize: number, cfg: WatermarkConfig): string {
+  const edgePad = Math.round(Math.min(width, height) * 0.02)
+  let body: string
+
+  if (cfg.position === 'center') {
+    const cx = width / 2, cy = height / 2
+    body = textElement(cx, cy, 'middle', 'middle', fontSize, cfg, cx, cy)
+
+  } else if (cfg.position === 'bottom-right') {
+    const ax = width - edgePad, ay = height - edgePad
+    body = textElement(ax, ay, 'end', 'text-after-edge', fontSize, cfg, ax, ay)
+
+  } else if (cfg.position === 'top-left') {
+    const ax = edgePad, ay = edgePad + fontSize
+    body = textElement(ax, ay, 'start', 'auto', fontSize, cfg, ax, ay)
+
+  } else {
+    // tile: repeat grid across whole image
+    const estW  = Math.round(cfg.text.length * fontSize * 0.6)
+    const tileW = estW  * 2
+    const tileH = fontSize * 4
+    const cols  = Math.ceil(width  / tileW) + 2
+    const rows  = Math.ceil(height / tileH) + 2
+    const els: string[] = []
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = (c - 0.5) * tileW + (r % 2 === 1 ? tileW / 2 : 0)
+        const y = (r - 0.5) * tileH + tileH / 2
+        els.push(textElement(x, y, 'middle', 'middle', fontSize, cfg, x, y))
+      }
+    }
+    body = els.join('\n')
+  }
+
+  return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`
+}
+
 export async function applyWatermark(
-  inputBuffer: Buffer
+  inputBuffer: Buffer,
+  config: WatermarkConfig = DEFAULT_CONFIG,
 ): Promise<{ buffer: Buffer; contentType: 'image/jpeg' | 'image/png' }> {
   const image = sharp(inputBuffer)
   const { width = 800, height = 800, format, channels } = await image.metadata()
 
   const isTransparentPng = format === 'png' && channels === 4
-
-  const fontSize = Math.round(width * 0.07)
-  const cx = width  / 2
-  const cy = height / 2
-
-  const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-    <text
-      x="${cx}" y="${cy}"
-      text-anchor="middle"
-      dominant-baseline="middle"
-      font-family="DejaVu Sans, Arial, sans-serif"
-      font-size="${fontSize}"
-      font-weight="bold"
-      fill="#FFFFFF"
-      stroke="#000000"
-      stroke-width="2"
-      paint-order="stroke fill"
-      opacity="0.3"
-      transform="rotate(-30, ${cx}, ${cy})"
-    >Eiscaf&#233; Simonetti</text>
-  </svg>`
-
-  const compositeTop  = 0
-  const compositeLeft = 0
+  const fontSize = Math.max(10, Math.round(width * (config.font_size_percent / 100)))
+  const svg      = buildSvg(width, height, fontSize, config)
 
   const result = image
     .withMetadata({
-      exif: {
-        IFD0: { Copyright: 'Copyright Eiscafé Simonetti, Langenfeld' },
-      },
+      exif: { IFD0: { Copyright: 'Copyright Eiscafé Simonetti, Langenfeld' } },
     })
-    .composite([{
-      input: Buffer.from(svg),
-      top:   compositeTop,
-      left:  compositeLeft,
-    }])
+    .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
 
   if (isTransparentPng) {
     return { buffer: await result.png().toBuffer(), contentType: 'image/png' }
   }
-
   return { buffer: await result.jpeg({ quality: 85 }).toBuffer(), contentType: 'image/jpeg' }
 }

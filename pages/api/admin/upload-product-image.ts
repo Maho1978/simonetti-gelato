@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { applyWatermark } from '@/lib/watermark'
+import { applyWatermark, DEFAULT_CONFIG } from '@/lib/watermark'
+import type { WatermarkConfig } from '@/lib/watermark'
 
 export const config = {
   api: { bodyParser: { sizeLimit: '10mb' } },
@@ -33,7 +34,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const inputBuffer = Buffer.from(base64, 'base64')
-    const { buffer, contentType } = await applyWatermark(inputBuffer)
+
+    const { data: configData } = await supabaseAdmin
+      .from('watermark_config').select('*').eq('id', 1).single()
+    const wmConfig: WatermarkConfig = (configData as WatermarkConfig) ?? DEFAULT_CONFIG
+
+    const { buffer, contentType } = await applyWatermark(inputBuffer, wmConfig)
 
     const ext      = contentType === 'image/png' ? 'png' : 'jpg'
     const filePath = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`

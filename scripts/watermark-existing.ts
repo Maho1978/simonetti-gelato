@@ -3,7 +3,8 @@ import path from 'path'
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 
 import { createClient } from '@supabase/supabase-js'
-import { applyWatermark } from '../lib/watermark'
+import { applyWatermark, DEFAULT_CONFIG } from '../lib/watermark'
+import type { WatermarkConfig } from '../lib/watermark'
 
 const BUCKET = 'product-images'
 const FOLDER = 'products'
@@ -53,6 +54,14 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
+  // Load watermark config from DB (falls back to DEFAULT_CONFIG on error)
+  console.log('⚙️  Lade Wasserzeichen-Config aus Supabase...')
+  const { data: configData, error: configErr } = await admin
+    .from('watermark_config').select('*').eq('id', 1).single()
+  if (configErr) console.warn('   Config nicht gefunden, nutze Default-Werte:', configErr.message)
+  const wmConfig: WatermarkConfig = (configData as WatermarkConfig) ?? DEFAULT_CONFIG
+  console.log(`   Text: "${wmConfig.text}", Position: ${wmConfig.position}, Größe: ${wmConfig.font_size_percent}%\n`)
+
   console.log('📋 Lade Bildliste aus Bucket "product-images"...')
   const allFiles = await listAllFiles(admin)
   const toProcess = Number.isFinite(limit) ? allFiles.slice(0, limit) : allFiles
@@ -89,7 +98,7 @@ async function main() {
       // Content-Type aus Storage-Metadata übernehmen (Schritt 4 laut Spec)
       const originalContentType = file.metadata?.mimetype ?? 'image/jpeg'
 
-      const { buffer: watermarked, contentType } = await applyWatermark(inputBuffer)
+      const { buffer: watermarked, contentType } = await applyWatermark(inputBuffer, wmConfig)
 
       // Beim Hochladen den tatsächlichen Output-Typ verwenden;
       // falls Original transparent-PNG war, bleibt es PNG – sonst JPEG
