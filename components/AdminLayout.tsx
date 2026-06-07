@@ -11,7 +11,8 @@ interface AdminLayoutProps {
 const NAV_ITEMS = [
   { label: 'Dashboard',   href: '/admin',               icon: '📊' },
   { label: 'Kanban',      href: '/admin/kanban',        icon: '🗂️' },
-  { label: 'Produkte',    href: '/admin/products',      icon: '🍦' },
+  { label: 'Produkte',    href: '/admin/products',          icon: '🍦' },
+  { label: 'WM-Preview', href: '/admin/watermark-preview', icon: '🔍' },
   { label: 'Extras',      href: '/admin/extras',        icon: '➕' },
   { label: 'Kategorien',  href: '/admin/categories',    icon: '📂' },
   { label: 'Fahrer',      href: '/admin/drivers',       icon: '🚗' },

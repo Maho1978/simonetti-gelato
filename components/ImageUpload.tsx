@@ -33,38 +33,37 @@ export default function ImageUpload({ currentImageUrl, productId, onImageUploade
     setUploading(true)
 
     try {
-      // Preview erstellen
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreview(reader.result as string)
+      // Preview + base64 in einem Schritt lesen
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror   = reject
+        reader.readAsDataURL(file)
+      })
+      setPreview(dataUrl)
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      const uploadRes = await fetch('/api/admin/upload-product-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({
+          base64:   dataUrl.split(',')[1],
+          mimeType: file.type,
+          fileName: file.name,
+        }),
+      })
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json()
+        throw new Error(err.error ?? 'Upload fehlgeschlagen')
       }
-      reader.readAsDataURL(file)
 
-      // Dateiname generieren
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      const filePath = `products/${fileName}`
+      const { url: publicUrl } = await uploadRes.json()
 
-      // Upload zu Supabase Storage
-      const { data, error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) {
-        throw uploadError
-      }
-
-      // Public URL generieren
-      const { data: urlData } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath)
-
-      const publicUrl = urlData.publicUrl
-      
-      // URL an Parent-Component übergeben
       onImageUploaded(publicUrl)
       setPreview(publicUrl)
       
