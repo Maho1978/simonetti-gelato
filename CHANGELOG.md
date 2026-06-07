@@ -40,6 +40,31 @@ schreiben sollte. War fehleranfällig und nicht atomar.
 
 ---
 
+## 2026-06-07 — Hotfix: payment_status in Orders-API-Route
+
+**Commit:** `0156791`  
+**Status:** Live
+
+### Problem
+Deploy 1 reparierte `saveOrder()` in `checkout.tsx`, aber die API-Route
+`pages/api/orders/index.ts` hat `payment_status` nie aus dem Request-Body
+gelesen und nicht an Supabase weitergegeben — DB-Default `'pending'` griff
+immer. Entdeckt bei Prüfung der heutigen PayPal-Bestellungen:
+2 Bestellungen (40,70 € + 29,40 €) standen trotz erfolgter Zahlung auf `pending`.
+Beide Captures via PayPal Live-API als `COMPLETED` verifiziert.
+
+### Änderungen
+
+#### `pages/api/orders/index.ts`
+- `payment_status` in Destructuring ergänzt
+- `payment_status: payment_status || 'pending'` im Supabase-Insert ergänzt
+
+#### Daten-Korrektur
+2 betroffene PayPal-Bestellungen vom 2026-06-07 manuell auf `payment_status='paid'`
+gesetzt (`cf8de6db` 40,70 €, `b96c6887` 29,40 €).
+
+---
+
 ## 2026-06-07 — Deploy 1: payment_status-Logik + Cash-Trigger
 
 **Commits:** `41d1031`, `824825e`, `b1785a8`  
