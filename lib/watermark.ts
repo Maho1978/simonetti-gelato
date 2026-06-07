@@ -8,30 +8,29 @@ export async function applyWatermark(
 
   const isTransparentPng = format === 'png' && channels === 4
 
-  const fontSize = Math.max(14, Math.min(48, Math.round(height * 0.03)))
-  const edgePad  = Math.round(Math.min(width, height) * 0.02)
-  const strokeW  = Math.max(2, Math.round(fontSize / 7))
+  const fontSize = Math.round(width * 0.07)
+  const cx = width  / 2
+  const cy = height / 2
 
-  const text = 'eiscafe-simonetti.de'
-  const svgW = Math.round(text.length * fontSize * 0.62)
-  const svgH = Math.round(fontSize * 1.5)
-
-  const svg = `<svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">
+  const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <text
-      x="0" y="${fontSize}"
+      x="${cx}" y="${cy}"
+      text-anchor="middle"
+      dominant-baseline="middle"
       font-family="DejaVu Sans, Arial, sans-serif"
       font-size="${fontSize}"
       font-weight="bold"
-      fill="rgba(255,255,255,0.7)"
-      stroke="rgba(0,0,0,0.7)"
-      stroke-width="${strokeW}"
-      stroke-linejoin="round"
+      fill="#FFFFFF"
+      stroke="#000000"
+      stroke-width="2"
       paint-order="stroke fill"
-    >${text}</text>
+      opacity="0.3"
+      transform="rotate(-30, ${cx}, ${cy})"
+    >Eiscaf&#233; Simonetti</text>
   </svg>`
 
-  const compositeTop  = Math.max(0, height - svgH - edgePad)
-  const compositeLeft = Math.max(0, width  - svgW - edgePad)
+  const compositeTop  = 0
+  const compositeLeft = 0
 
   const result = image
     .withMetadata({
