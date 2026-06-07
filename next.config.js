@@ -21,6 +21,9 @@ const nextConfig = {
   },
   turbopack: {},
   serverExternalPackages: ['sharp'],
+  outputFileTracingIncludes: {
+    '/api/admin/**': ['./public/fonts/**/*'],
+  },
   async headers() {
     return [
       {
