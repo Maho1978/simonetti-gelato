@@ -31,6 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         notes,
         payment_intent_id,
         payment_method,
+        payment_status,
         order_type,
         status,
       } = req.body
@@ -56,6 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           notes:             notes             || null,
           payment_intent_id: payment_intent_id || null,
           payment_method:    payment_method    || 'cash',
+          payment_status:    payment_status    || 'pending',
           order_type:        order_type        || 'delivery',
           status:            status            || 'OFFEN',
         })
