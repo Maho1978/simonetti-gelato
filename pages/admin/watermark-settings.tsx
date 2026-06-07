@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import AdminLayout from '@/components/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import { DEFAULT_CONFIG } from '@/lib/watermark-config'
@@ -12,25 +12,7 @@ const POSITION_LABELS: Record<WatermarkConfig['position'], string> = {
   'tile':         'Kachel-Muster',
 }
 
-function buildLivePreviewUrl(imageUrl: string, token: string, cfg: WatermarkConfig): string {
-  const p = new URLSearchParams({
-    imageUrl,
-    token,
-    wm_text:              cfg.text,
-    wm_font_size_percent: String(cfg.font_size_percent),
-    wm_opacity:           String(cfg.opacity),
-    wm_position:          cfg.position,
-    wm_rotation:          String(cfg.rotation),
-    wm_color:             cfg.color,
-    wm_shadow_enabled:    String(cfg.shadow_enabled),
-    wm_shadow_color:      cfg.shadow_color,
-    wm_font_weight:       cfg.font_weight,
-    cb:                   String(Date.now()),
-  })
-  return `/api/admin/watermark-preview?${p}`
-}
-
-// ── kleine Form-Helfer ─────────────────────────────────────────────────────
+// ── Form-Helfer ────────────────────────────────────────────────────────────
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -44,8 +26,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Slider({
-  value, min, max, step = 1,
-  onChange, display,
+  value, min, max, step = 1, onChange, display,
 }: {
   value: number; min: number; max: number; step?: number;
   onChange: (v: number) => void; display: string;
@@ -53,8 +34,7 @@ function Slider({
   return (
     <div className="flex items-center gap-3">
       <input
-        type="range" min={min} max={max} step={step}
-        value={value}
+        type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
         className="flex-1 h-2 accent-[#4a5d54] cursor-pointer"
       />
@@ -66,67 +46,101 @@ function Slider({
 // ── Hauptkomponente ────────────────────────────────────────────────────────
 
 export default function WatermarkSettingsPage() {
+  // Live config (updated immediately on every input)
   const [cfg, setCfg]             = useState<WatermarkConfig>(DEFAULT_CONFIG)
-  const [token, setToken]         = useState('')
+  // Debounced snapshot used to build the preview URL
+  const [debouncedCfg, setDebouncedCfg] = useState<WatermarkConfig>(DEFAULT_CONFIG)
+  // Incrementing key forces img reload when debounce fires
+  const [cbKey, setCbKey]         = useState(0)
+
+  const [token, setToken]         = useState<string | null>(null)
   const [testImg, setTestImg]     = useState<string | null>(null)
-  const [previewUrl, setPreview]  = useState<string | null>(null)
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(false)
   const [productCount, setCount]  = useState(0)
   const [showDialog, setDialog]   = useState(false)
   const [copied, setCopied]       = useState(false)
   const [previewErr, setPreviewErr] = useState(false)
-  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ── init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      setToken(session.access_token)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+        setToken(session.access_token)
 
-      // Load existing config
-      const res = await fetch('/api/admin/watermark-config')
-      if (res.ok) setCfg(await res.json())
+        // Load config — sync debouncedCfg immediately (no 300ms wait on page open)
+        const res = await fetch('/api/admin/watermark-config')
+        if (res.ok) {
+          const dbConfig: WatermarkConfig = await res.json()
+          setCfg(dbConfig)
+          setDebouncedCfg(dbConfig)
+          setCbKey(k => k + 1)
+        }
 
-      // First product with image as test subject
-      const { data: prods } = await supabase
-        .from('products')
-        .select('image_url')
-        .not('image_url', 'is', null)
-        .neq('image_url', '')
-        .order('name')
-        .limit(1)
-      if (prods?.[0]?.image_url) setTestImg(prods[0].image_url)
+        // First product with an image as test subject
+        const { data: prods } = await supabase
+          .from('products')
+          .select('image_url')
+          .not('image_url', 'is', null)
+          .neq('image_url', '')
+          .order('name')
+          .limit(1)
+        if (prods?.[0]?.image_url) setTestImg(prods[0].image_url)
 
-      // Total count for dialog
-      const { count } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .not('image_url', 'is', null)
-      setCount(count ?? 0)
+        const { count } = await supabase
+          .from('products')
+          .select('*', { count: 'exact', head: true })
+          .not('image_url', 'is', null)
+        setCount(count ?? 0)
+      } catch (err) {
+        console.error('[watermark-settings] init error:', err)
+      }
     }
     init()
   }, [])
 
-  // Debounced live preview on every config change
+  // ── debounce: update snapshot 300ms after last config change ──────────────
   useEffect(() => {
-    if (!token || !testImg) return
-    if (debounce.current) clearTimeout(debounce.current)
-    debounce.current = setTimeout(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      setDebouncedCfg(cfg)
+      setCbKey(k => k + 1)
       setPreviewErr(false)
-      setPreview(buildLivePreviewUrl(testImg, token, cfg))
     }, 300)
-    return () => { if (debounce.current) clearTimeout(debounce.current) }
-  }, [cfg, token, testImg])
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [cfg])
 
+  // ── preview URL — computed, never stale ────────────────────────────────────
+  const previewUrl = useMemo<string | null>(() => {
+    if (!token || !testImg) return null
+    const p = new URLSearchParams({
+      imageUrl:             testImg,
+      token,
+      wm_text:              debouncedCfg.text,
+      wm_font_size_percent: String(debouncedCfg.font_size_percent),
+      wm_opacity:           String(debouncedCfg.opacity),
+      wm_position:          debouncedCfg.position,
+      wm_rotation:          String(debouncedCfg.rotation),
+      wm_color:             debouncedCfg.color,
+      wm_shadow_enabled:    String(debouncedCfg.shadow_enabled),
+      wm_shadow_color:      debouncedCfg.shadow_color,
+      wm_font_weight:       debouncedCfg.font_weight,
+      _cb:                  String(cbKey),
+    })
+    return `/api/admin/watermark-preview?${p}`
+  }, [token, testImg, debouncedCfg, cbKey])
+
+  // ── helpers ────────────────────────────────────────────────────────────────
   function set<K extends keyof WatermarkConfig>(k: K, v: WatermarkConfig[K]) {
     setCfg(prev => ({ ...prev, [k]: v }))
   }
 
   async function handleSave() {
     if (!token) return
-    setSaving(true)
-    setSaved(false)
+    setSaving(true); setSaved(false)
     const res = await fetch('/api/admin/watermark-config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -146,6 +160,7 @@ export default function WatermarkSettingsPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // ── render ─────────────────────────────────────────────────────────────────
   return (
     <AdminLayout>
       <div className="p-6 max-w-7xl mx-auto">
@@ -155,14 +170,13 @@ export default function WatermarkSettingsPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Wasserzeichen-Einstellungen</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Einstellungen werden sofort in der Vorschau angezeigt.
-              Erst nach dem Speichern + Batch-Script wirken sie auf alle Bilder.
+              Vorschau aktualisiert 300 ms nach der letzten Änderung. Erst nach Speichern wirken
+              Einstellungen auf neue Uploads.
             </p>
           </div>
           <div className="flex gap-3">
             <button
-              onClick={handleSave}
-              disabled={saving}
+              onClick={handleSave} disabled={saving}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white transition"
               style={{ backgroundColor: '#4a5d54' }}
             >
@@ -180,7 +194,6 @@ export default function WatermarkSettingsPage() {
           </div>
         </div>
 
-        {/* 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
           {/* ── FORM ── */}
@@ -188,8 +201,7 @@ export default function WatermarkSettingsPage() {
 
             <Field label="Wasserzeichen-Text">
               <input
-                type="text"
-                value={cfg.text}
+                type="text" value={cfg.text}
                 onChange={e => set('text', e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4a5d54]"
               />
@@ -206,7 +218,7 @@ export default function WatermarkSettingsPage() {
             <Field label={`Transparenz – ${Math.round(cfg.opacity * 100)}%`}>
               <Slider
                 value={Math.round(cfg.opacity * 100)} min={0} max={100}
-                onChange={v => set('opacity', v / 100)}
+                onChange={v => set('opacity', Math.round(v) / 100)}
                 display={`${Math.round(cfg.opacity * 100)}%`}
               />
             </Field>
@@ -234,8 +246,7 @@ export default function WatermarkSettingsPage() {
             <Field label="Textfarbe">
               <div className="flex items-center gap-3">
                 <input
-                  type="color"
-                  value={cfg.color}
+                  type="color" value={cfg.color}
                   onChange={e => set('color', e.target.value)}
                   className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
                 />
@@ -246,9 +257,7 @@ export default function WatermarkSettingsPage() {
             <Field label="Schatten">
               <div className="flex items-center gap-3">
                 <button
-                  type="button"
-                  role="switch"
-                  aria-checked={cfg.shadow_enabled}
+                  type="button" role="switch" aria-checked={cfg.shadow_enabled}
                   onClick={() => set('shadow_enabled', !cfg.shadow_enabled)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     cfg.shadow_enabled ? 'bg-[#4a5d54]' : 'bg-gray-300'
@@ -258,9 +267,7 @@ export default function WatermarkSettingsPage() {
                     cfg.shadow_enabled ? 'translate-x-6' : 'translate-x-1'
                   }`} />
                 </button>
-                <span className="text-sm text-gray-600">
-                  {cfg.shadow_enabled ? 'An' : 'Aus'}
-                </span>
+                <span className="text-sm text-gray-600">{cfg.shadow_enabled ? 'An' : 'Aus'}</span>
               </div>
             </Field>
 
@@ -268,8 +275,7 @@ export default function WatermarkSettingsPage() {
               <Field label="Schattenfarbe">
                 <div className="flex items-center gap-3">
                   <input
-                    type="color"
-                    value={cfg.shadow_color}
+                    type="color" value={cfg.shadow_color}
                     onChange={e => set('shadow_color', e.target.value)}
                     className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5"
                   />
@@ -293,12 +299,13 @@ export default function WatermarkSettingsPage() {
           {/* ── LIVE-VORSCHAU ── */}
           <div className="space-y-4 sticky top-20">
             <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Live-Vorschau {!testImg && <span className="text-amber-500">(kein Testbild gefunden)</span>}
+              Live-Vorschau
+              {!token && <span className="text-red-400 ml-2 font-normal normal-case">(nicht eingeloggt)</span>}
+              {token && !testImg && <span className="text-amber-500 ml-2 font-normal normal-case">(kein Produkt mit Bild)</span>}
             </div>
 
             {testImg ? (
               <div className="grid grid-cols-2 gap-3">
-                {/* Original */}
                 <div className="space-y-1">
                   <div className="text-xs text-gray-400 font-medium text-center">Original</div>
                   <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
@@ -306,13 +313,13 @@ export default function WatermarkSettingsPage() {
                   </div>
                 </div>
 
-                {/* Watermarked preview */}
                 <div className="space-y-1">
                   <div className="text-xs font-medium text-center" style={{ color: '#4a5d54' }}>
                     Mit Wasserzeichen
                   </div>
-                  <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden border border-gray-200 relative">
+                  <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
                     {previewUrl && !previewErr ? (
+                      // key forces unmount/remount → new network request even if URL diff is only _cb
                       <img
                         key={previewUrl}
                         src={previewUrl}
@@ -337,15 +344,18 @@ export default function WatermarkSettingsPage() {
               <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 border border-gray-200">
                 <div className="text-center">
                   <ImageOff size={32} className="mx-auto mb-2 opacity-40" />
-                  <div className="text-sm">Kein Produkt mit Bild vorhanden</div>
+                  <div className="text-sm">
+                    {token ? 'Kein Produkt mit Bild gefunden' : 'Nicht eingeloggt'}
+                  </div>
                 </div>
               </div>
             )}
 
-            <p className="text-xs text-gray-400">
-              Vorschau aktualisiert 300 ms nach der letzten Änderung.
-              Das Testbild ist das erste Produkt alphabetisch.
-            </p>
+            {previewUrl && (
+              <p className="text-xs text-gray-400 break-all">
+                <span className="font-medium">URL:</span> {previewUrl.substring(0, 80)}…
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -362,20 +372,15 @@ export default function WatermarkSettingsPage() {
                 Alle {productCount} Produktbilder überschreiben?
               </h2>
             </div>
-
             <p className="text-sm text-gray-600">
-              Dieser Vorgang fügt das Wasserzeichen zu allen bestehenden Produktbildern hinzu
-              und <strong>überschreibt die Originale</strong>. Er kann nicht rückgängig gemacht werden.
+              Fügt das Wasserzeichen zu allen bestehenden Produktbildern hinzu und
+              <strong> überschreibt die Originale</strong>. Nicht rückgängig machbar.
             </p>
-
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              ✅ Zuerst die Einstellungen speichern — das Batch-Script liest die Config aus der Datenbank.
+              ✅ Einstellungen zuerst speichern — das Batch-Script liest die Config aus der Datenbank.
             </div>
-
             <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              <div className="text-xs text-gray-500 mb-1.5 font-medium">
-                Im Webshop-Verzeichnis ausführen:
-              </div>
+              <div className="text-xs text-gray-500 mb-1.5 font-medium">Im Webshop-Verzeichnis ausführen:</div>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-sm font-mono text-gray-800">
                   npx tsx scripts/watermark-existing.ts
@@ -391,11 +396,6 @@ export default function WatermarkSettingsPage() {
                 Tipp: zuerst <code className="bg-gray-100 px-1 rounded">--limit 3</code> zum Testen
               </div>
             </div>
-
-            <p className="text-xs text-gray-400">
-              Das Script läuft lokal (nicht im Browser), da Vercel-Funktionen für diesen Vorgang zu kurz leben.
-            </p>
-
             <div className="flex justify-end">
               <button
                 onClick={() => setDialog(false)}
