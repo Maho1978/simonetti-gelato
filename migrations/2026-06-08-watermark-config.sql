@@ -25,14 +25,19 @@ insert into watermark_config (id)
 
 alter table watermark_config enable row level security;
 
--- Neue Supabase-Pflicht-GRANTs (ab 30.5.2026)
+-- GRANTs: Lesen für anon/authenticated, alles für service_role.
+-- Kein "grant update to authenticated" — Writes laufen ausschließlich über
+-- die Admin-API-Route mit service_role, die RLS automatisch bypasst.
 grant select on watermark_config to anon, authenticated;
-grant update on watermark_config to authenticated;
 grant all    on watermark_config to service_role;
 
--- RLS: Lesen für alle, Schreiben nur für authentifizierte
-create policy if not exists "select_watermark_config"
+-- RLS: Lesen für alle erlaubt.
+-- "create policy if not exists" wird von PG bei Policies nicht unterstützt
+-- → drop first, dann create.
+drop policy if exists "select_watermark_config" on watermark_config;
+create policy "select_watermark_config"
   on watermark_config for select using (true);
 
-create policy if not exists "update_watermark_config"
-  on watermark_config for update using (auth.role() = 'authenticated');
+-- BEWUSST KEINE UPDATE-Policy. service_role bypasst RLS automatisch,
+-- alle anderen (auch eingeloggte Kunden) werden damit blockiert.
+drop policy if exists "update_watermark_config" on watermark_config;
