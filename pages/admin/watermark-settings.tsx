@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import AdminLayout from '@/components/AdminLayout'
 import { supabase } from '@/lib/supabase'
-import { DEFAULT_CONFIG } from '@/lib/watermark'
-import type { WatermarkConfig } from '@/lib/watermark'
+import { DEFAULT_CONFIG } from '@/lib/watermark-config'
+import type { WatermarkConfig } from '@/lib/watermark-config'
 import { Save, AlertTriangle, Check, ImageOff } from 'lucide-react'
 
 const POSITION_LABELS: Record<WatermarkConfig['position'], string> = {

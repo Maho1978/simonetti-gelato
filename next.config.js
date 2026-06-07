@@ -20,6 +20,7 @@ const nextConfig = {
     domains: ['localhost', 'flydacnsbsnpwpqezuof.supabase.co'],
   },
   turbopack: {},
+  serverExternalPackages: ['sharp'],
   async headers() {
     return [
       {
