@@ -232,8 +232,6 @@ export default function Checkout({ session }: { session: Session | null }) {
   const isGuest   = guest === 'true'
 
   const [cart, setCart]                 = useState<CartItem[]>([])
-  const [clientSecret, setClientSecret] = useState('')
-
   const [shopStatus, setShopStatus]     = useState<ShopStatusData | null>(null)
   const [shopLoading, setShopLoading]   = useState(true)
 
@@ -343,21 +341,14 @@ export default function Checkout({ session }: { session: Session | null }) {
     if (savedCart) {
       const parsedCart = JSON.parse(savedCart)
       setCart(parsedCart)
-      createPaymentIntent(parsedCart, null, 0, deliveryFee)
     } else {
       router.push('/')
     }
   }, [])
 
-  useEffect(() => {
-    if (cart.length > 0) { setClientSecret(''); createPaymentIntent(cart, voucher, tip, effectiveDeliveryFee) }
-  }, [orderType])
-
   const updateCart = (newCart: CartItem[]) => {
     setCart(newCart)
     localStorage.setItem('simonetti-cart', JSON.stringify(newCart))
-    setClientSecret('')
-    createPaymentIntent(newCart, voucher, tip)
   }
 
   const changeQty = (cartId: string, delta: number) => {
@@ -380,22 +371,11 @@ export default function Checkout({ session }: { session: Session | null }) {
   const subtotal   = cart.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity), 0)
   const discount   = (voucher?.discountAmount || 0) + (loyalty?.discountAmount || 0)
   const roundTo10Cents = (val: number) => Math.round(val * 10) / 10
-  const grandTotal = roundTo10Cents(Math.max(0, subtotal - discount + effectiveDeliveryFee + tip))
+  const grandTotal  = roundTo10Cents(Math.max(0, subtotal - discount + effectiveDeliveryFee + tip))
+  const amountCents = Math.round(grandTotal * 100)
 
-  const createPaymentIntent = async (cartItems: CartItem[], appliedVoucher: AppliedVoucher | null, tipAmount: number, fee?: number) => {
-    const sub    = cartItems.reduce((sum, i) => sum + (i.totalPrice || i.price * i.quantity), 0)
-    const disc   = appliedVoucher?.discountAmount || 0
-    const useFee = fee ?? effectiveDeliveryFee
-    const total  = parseFloat(Math.max(0, sub - disc + useFee + tipAmount).toFixed(2))
-    try {
-      const res  = await fetch('/api/stripe/create-payment-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: total, metadata: { voucher_code: appliedVoucher?.code || null, voucher_id: appliedVoucher?.id || null, discount: disc, tip: tipAmount } }) })
-      const data = await res.json()
-      setClientSecret(data.clientSecret)
-    } catch (err) { console.error('PaymentIntent error:', err) }
-  }
-
-  const handleVoucherApply = (applied: AppliedVoucher | null) => { setVoucher(applied); setClientSecret(''); createPaymentIntent(cart, applied, tip) }
-  const handleTipChange    = (amount: number) => { setTip(amount); setClientSecret(''); createPaymentIntent(cart, voucher, amount) }
+  const handleVoucherApply = (applied: AppliedVoucher | null) => { setVoucher(applied) }
+  const handleTipChange    = (amount: number) => { setTip(amount) }
 
   const saveOrder = async (paymentId: string, method: string, cashChangeNote?: string) => {
     const orderData = {
@@ -586,7 +566,7 @@ export default function Checkout({ session }: { session: Session | null }) {
               )}
 
               {session?.user?.id ? (
-                <LoyaltyRedeemer userId={session.user.id} applied={loyalty} onApply={(l) => { setLoyalty(l); setClientSecret(''); createPaymentIntent(cart, voucher, tip) }} />
+                <LoyaltyRedeemer userId={session.user.id} applied={loyalty} onApply={(l) => { setLoyalty(l) }} />
               ) : null}
 
               {(showVoucher || showTip) && (
@@ -770,8 +750,8 @@ export default function Checkout({ session }: { session: Session | null }) {
                       </p>
                     )}
 
-                    {paymentMethod === 'stripe' && clientSecret && (
-                      <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#111827', borderRadius: '12px' } } }}>
+                    {paymentMethod === 'stripe' && amountCents > 0 && (
+                      <Elements stripe={stripePromise} options={{ mode: 'payment', currency: 'eur', amount: amountCents, appearance: { theme: 'stripe', variables: { colorPrimary: '#111827', borderRadius: '12px' } } }}>
                         <StripeForm
                           session={session} isGuest={isGuest} cart={cart} total={grandTotal} subtotal={subtotal}
                           shopOpenForType={shopOpenForType} minimumOrder={effectiveMinimumOrder} deliveryFee={effectiveDeliveryFee}
@@ -779,12 +759,9 @@ export default function Checkout({ session }: { session: Session | null }) {
                           name={name} email={email} phone={phone}
                           street={fullStreet} zip={zip} city={city} notes={notes}
                           orderType={orderType} isPreorder={shopStatus?.isPreorder ?? false}
-                          agbAccepted={agbAccepted} clientSecret={clientSecret}
+                          agbAccepted={agbAccepted} amountCents={amountCents}
                         />
                       </Elements>
-                    )}
-                    {paymentMethod === 'stripe' && !clientSecret && (
-                      <div className="text-center py-8"><div className="text-4xl mb-2 animate-pulse">🍦</div><p className="text-sm text-gray-400">Zahlung wird vorbereitet...</p></div>
                     )}
 
                     {paymentMethod === 'paypal' && showPayPal && paypalClientId && (
@@ -851,12 +828,12 @@ export default function Checkout({ session }: { session: Session | null }) {
   )
 }
 
-function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, loyalty, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted, clientSecret }: {
+function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, loyalty, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted, amountCents }: {
   session: Session | null; isGuest: boolean; cart: CartItem[]; total: number; subtotal: number
   shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number
   voucher: AppliedVoucher | null; loyalty: AppliedLoyalty | null
   tip: number; name: string; email: string; phone: string; street: string; zip: string; city: string; notes: string
-  orderType: string; isPreorder: boolean; agbAccepted: boolean; clientSecret: string
+  orderType: string; isPreorder: boolean; agbAccepted: boolean; amountCents: number
 }) {
   const stripe   = useStripe()
   const elements = useElements()
@@ -871,6 +848,13 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
 
   const isBlocked = shopOpenForType === false || subtotal < minimumOrder || !isFormValid || !agbAccepted
 
+  // Betrag in Elements aktuell halten wenn sich Warenkorb/Voucher/Tip ändern
+  useEffect(() => {
+    if (elements && amountCents > 0) {
+      elements.update({ amount: amountCents })
+    }
+  }, [amountCents])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!agbAccepted) return
@@ -883,7 +867,7 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
     setLoading(true); setError('')
     let pendingOrderId: string | null = null
     try {
-      // 1. Bestellung AUSSTEHEND anlegen — verhindert Race Condition mit Stripe-Webhook
+      // 1. Bestellung AUSSTEHEND anlegen
       const orderData = {
         user_id: session?.user?.id || null, guest_email: isGuest ? email : null,
         customer_name: name, customer_email: isGuest ? email : session?.user?.email,
@@ -900,29 +884,40 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
       pendingOrderId = order?.id ?? null
       if (!pendingOrderId) throw new Error('Bestellung konnte nicht angelegt werden. Bitte erneut versuchen.')
 
-      // 2. PaymentIntent-Metadata mit order_id verknüpfen
-      if (pendingOrderId && clientSecret) {
-        const piId = clientSecret.split('_secret_')[0]
-        await fetch('/api/stripe/payment-intent-metadata', {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentIntentId: piId, orderId: pendingOrderId }),
-        })
-      }
+      // 2. PaymentIntent mit order_id in Metadata erstellen (Lazy — order_id ab Beginn bekannt)
+      const piRes = await fetch('/api/stripe/create-payment-intent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: total,
+          customerEmail: isGuest ? email : session?.user?.email,
+          metadata: {
+            order_id: pendingOrderId,
+            voucher_code: voucher?.code || null,
+            voucher_id: voucher?.id || null,
+            discount: voucher?.discountAmount || 0,
+            tip,
+          },
+        }),
+      })
+      if (!piRes.ok) throw new Error('Zahlung konnte nicht initialisiert werden. Bitte erneut versuchen.')
+      const { clientSecret } = await piRes.json()
+      if (!clientSecret) throw new Error('Zahlung konnte nicht initialisiert werden. Bitte erneut versuchen.')
 
-      // 3. Zahlung bestätigen
+      // 3. Zahlung bestätigen — clientSecret des frisch erstellten PI übergeben
       const { error: stripeError } = await stripe.confirmPayment({
         elements,
+        clientSecret,
         redirect: 'if_required',
         confirmParams: { return_url: `${window.location.origin}/order-success` },
       })
       if (stripeError) {
-        // Bestellung stornieren wenn Zahlung fehlschlägt
-        if (pendingOrderId) {
+        try {
           await fetch(`/api/orders/${pendingOrderId}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'STORNIERT' }),
           })
-        }
+        } catch {}
+        pendingOrderId = null
         throw new Error(stripeError.message)
       }
 
@@ -937,7 +932,17 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
       // 5. Webhook setzt Bestellung auf OFFEN — hier nur Cart leeren und weiterleiten
       localStorage.removeItem('simonetti-cart'); localStorage.removeItem('cart')
       router.push('/order-success')
-    } catch (err: any) { setError(err.message || 'Zahlung fehlgeschlagen') } finally { setLoading(false) }
+    } catch (err: any) {
+      if (pendingOrderId) {
+        try {
+          await fetch(`/api/orders/${pendingOrderId}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'STORNIERT' }),
+          })
+        } catch {}
+      }
+      setError(err.message || 'Zahlung fehlgeschlagen')
+    } finally { setLoading(false) }
   }
 
   const btnLabel = loading ? null
