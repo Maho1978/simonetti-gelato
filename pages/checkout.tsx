@@ -416,6 +416,7 @@ export default function Checkout({ session }: { session: Session | null }) {
       notes:             [notes, cashChangeNote ? `Wechselgeld für: ${cashChangeNote}` : '', loyalty?.note || ''].filter(Boolean).join(' | ') || null,
       payment_intent_id: paymentId,
       payment_method:    method,
+      payment_status:    method === 'stripe' ? 'pending' : method === 'paypal' ? 'paid' : 'pending',
       order_type:        orderType,
       status:            'OFFEN',
     }
