@@ -1,5 +1,5 @@
 ﻿import type { NextApiRequest, NextApiResponse } from 'next'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 // Hilfsfunktion: Bestellnummer generieren z.B. "SIM-2024-0042"
 function generateOrderNumber(): string {
