@@ -28,6 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const accessToken = await getPayPalToken();
+    if (!accessToken) throw new Error('PayPal Token nicht verfügbar');
+
     const captureRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders/${token}/capture`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
@@ -35,6 +37,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const captureData = await captureRes.json();
 
     if (captureData.status === 'COMPLETED') {
+      // Sicherstellen dass der PayPal-Auftrag zu dieser DB-Bestellung gehört
+      const capturedOrderId = captureData.purchase_units?.[0]?.custom_id;
+      if (capturedOrderId && capturedOrderId !== orderId) {
+        console.error(`PayPal capture mismatch: custom_id=${capturedOrderId}, query orderId=${orderId}`);
+        return res.redirect(302, `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?error=payment_mismatch`);
+      }
+
       const captureId = captureData.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? null;
       await supabase.from('orders').update({
         payment_status: 'paid',
@@ -49,6 +58,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.redirect(302, `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?error=payment_failed`);
   } catch (err: any) {
     console.error('PayPal capture error:', err);
-    return res.redirect(302, `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?error=${encodeURIComponent(err.message)}`);
+    return res.redirect(302, `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?error=payment_error`);
   }
 }

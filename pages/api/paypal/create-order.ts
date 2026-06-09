@@ -54,12 +54,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // PayPal Order erstellen
     const token = await getPayPalToken();
+    if (!token) throw new Error('PayPal Token nicht verfügbar');
     const paypalRes = await fetch(`${PAYPAL_BASE}/v2/checkout/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({
         intent: 'CAPTURE',
         purchase_units: [{
+          custom_id: order.id,
           amount: { currency_code: 'EUR', value: parseFloat(amount).toFixed(2) },
           description: `Eiscafé Simonetti - Bestellung ${orderNumber}`,
         }],

@@ -81,6 +81,17 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
+  const { data: existing } = await supabase
+    .from('orders')
+    .select('payment_status')
+    .eq('id', orderId)
+    .single()
+
+  if (existing?.payment_status === 'paid') {
+    console.log(`ℹ️  checkout.session.completed: Bestellung ${orderId} bereits bezahlt, skip.`)
+    return
+  }
+
   const paymentIntentId = typeof session.payment_intent === 'string'
     ? session.payment_intent
     : session.payment_intent?.id
@@ -114,6 +125,17 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
 async function onPaymentSucceeded(pi: Stripe.PaymentIntent) {
   const orderId = pi.metadata?.order_id
   if (!orderId) return
+
+  const { data: existing } = await supabase
+    .from('orders')
+    .select('payment_status')
+    .eq('id', orderId)
+    .single()
+
+  if (existing?.payment_status === 'paid') {
+    console.log(`ℹ️  payment_intent.succeeded: Bestellung ${orderId} bereits bezahlt, skip.`)
+    return
+  }
 
   const { data: order, error } = await supabase
     .from('orders')
