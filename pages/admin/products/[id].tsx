@@ -121,24 +121,38 @@ export default function ProductDetail() {
     }
 
     setUploading(true)
-    const ext      = file.name.split('.').pop()
-    const fileName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-    const { error: uploadError } = await supabase.storage
-      .from('product-images')
-      .upload(fileName, file, { cacheControl: '3600', upsert: false })
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror   = reject
+      reader.readAsDataURL(file)
+    })
 
-    if (uploadError) {
-      showToast('❌ Upload fehlgeschlagen: ' + uploadError.message)
+    const { data: { session } } = await supabase.auth.getSession()
+
+    const uploadRes = await fetch('/api/admin/upload-product-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({
+        base64:   dataUrl.split(',')[1],
+        mimeType: file.type,
+        fileName: file.name,
+      }),
+    })
+
+    if (!uploadRes.ok) {
+      const err = await uploadRes.json()
+      showToast('❌ Upload fehlgeschlagen: ' + (err.error ?? 'Unbekannter Fehler'))
       setUploading(false)
       return
     }
 
-    const { data: urlData } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(fileName)
-
-    setImageUrl(urlData.publicUrl)
+    const { url } = await uploadRes.json()
+    setImageUrl(url)
     setUploading(false)
     showToast('✅ Bild hochgeladen!')
   }
