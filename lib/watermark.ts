@@ -43,8 +43,10 @@ function textEl(
   cfg: WatermarkConfig,
   rx: number, ry: number,
 ): string {
+  // Shadow opacity is always stronger than fill so it creates real contrast on any background
+  const shadowOpacity = Math.min(cfg.opacity + 0.3, 1)
   const strokeStyle = cfg.shadow_enabled
-    ? `style="paint-order: stroke fill; stroke: ${escapeXml(cfg.shadow_color)}; stroke-width: 2px; stroke-opacity: ${cfg.opacity};"`
+    ? `style="paint-order: stroke fill; stroke: ${escapeXml(cfg.shadow_color)}; stroke-width: 3px; stroke-linejoin: round; stroke-opacity: ${shadowOpacity};"`
     : ''
   return `<text
     x="${x}" y="${y}"
@@ -77,8 +79,9 @@ function buildSvg(width: number, height: number, fontSize: number, cfg: Watermar
     body = textEl(cx, cy, 'middle', 'middle', fontSize, cfg, cx, cy)
 
   } else if (cfg.position === 'bottom-right') {
+    // use 'auto' baseline (= text bottom at y) — 'text-after-edge' is ignored by librsvg
     const ax = width - edgePad, ay = height - edgePad
-    body = textEl(ax, ay, 'end', 'text-after-edge', fontSize, cfg, ax, ay)
+    body = textEl(ax, ay, 'end', 'auto', fontSize, cfg, ax, ay)
 
   } else if (cfg.position === 'top-left') {
     const ax = edgePad, ay = edgePad + fontSize

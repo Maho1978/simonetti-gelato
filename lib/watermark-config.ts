@@ -14,9 +14,9 @@ export interface WatermarkConfig {
 
 export const DEFAULT_CONFIG: WatermarkConfig = {
   text:              'Eiscafé Simonetti',
-  font_size_percent: 7,
-  opacity:           0.3,
-  position:          'center',
+  font_size_percent: 12,
+  opacity:           0.6,
+  position:          'tile',
   rotation:          -30,
   color:             '#FFFFFF',
   shadow_enabled:    true,
