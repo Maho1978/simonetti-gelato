@@ -20,7 +20,7 @@ const nextConfig = {
     domains: ['localhost', 'flydacnsbsnpwpqezuof.supabase.co'],
   },
   turbopack: {},
-  serverExternalPackages: ['sharp', '@napi-rs/canvas'],
+  serverExternalPackages: ['sharp'],
   outputFileTracingIncludes: {
     '/api/admin/**': ['./public/fonts/**/*'],
   },
