@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 44" role="img" aria-label="Link by Stripe">
+  <rect width="120" height="44" rx="8" fill="#00D66B"/>
+  <text x="15" y="30" font-family="-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif" font-size="20" font-weight="700" fill="#fff" letter-spacing="-0.3">Link</text>
+  <path d="M84 14h8a8 8 0 0 1 0 16h-8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path d="M88 22h12" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+</svg>

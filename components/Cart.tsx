@@ -2,6 +2,7 @@ import { X, Minus, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { Session } from '@supabase/supabase-js'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
+import PaymentMethods from './PaymentMethods'
 
 interface CartItem {
   id: string
@@ -271,8 +272,13 @@ export default function Cart({
                 </div>
               )}
 
+              {/* Zahlungsmittel */}
+              <div className="mt-5">
+                <PaymentMethods variant="cart" />
+              </div>
+
               {/* Checkout Buttons */}
-              <div className="mt-6 space-y-3">
+              <div className="mt-4 space-y-3">
                 {session ? (
                   <button
                     onClick={handleCheckout}
