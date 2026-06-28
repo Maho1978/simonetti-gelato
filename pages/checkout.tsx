@@ -4,7 +4,7 @@ import { useRouter } from 'next/router'
 import { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { loadStripe } from '@stripe/stripe-js'
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
+import { Elements, PaymentElement, ExpressCheckoutElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 import Navbar from '@/components/Navbar'
 import { AlertCircle, Tag, X, Check, Loader2, CreditCard, User, Clock, Plus, Minus, Trash2, Banknote } from 'lucide-react'
@@ -243,6 +243,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [showStripe, setShowStripe]     = useState(true)
   const [showPayPal, setShowPayPal]     = useState(false)
   const [showCash, setShowCash]         = useState(false)
+  const [expressHidden, setExpressHidden] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'cash'>('stripe')
   const [deliveryFee, setDeliveryFee]   = useState(3.00)
   const [minimumOrder, setMinimumOrder] = useState(15.00)
@@ -734,6 +735,27 @@ export default function Checkout({ session }: { session: Session | null }) {
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
                       <CreditCard size={13} /> Zahlungsmethode
                     </div>
+
+                    {/* ── Express Checkout (Apple Pay / Google Pay) ── */}
+                    {showStripe && amountCents > 0 && !expressHidden && (
+                      <Elements
+                        stripe={stripePromise}
+                        options={{ mode: 'payment', currency: 'eur', amount: amountCents, appearance: { theme: 'stripe', variables: { colorPrimary: '#111827', borderRadius: '12px' } } }}
+                      >
+                        <ExpressCheckoutForm
+                          session={session} isGuest={isGuest} cart={cart} total={grandTotal} subtotal={subtotal}
+                          shopOpenForType={shopOpenForType} minimumOrder={effectiveMinimumOrder} deliveryFee={effectiveDeliveryFee}
+                          voucher={voucher} loyalty={loyalty} tip={tip}
+                          name={name} email={email} phone={phone}
+                          street={fullStreet} zip={zip} city={city} notes={notes}
+                          orderType={orderType} isPreorder={shopStatus?.isPreorder ?? false}
+                          agbAccepted={agbAccepted} amountCents={amountCents}
+                          isFormValid={isFormValid}
+                          onHide={() => setExpressHidden(true)}
+                        />
+                      </Elements>
+                    )}
+
                     <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${paymentOptions.length}, 1fr)` }}>
                       {paymentOptions.map(opt => (
                         <button key={opt.id} type="button" onClick={() => setPaymentMethod(opt.id as any)}
@@ -963,5 +985,140 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
           : btnLabel}
       </button>
     </form>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ExpressCheckoutForm — Apple Pay / Google Pay über den Tabs
+// Braucht eigenen Elements-Provider (separat vom StripeForm-Provider)
+// ─────────────────────────────────────────────────────────────────────────────
+function ExpressCheckoutForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, loyalty, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted, amountCents, isFormValid, onHide }: {
+  session: Session | null; isGuest: boolean; cart: CartItem[]; total: number; subtotal: number
+  shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number
+  voucher: AppliedVoucher | null; loyalty: AppliedLoyalty | null
+  tip: number; name: string; email: string; phone: string; street: string; zip: string; city: string; notes: string
+  orderType: string; isPreorder: boolean; agbAccepted: boolean; amountCents: number
+  isFormValid: boolean; onHide: () => void
+}) {
+  const stripe   = useStripe()
+  const elements = useElements()
+  const router   = useRouter()
+  const [walletVisible, setWalletVisible] = useState(false)
+  const [error, setError]                 = useState('')
+
+  useEffect(() => {
+    if (elements && amountCents > 0) elements.update({ amount: amountCents })
+  }, [amountCents])
+
+  const handleReady = ({ availablePaymentMethods }: any) => {
+    if (availablePaymentMethods && Object.keys(availablePaymentMethods).length > 0) {
+      setWalletVisible(true)
+    } else {
+      onHide()
+    }
+  }
+
+  const handleClick = ({ resolve, reject }: any) => {
+    if (!isFormValid) {
+      setError('Bitte zuerst alle Pflichtfelder ausfüllen')
+      reject()
+      return
+    }
+    if (!agbAccepted) {
+      setError('Bitte AGB und Datenschutzerklärung akzeptieren')
+      reject()
+      return
+    }
+    setError('')
+    resolve({ emailRequired: false })
+  }
+
+  const handleConfirm = async () => {
+    if (!stripe || !elements) return
+    setError('')
+    let pendingOrderId: string | null = null
+    try {
+      const orderData = {
+        user_id: session?.user?.id || null, guest_email: isGuest ? email : null,
+        customer_name: name, customer_email: isGuest ? email : session?.user?.email,
+        customer_phone: phone || null, items: cart, subtotal,
+        discount: voucher?.discountAmount || 0, voucher_code: voucher?.code || null, voucher_id: voucher?.id || null,
+        delivery_fee: deliveryFee, tip, total,
+        delivery_address: orderType === 'pickup' ? null : { name, street, zip, city },
+        notes: [notes, loyalty?.note || ''].filter(Boolean).join(' | ') || null,
+        payment_method: 'stripe', order_type: orderType, status: 'AUSSTEHEND',
+      }
+      const orderRes = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) })
+      if (!orderRes.ok) throw new Error('Bestellung konnte nicht angelegt werden.')
+      const { order } = await orderRes.json()
+      pendingOrderId = order?.id ?? null
+      if (!pendingOrderId) throw new Error('Bestellung konnte nicht angelegt werden.')
+
+      const piRes = await fetch('/api/stripe/create-payment-intent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: total,
+          customerEmail: isGuest ? email : session?.user?.email,
+          metadata: {
+            order_id: pendingOrderId,
+            voucher_code: voucher?.code || null,
+            voucher_id: voucher?.id || null,
+            discount: voucher?.discountAmount || 0,
+            tip,
+          },
+        }),
+      })
+      if (!piRes.ok) throw new Error('Zahlung konnte nicht initialisiert werden.')
+      const { clientSecret } = await piRes.json()
+      if (!clientSecret) throw new Error('Zahlung konnte nicht initialisiert werden.')
+
+      const { error: stripeError } = await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        redirect: 'if_required',
+        confirmParams: { return_url: `${window.location.origin}/order-success` },
+      })
+      if (stripeError) {
+        try { await fetch(`/api/orders/${pendingOrderId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'STORNIERT' }) }) } catch {}
+        throw new Error(stripeError.message)
+      }
+
+      if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
+      if (loyalty?.points_used && session?.user?.id) {
+        await supabase.from('loyalty_transactions').insert({ user_id: session.user.id, points: -loyalty.points_used, reason: 'redemption' })
+      }
+      localStorage.removeItem('simonetti-cart'); localStorage.removeItem('cart')
+      router.push('/order-success')
+    } catch (err: any) {
+      if (pendingOrderId) {
+        try { await fetch(`/api/orders/${pendingOrderId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'STORNIERT' }) }) } catch {}
+      }
+      setError(err.message || 'Zahlung fehlgeschlagen')
+    }
+  }
+
+  return (
+    <div className={walletVisible ? 'block' : 'hidden'}>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl flex items-center gap-2 text-xs mb-2">
+          <AlertCircle size={14} /> {error}
+        </div>
+      )}
+      <ExpressCheckoutElement
+        onReady={handleReady}
+        onClick={handleClick}
+        onConfirm={handleConfirm}
+        options={{
+          buttonHeight: 48,
+          buttonTheme: { applePay: 'black', googlePay: 'black' },
+          layout: { maxColumns: 1, maxRows: 3 },
+        }}
+      />
+      <div className="flex items-center gap-3 my-3">
+        <div className="flex-1 h-px bg-gray-100" />
+        <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#C4973A]">oder zahlen mit</span>
+        <div className="flex-1 h-px bg-gray-100" />
+      </div>
+    </div>
   )
 }
