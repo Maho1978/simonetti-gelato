@@ -10,6 +10,10 @@ const withPWA = require('next-pwa')({
       urlPattern: /\/checkout/,
       handler: 'NetworkOnly',
     },
+    {
+      urlPattern: /\/\.well-known\//,
+      handler: 'NetworkOnly',
+    },
     ...require('next-pwa/cache'),
   ],
 })
@@ -39,6 +43,15 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'no-store, must-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/.well-known/apple-developer-merchantid-domain-association',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/octet-stream',
           },
         ],
       },
