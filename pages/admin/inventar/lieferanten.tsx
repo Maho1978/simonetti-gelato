@@ -17,7 +17,7 @@ type Lieferant = {
 }
 
 const EMPTY = {
-  name: '', kategorie: 'trocken' as const, telefon: '', email: '',
+  name: '', kategorie: 'trocken' as Lieferant['kategorie'], telefon: '', email: '',
   webseite: '', kontakt: '', lieferzeit_tage: '1', notizen: '', aktiv: true,
 }
 

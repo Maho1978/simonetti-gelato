@@ -14,7 +14,7 @@ import {
 } from '@/components/KanbanTracking'
 import OrderCorrectionModal from '@/components/OrderCorrectionModal'
 
-const COLUMNS = [
+const COLUMNS: { id: string; title: string; color: string; border: string; icon: string; hidden?: boolean }[] = [
   { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-50',   border: 'border-blue-200',   icon: '👨‍🍳' },
   { id: 'AN_FAHRER',      title: 'An Fahrer',      color: 'bg-orange-50', border: 'border-orange-200', icon: '🚗' },
   { id: 'GELIEFERT',      title: 'Geliefert',      color: 'bg-green-50',  border: 'border-green-200',  icon: '✅' },
