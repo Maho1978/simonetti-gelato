@@ -83,6 +83,7 @@ function ExtrasContent() {
       name: extra.name, price: extra.price, category: extra.category || '',
       active: extra.active, scope: extra.scope || 'global',
       category_names: extra.category_names || [], product_ids: extra.product_ids || [],
+      selection_type: extra.selection_type || 'multiple',
     })
   }
 

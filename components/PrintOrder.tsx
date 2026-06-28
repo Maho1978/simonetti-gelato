@@ -20,6 +20,7 @@ interface Order {
 
 interface PrintOrderProps {
   order: Order
+  type?: string
 }
 
 export default function PrintOrder({ order }: PrintOrderProps) {

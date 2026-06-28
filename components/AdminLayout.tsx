@@ -6,6 +6,7 @@ import { LogOut, Menu, X } from 'lucide-react'
 
 interface AdminLayoutProps {
   children: ReactNode
+  session?: any
 }
 
 const NAV_ITEMS = [

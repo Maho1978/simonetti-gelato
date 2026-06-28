@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2015",
     "lib": [
       "dom",
       "dom.iterable",
@@ -30,6 +30,8 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "scripts",
+    "pages/index -REAL (kopie).tsx"
   ]
 }
