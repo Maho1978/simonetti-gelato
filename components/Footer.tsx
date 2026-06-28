@@ -91,6 +91,7 @@ export default function Footer() {
               <Link href="/impressum" className="block hover:text-white transition">Impressum</Link>
               <Link href="/datenschutz" className="block hover:text-white transition">Datenschutz</Link>
               <Link href="/agb" className="block hover:text-white transition">AGB</Link>
+              <Link href="/zahlung-lieferung" className="block hover:text-white transition">Zahlung &amp; Lieferung</Link>
             </div>
           </div>
         </div>
