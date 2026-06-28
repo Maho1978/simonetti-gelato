@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import PaymentMethods from './PaymentMethods'
 
 const PLATFORM_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
   instagram:   { label: 'Instagram',   icon: '📸', color: 'hover:text-pink-500'   },
@@ -114,6 +115,11 @@ export default function Footer() {
             </div>
           </div>
         )}
+
+        {/* ── Zahlungsmittel ── */}
+        <div className="mb-6">
+          <PaymentMethods variant="footer" />
+        </div>
 
         {/* ── Bottom Bar ── */}
         <div className="border-t border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
