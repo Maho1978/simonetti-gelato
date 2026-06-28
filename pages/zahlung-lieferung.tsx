@@ -21,6 +21,13 @@ function getDeliveryHours(h: any) {
 
 const PAYMENT_METHODS = [
   {
+    id: 'cash',
+    src: null,
+    icon: 'cash',
+    label: 'Barzahlung bei Lieferung',
+    description: 'Passend halten, bitte — kein Wechselgeld garantiert.',
+  },
+  {
     id: 'card',
     src: null,
     icons: ['/icons/payments/visa.svg', '/icons/payments/mastercard.svg'],
@@ -51,13 +58,6 @@ const PAYMENT_METHODS = [
     src: '/icons/payments/link.svg',
     label: 'Link by Stripe',
     description: 'Gespeicherte Zahlungsdaten für schnellen Checkout beim nächsten Besuch.',
-  },
-  {
-    id: 'cash',
-    src: null,
-    icon: 'cash',
-    label: 'Barzahlung bei Lieferung',
-    description: 'Passend halten, bitte — kein Wechselgeld garantiert.',
   },
 ]
 

@@ -24,6 +24,13 @@ export default function PaymentMethods({ variant }: Props) {
         </p>
       )}
       <div className="flex flex-wrap gap-2 md:gap-3 items-center">
+        <div
+          className="flex items-center gap-1.5 bg-[#f5f5f5] rounded-md px-[10px] py-[6px]"
+          title="Barzahlung bei Lieferung"
+        >
+          <Banknote size={isCart ? 18 : 16} color="#C4973A" />
+          <span className="text-xs font-medium text-gray-600 leading-none">Bar</span>
+        </div>
         {METHODS.map(({ id, label, src }) => (
           <div
             key={id}
@@ -37,13 +44,6 @@ export default function PaymentMethods({ variant }: Props) {
             />
           </div>
         ))}
-        <div
-          className="flex items-center gap-1.5 bg-[#f5f5f5] rounded-md px-[10px] py-[6px]"
-          title="Barzahlung bei Lieferung"
-        >
-          <Banknote size={isCart ? 18 : 16} color="#C4973A" />
-          <span className="text-xs font-medium text-gray-600 leading-none">Bar</span>
-        </div>
       </div>
     </div>
   )
