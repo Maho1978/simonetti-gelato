@@ -378,7 +378,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const handleVoucherApply = (applied: AppliedVoucher | null) => { setVoucher(applied) }
   const handleTipChange    = (amount: number) => { setTip(amount) }
 
-  const saveOrder = async (paymentId: string, method: string, cashChangeNote?: string) => {
+  const saveOrder = async (paymentId: string, method: string, cashChangeNote?: string, paypalCaptureId?: string) => {
     const orderData = {
       user_id:           session?.user?.id || null,
       guest_email:       isGuest ? email : null,
@@ -396,6 +396,7 @@ export default function Checkout({ session }: { session: Session | null }) {
       delivery_address:  orderType === 'pickup' ? null : { name, street: `${street} ${hausnr}`.trim(), zip, city },
       notes:             [notes, cashChangeNote ? `Wechselgeld für: ${cashChangeNote}` : '', loyalty?.note || ''].filter(Boolean).join(' | ') || null,
       payment_intent_id: paymentId,
+      paypal_capture_id: paypalCaptureId || null,
       payment_method:    method,
       payment_status:    method === 'stripe' ? 'pending' : method === 'paypal' ? 'paid' : 'pending',
       order_type:        orderType,
@@ -797,7 +798,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                           <div className={(!isFormValid || !agbAccepted) ? 'opacity-40 pointer-events-none' : ''}>
                             <PayPalButtons style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' }} disabled={!isFormValid || !agbAccepted}
                               createOrder={(_data, actions) => actions.order.create({ intent: 'CAPTURE', purchase_units: [{ amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) }, description: 'Eiscafe Simonetti Bestellung' }] })}
-                              onApprove={async (_data, actions) => { const order = await actions.order!.capture(); await saveOrder(order.id || 'paypal-' + Date.now(), 'paypal') }}
+                              onApprove={async (_data, actions) => { const order = await actions.order!.capture(); const captureId = (order as any)?.purchase_units?.[0]?.payments?.captures?.[0]?.id as string | undefined; await saveOrder(order.id || 'paypal-' + Date.now(), 'paypal', undefined, captureId) }}
                               onError={err => console.error('PayPal error:', err)} />
                           </div>
                         </div>

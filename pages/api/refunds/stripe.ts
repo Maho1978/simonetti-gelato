@@ -2,8 +2,17 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { stripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
+async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) return false
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(auth.slice(7))
+  if (error || !user) return false
+  return user.email === process.env.ADMIN_EMAIL || user.user_metadata?.role === 'admin'
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (!await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' })
 
   const { orderId, amount } = req.body as { orderId?: string; amount?: number }
 
@@ -27,14 +36,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 
+  const previous = Number(order.refund_amount) || 0
+
   try {
-    const refund = await stripe.refunds.create({
-      payment_intent: pi,
-      amount: Math.round(amount),
-    })
+    // Idempotency-Key deterministisch aus orderId + bisher erstattet + Betrag:
+    // blockiert exakte Doppel-Erstattung (Netzwerk-Retry/Doppelklick) für 24h,
+    // erlaubt aber legitime spätere Teilerstattungen (anderer "previous"-Stand).
+    const idempotencyKey = `refund_${orderId}_${previous}_${Math.round(amount)}`
+    const refund = await stripe.refunds.create(
+      {
+        payment_intent: pi,
+        amount: Math.round(amount),
+      },
+      { idempotencyKey },
+    )
 
     const refundEur = Math.round(amount) / 100
-    const previous = Number(order.refund_amount) || 0
     const newTotal = previous + refundEur
 
     await supabaseAdmin

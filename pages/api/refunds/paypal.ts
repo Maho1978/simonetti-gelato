@@ -30,8 +30,17 @@ async function lookupCaptureId(orderToken: string, accessToken: string): Promise
   return capture?.id ?? null
 }
 
+async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) return false
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(auth.slice(7))
+  if (error || !user) return false
+  return user.email === process.env.ADMIN_EMAIL || user.user_metadata?.role === 'admin'
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (!await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' })
 
   const { orderId, amount } = req.body as { orderId?: string; amount?: string }
 
@@ -78,12 +87,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Refund auslösen
+  const previous = Number(order.refund_amount) || 0
   try {
+    // PayPal-Request-Id = Idempotenz: blockiert exakte Doppel-Erstattung,
+    // erlaubt legitime spätere Teilerstattungen (anderer "previous"-Stand).
+    const requestId = `refund_${orderId}_${previous}_${amountNum.toFixed(2)}`
     const refundRes = await fetch(`${PAYPAL_BASE}/v2/payments/captures/${captureId}/refund`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
+        'PayPal-Request-Id': requestId,
       },
       body: JSON.stringify({
         amount: { value: amountNum.toFixed(2), currency_code: 'EUR' },
@@ -98,7 +112,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const previous = Number(order.refund_amount) || 0
     const newTotal = +(previous + amountNum).toFixed(2)
 
     await supabaseAdmin

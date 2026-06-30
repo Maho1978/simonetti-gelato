@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Minus, X, AlertTriangle, Loader2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 type Item = {
   name?: string
@@ -85,10 +86,15 @@ export default function OrderCorrectionModal({
 
   async function callRefund(): Promise<{ ok: boolean; error?: string }> {
     if (paymentKind === 'cash') return { ok: true }
+    const { data: { session } } = await supabase.auth.getSession()
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.access_token ?? ''}`,
+    }
     if (paymentKind === 'stripe') {
       const r = await fetch('/api/refunds/stripe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ orderId: order.id, amount: Math.round(refundAmount * 100) }),
       })
       const data = await r.json().catch(() => ({}))
@@ -98,7 +104,7 @@ export default function OrderCorrectionModal({
     // paypal
     const r = await fetch('/api/refunds/paypal', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify({ orderId: order.id, amount: refundAmount.toFixed(2) }),
     })
     const data = await r.json().catch(() => ({}))
