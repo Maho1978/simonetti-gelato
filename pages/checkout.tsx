@@ -880,13 +880,20 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!agbAccepted) return
+    if (!stripe || !elements) return
+    setLoading(true); setError('')
+
+    // Stripe Deferred-Intent (mode:'payment'): elements.submit() MUSS vor jeder
+    // async-Arbeit UND vor stripe.confirmPayment() laufen — sonst wirft das neue SDK
+    // "elements.submit() must be called before stripe.confirmPayment()".
+    const { error: submitError } = await elements.submit()
+    if (submitError) { setError(submitError.message || 'Bitte Zahlungsdaten prüfen.'); setLoading(false); return }
+
     try {
       const statusData = await fetch('/api/shop-status').then(r => r.json())
       const typeOpen = orderType === 'pickup' ? statusData.pickup?.isOpen : statusData.delivery?.isOpen
-      if (!typeOpen && !statusData.isPreorder) { setError(`${orderType === 'pickup' ? 'Abholung' : 'Lieferung'} ist momentan nicht verfügbar.`); return }
+      if (!typeOpen && !statusData.isPreorder) { setError(`${orderType === 'pickup' ? 'Abholung' : 'Lieferung'} ist momentan nicht verfügbar.`); setLoading(false); return }
     } catch {}
-    if (!stripe || !elements) return
-    setLoading(true); setError('')
     let pendingOrderId: string | null = null
     try {
       // 1. Bestellung AUSSTEHEND anlegen
