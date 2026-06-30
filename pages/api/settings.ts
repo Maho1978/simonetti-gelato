@@ -1,6 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabase } from '@/lib/supabase'
 
+async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) return false
+  const { data: { user }, error } = await supabase.auth.getUser(auth.slice(7))
+  if (error || !user) return false
+  return user.email === process.env.ADMIN_EMAIL || user.user_metadata?.role === 'admin'
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
@@ -25,6 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
   } else if (req.method === 'POST') {
+    if (!await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' })
     try {
       const { deliveryTime, minOrderValue, deliveryFee, isOpen, openFrom, openUntil } = req.body
 

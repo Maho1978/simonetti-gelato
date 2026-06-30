@@ -8,8 +8,17 @@ export interface PushSubscriber {
   email: string;
 }
 
+async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) return false;
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(auth.slice(7));
+  if (error || !user) return false;
+  return user.email === process.env.ADMIN_EMAIL || user.user_metadata?.role === 'admin';
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (!await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' });
 
   const { data: tokens, error } = await supabaseAdmin
     .from('push_tokens')

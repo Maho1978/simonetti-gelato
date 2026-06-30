@@ -1,6 +1,7 @@
 // pages/admin/customers.tsx
 import { useState, useEffect, useCallback } from 'react'
 import AdminLayout from '@/components/AdminLayout'
+import { supabase } from '@/lib/supabase'
 import {
   User, Phone, Mail, ShoppingBag,
   Search, ChevronDown, ChevronUp, MessageSquare, X, Plus, Trash2, Edit2, Check
@@ -32,9 +33,17 @@ interface Customer {
   lastOrder: string | null
 }
 
-const apiPost = (body: object) => fetch('/api/customers', {
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${session?.access_token ?? ''}`,
+  }
+}
+
+const apiPost = async (body: object) => fetch('/api/customers', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: await authHeaders(),
   body: JSON.stringify(body),
 })
 
@@ -294,7 +303,7 @@ export default function CustomersPage() {
   const loadCustomers = useCallback(async () => {
     setLoading(true)
     try {
-      const res  = await fetch('/api/customers')
+      const res  = await fetch('/api/customers', { headers: await authHeaders() })
       const data = await res.json()
       if (data.customers) setCustomers(data.customers)
     } catch (e) {}

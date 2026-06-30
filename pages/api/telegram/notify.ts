@@ -41,8 +41,17 @@ ${items}${notes}
 👉 [Zum Kanban](https://www.eiscafe-simonetti.de/admin/kanban)`
 }
 
+async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) return false
+  const { data: { user }, error } = await supabase.auth.getUser(auth.slice(7))
+  if (error || !user) return false
+  return user.email === process.env.ADMIN_EMAIL || user.user_metadata?.role === 'admin'
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (!await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' })
 
   const { order } = req.body
   if (!order) return res.status(400).json({ error: 'Missing order' })

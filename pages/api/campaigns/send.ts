@@ -1,4 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+
+async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) return false
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(auth.slice(7))
+  if (error || !user) return false
+  return user.email === process.env.ADMIN_EMAIL || user.user_metadata?.role === 'admin'
+}
 
 async function sendBrevoEmail(to: string, subject: string, html: string): Promise<boolean> {
   try {
@@ -25,6 +34,7 @@ async function sendBrevoEmail(to: string, subject: string, html: string): Promis
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (!await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' })
 
   const { subject, html, recipients } = req.body
   if (!subject || !html || !Array.isArray(recipients) || recipients.length === 0) {

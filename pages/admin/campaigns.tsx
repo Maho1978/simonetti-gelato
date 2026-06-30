@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${session?.access_token ?? ''}`,
+  }
+}
 import AdminLayout from '@/components/AdminLayout'
 import { Send, Eye, Users, Search, CheckSquare, Square, Loader2, CheckCircle, AlertCircle, ChevronDown, Smartphone, Bell } from 'lucide-react'
 
@@ -181,7 +189,8 @@ export default function Campaigns() {
   useEffect(() => {
     if (activeTab !== 'push' || subscribers.length > 0) return
     setLoadingSubs(true)
-    fetch('/api/push/subscribers')
+    authHeaders()
+      .then(headers => fetch('/api/push/subscribers', { headers }))
       .then(r => r.json())
       .then(d => setSubscribers(d.subscribers || []))
       .catch(() => {})
@@ -259,7 +268,7 @@ export default function Campaigns() {
     const html = buildEmailHtml(campaign)
     const res  = await fetch('/api/campaigns/send', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({ subject: campaign.subject, html, recipients }),
     })
     const data = await res.json()
@@ -282,7 +291,7 @@ export default function Campaigns() {
     const payload: any = { title: pushTitle, body: pushBody }
     if (pushAudience === 'manual') payload.user_ids = [...selectedSubs]
     try {
-      const res = await fetch('/api/push/send-all', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const res = await fetch('/api/push/send-all', { method: 'POST', headers: await authHeaders(), body: JSON.stringify(payload) })
       setPushResult(await res.json())
     } catch { setPushResult({ ok: false, sent: 0, failed: 0, message: 'Netzwerkfehler' }) }
     finally { setPushSending(false) }

@@ -43,9 +43,13 @@ async function sendEmail(type: string, order: any) {
 
 async function sendTelegram(order: any) {
   try {
+    const { data: { session } } = await supabase.auth.getSession()
     await fetch('/api/telegram/notify', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
       body: JSON.stringify({ order }),
     })
   } catch (e) {}
