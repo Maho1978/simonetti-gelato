@@ -28,7 +28,10 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
-    domains: ['localhost', 'flydacnsbsnpwpqezuof.supabase.co'],
+    remotePatterns: [
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'https', hostname: 'flydacnsbsnpwpqezuof.supabase.co' },
+    ],
   },
   turbopack: {},
   serverExternalPackages: ['sharp'],

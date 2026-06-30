@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 // ⚠️ PFLICHT: bodyParser aus – Stripe braucht rohen Request-Body zur Signaturprüfung
 export const config = { api: { bodyParser: false } }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-06-24.dahlia' })
 
 // Service-Role-Client – umgeht RLS, darf alles schreiben
 const supabase = createClient(
