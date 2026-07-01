@@ -440,7 +440,7 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
   )
 }
 
-function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onOpenCorrection, colIdx }: any) {
+function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveLeft, onMoveRight, onMarkDelivered, onAssignDriver, onOpenCorrection, onCancelOrder, colIdx }: any) {
   const [waText, setWaText] = useState('')
   const [waEnabled, setWaEnabled] = useState(true)
   const status   = COLUMNS[colIdx]?.id
@@ -605,6 +605,14 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
               onClick={onOpenCorrection}
               className="w-full py-2.5 border-2 border-amber-300 bg-amber-50 text-amber-800 rounded-xl font-bold text-sm hover:bg-amber-100 transition">
               ✏️ Bestellung korrigieren
+            </button>
+          )}
+
+          {order.status !== 'AUSSTEHEND' && order.status !== 'STORNIERT' && onCancelOrder && (
+            <button
+              onClick={onCancelOrder}
+              className="w-full py-2.5 border-2 border-red-300 bg-red-50 text-red-700 rounded-xl font-bold text-sm hover:bg-red-100 transition">
+              🚫 Bestellung stornieren &amp; erstatten
             </button>
           )}
         </div>
@@ -853,6 +861,54 @@ export default function KanbanPage() {
     }
   }
 
+  const cancelOrder = async (order: any) => {
+    if (!order) return
+    const orderNr = order.order_number || order.id.slice(-6).toUpperCase()
+    const already = Number(order.refund_amount || 0)
+    const refundAmount = +(Number(order.total || 0) - already).toFixed(2)
+    const isCash = order.payment_method === 'cash' || (order.payment_intent_id || '').startsWith('cash-')
+
+    const reason = window.prompt(
+      `Bestellung #${orderNr} stornieren?\n` +
+      (isCash || refundAmount <= 0
+        ? 'Keine Rückerstattung nötig.\n'
+        : `${refundAmount.toFixed(2)} € werden an den Kunden zurückerstattet.\n`) +
+      '\nOptional: Grund (wird dem Kunden in der Storno-Mail mitgeteilt):',
+      '',
+    )
+    if (reason === null) return // Abbruch
+
+    // 1. Rückerstattung (Stripe/PayPal) — Bar / bereits erstattet überspringt
+    if (!isCash && refundAmount > 0) {
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` }
+      const isPayPal = order.payment_method === 'paypal'
+      const r = await fetch(isPayPal ? '/api/refunds/paypal' : '/api/refunds/stripe', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(isPayPal
+          ? { orderId: order.id, amount: refundAmount.toFixed(2) }
+          : { orderId: order.id, amount: Math.round(refundAmount * 100) }),
+      })
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}))
+        alert(`Stornierung abgebrochen — Rückerstattung fehlgeschlagen: ${d?.error || r.status}`)
+        return
+      }
+    }
+
+    // 2. Status auf STORNIERT
+    const ok = await apiUpdateOrder(order.id, { status: 'STORNIERT' })
+    if (!ok) { alert('Rückerstattung ok, aber Status-Update fehlgeschlagen. Bitte manuell prüfen.'); return }
+
+    // 3. Storno-Mail an den Kunden (Grund + erstatteter Betrag ohne DB-Spalte durchgereicht)
+    await sendEmail('order_cancelled', { ...order, cancel_reason: reason || null, storno_refund: isCash ? 0 : refundAmount })
+
+    if (popupOrder?.id === order.id) closePopup()
+    setSelectedOrder(null)
+    loadOrders()
+  }
+
   const moveOrder = async (orderId: string, colIdx: number, dir: number) => {
     const newColIdx = colIdx + dir
     if (newColIdx < 0 || newColIdx > 2) return
@@ -931,6 +987,7 @@ export default function KanbanPage() {
           onMarkDelivered={() => markDelivered(selectedOrder.id)}
           onAssignDriver={assignDriver}
           onOpenCorrection={() => { setCorrectionOrder(selectedOrder); setSelectedOrder(null) }}
+          onCancelOrder={() => cancelOrder(selectedOrder)}
         />
       )}
       {correctionOrder && (

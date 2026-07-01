@@ -231,6 +231,34 @@ function emailOrderRejected(order: any): string {
   `, `Deine Bestellung konnte leider nicht bearbeitet werden.`)
 }
 
+function emailOrderCancelled(order: any): string {
+  const orderNr = order.order_number || (order.id || '').slice(-6).toUpperCase()
+  const isCash = order.payment_method === 'cash' || (order.payment_intent_id || '').startsWith('cash-')
+  const refund = Number(order.storno_refund != null ? order.storno_refund : order.total || 0).toFixed(2)
+  return baseLayout(`
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="font-size:56px;margin-bottom:12px;">😔</div>
+      <h1 style="margin:0 0 8px;font-size:26px;font-weight:900;color:#2d2d2d;">Bestellung storniert</h1>
+      <p style="margin:0;color:#888;font-size:15px;">Hallo <strong>${order.customer_name || ''}</strong>! Deine Bestellung wurde storniert.</p>
+    </div>
+    <div style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:8px;padding:18px 20px;margin-bottom:28px;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#991b1b;margin-bottom:6px;">Bestellung #${orderNr}</div>
+      ${order.cancel_reason ? `<div style="color:#7f1d1d;font-weight:600;font-size:14px;">Grund: ${order.cancel_reason}</div>` : ''}
+    </div>
+    <div style="background:#f0fdf4;border-radius:12px;padding:16px 20px;margin-bottom:24px;text-align:center;">
+      <div style="font-size:20px;margin-bottom:6px;">💶</div>
+      <div style="font-weight:700;color:#166534;font-size:14px;">${isCash ? 'Es wurde nichts belastet' : `${refund} € werden erstattet`}</div>
+      ${isCash ? '' : `<div style="color:#4b7a5e;font-size:13px;margin-top:4px;">Die Rückerstattung erscheint je nach Zahlart in 5–10 Werktagen auf deinem Konto.</div>`}
+    </div>
+    <div style="text-align:center;">
+      <a href="https://www.eiscafe-simonetti.de"
+        style="display:inline-block;background:#4a5d54;color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;">
+        🍦 Neue Bestellung
+      </a>
+    </div>
+  `, `Deine Bestellung #${orderNr} wurde storniert.`)
+}
+
 function emailNewOrderAdmin(order: any): string {
   const fee   = order.delivery_fee ?? 3.00
   const tip   = order.tip ?? 0
@@ -329,6 +357,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'order_rejected':
         subject = getSubject(`❌ Bestellung #${orderNr} konnte leider nicht bearbeitet werden`)
         html    = emailOrderRejected(order)
+        break
+      case 'order_cancelled':
+        subject = getSubject(`🚫 Bestellung #${orderNr} wurde storniert – Eiscafé Simonetti`)
+        html    = emailOrderCancelled(order)
         break
       case 'new_order_admin':
         subject = getSubject(`🔔 Neue Bestellung #${orderNr} – ${(order.total || 0).toFixed(2)} €`)
