@@ -48,8 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select('id, total, created_at, payment_status')
         .eq('payment_method', 'paypal')
         .eq('payment_status', 'paid')
-        .gte('paid_at', fromISO)
-        .lt('paid_at', toISO),
+        .gte('created_at', fromISO)
+        .lt('created_at', toISO),
     ])
 
     const succeeded = charges.filter(c => c.status === 'succeeded')
