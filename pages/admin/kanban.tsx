@@ -762,8 +762,18 @@ export default function KanbanPage() {
     const { data, error } = await query
     if (error || !data) return
 
-    if (!isFirstLoad.current) {
-      const newOnes = data.filter(o => !knownIds.current.has(o.id) && (o.status === 'OFFEN' || o.status === 'AUSSTEHEND'))
+    {
+      // Alarm für neue, noch nicht angenommene Bestellungen (Status OFFEN/AUSSTEHEND).
+      // Bei laufendem Polling: alle neuen. Beim ERSTEN Laden (Seite frisch geöffnet/
+      // neu geladen): nur kürzlich eingegangene (< 10 Min) — so wird ein Test bzw. eine
+      // Bestellung, die kurz vor dem Öffnen kam, nicht verschluckt.
+      const firstLoad = isFirstLoad.current
+      const recentCutoff = Date.now() - 10 * 60 * 1000
+      const newOnes = data.filter(o =>
+        !knownIds.current.has(o.id) &&
+        (o.status === 'OFFEN' || o.status === 'AUSSTEHEND') &&
+        (!firstLoad || new Date(o.created_at).getTime() > recentCutoff)
+      )
       if (newOnes.length > 0) {
         if (soundRef.current) playSound(volumeRef.current)
         setNewOrderBanner(true)
