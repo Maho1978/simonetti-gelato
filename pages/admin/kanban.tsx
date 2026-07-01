@@ -34,6 +34,30 @@ async function apiUpdateOrder(orderId: string, data: any) {
   return true
 }
 
+// Volle Rückerstattung des offenen Betrags (order.total - bereits erstattet).
+// Bar / nichts offen → ok ohne Aktion. Stripe/PayPal via Admin-gesicherte Routen.
+async function refundOrderFull(order: any): Promise<{ ok: boolean; error?: string; refunded: number }> {
+  const isCash = order.payment_method === 'cash' || (order.payment_intent_id || '').startsWith('cash-')
+  const already = Number(order.refund_amount || 0)
+  const refundAmount = +(Number(order.total || 0) - already).toFixed(2)
+  if (isCash || refundAmount <= 0) return { ok: true, refunded: 0 }
+  const { data: { session } } = await supabase.auth.getSession()
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` }
+  const isPayPal = order.payment_method === 'paypal'
+  const r = await fetch(isPayPal ? '/api/refunds/paypal' : '/api/refunds/stripe', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(isPayPal
+      ? { orderId: order.id, amount: refundAmount.toFixed(2) }
+      : { orderId: order.id, amount: Math.round(refundAmount * 100) }),
+  })
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}))
+    return { ok: false, error: d?.error || String(r.status), refunded: 0 }
+  }
+  return { ok: true, refunded: refundAmount }
+}
+
 async function sendEmail(type: string, order: any) {
   if (!order?.customer_email) return
   try {
@@ -850,12 +874,24 @@ export default function KanbanPage() {
 
   const confirmReject = async (reason: string) => {
     if (!rejectTarget) return
-    const ok = await apiUpdateOrder(rejectTarget.id, {
+    const order = rejectTarget
+
+    // Bereits bezahlte Bestellung (Karte/PayPal) → zuerst erstatten, damit die
+    // Ablehnungs-Mail ("du wurdest nicht belastet") auch wirklich stimmt.
+    if (order.payment_status === 'paid') {
+      const refundRes = await refundOrderFull(order)
+      if (!refundRes.ok) {
+        alert(`Ablehnung abgebrochen — Rückerstattung fehlgeschlagen: ${refundRes.error}`)
+        return
+      }
+    }
+
+    const ok = await apiUpdateOrder(order.id, {
       status: 'ABGELEHNT', reject_reason: reason || null, rejected_at: new Date().toISOString()
     })
     if (ok) {
-      await sendEmail('order_rejected', rejectTarget)
-      if (popupOrder?.id === rejectTarget.id) closePopup()
+      await sendEmail('order_rejected', order)
+      if (popupOrder?.id === order.id) closePopup()
       setRejectTarget(null)
       loadOrders()
     }
@@ -878,23 +914,11 @@ export default function KanbanPage() {
     )
     if (reason === null) return // Abbruch
 
-    // 1. Rückerstattung (Stripe/PayPal) — Bar / bereits erstattet überspringt
-    if (!isCash && refundAmount > 0) {
-      const { data: { session } } = await supabase.auth.getSession()
-      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` }
-      const isPayPal = order.payment_method === 'paypal'
-      const r = await fetch(isPayPal ? '/api/refunds/paypal' : '/api/refunds/stripe', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(isPayPal
-          ? { orderId: order.id, amount: refundAmount.toFixed(2) }
-          : { orderId: order.id, amount: Math.round(refundAmount * 100) }),
-      })
-      if (!r.ok) {
-        const d = await r.json().catch(() => ({}))
-        alert(`Stornierung abgebrochen — Rückerstattung fehlgeschlagen: ${d?.error || r.status}`)
-        return
-      }
+    // 1. Rückerstattung (Stripe/PayPal) — Bar / nichts offen überspringt intern
+    const refundRes = await refundOrderFull(order)
+    if (!refundRes.ok) {
+      alert(`Stornierung abgebrochen — Rückerstattung fehlgeschlagen: ${refundRes.error}`)
+      return
     }
 
     // 2. Status auf STORNIERT
