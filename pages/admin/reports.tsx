@@ -7,8 +7,201 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
-import { Download, TrendingUp, Euro, ShoppingBag, Users, ArrowUp, ArrowDown, Minus } from 'lucide-react'
+import { Download, TrendingUp, Euro, ShoppingBag, Users, ArrowUp, ArrowDown, Minus, FileText, Loader2 } from 'lucide-react'
 import PwaInstallCount from '@/components/PwaInstallCount'
+
+const MONAT_DE = ['Januar','Februar','März','April','Mai','Juni',
+                  'Juli','August','September','Oktober','November','Dezember']
+
+function eur(cents: number) {
+  return (cents / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+}
+
+const METHOD_LABELS: Record<string, string> = {
+  card: 'Karte (Kredit/Debit)', link: 'Stripe Link', paypal: 'PayPal',
+  sepa_debit: 'SEPA-Lastschrift', giropay: 'Giropay', sofort: 'Sofort/Klarna',
+  klarna: 'Klarna', eps: 'EPS', wero: 'Wero', apple_pay: 'Apple Pay',
+  google_pay: 'Google Pay', bancontact: 'Bancontact', ideal: 'iDEAL',
+}
+
+function StripePdfButton({ session }: { session: Session | null }) {
+  const now = new Date()
+  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() === 0 ? 12 : now.getMonth()).padStart(2, '0')}`
+    .replace(/^(\d{4})-12$/, `${now.getFullYear() - (now.getMonth() === 0 ? 1 : 0)}-12`)
+  // Vormonat berechnen
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const [month, setMonth] = useState(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`)
+  const [loading, setLoading] = useState(false)
+  const [error, setError]   = useState('')
+
+  const handleDownload = async () => {
+    if (!session) return
+    setLoading(true)
+    setError('')
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token
+      const res = await fetch(`/api/admin/stripe-report?month=${month}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Fehler') }
+      const data = await res.json()
+
+      const [y, m] = month.split('-').map(Number)
+      const monatLabel = `${MONAT_DE[m - 1]} ${y}`
+      const fromDate = new Date(y, m - 1, 1).toLocaleDateString('de-DE')
+      const toDate   = new Date(y, m, 0).toLocaleDateString('de-DE')
+
+      const s = data.stripe
+      const methodRows = s.paymentMethods.map((pm: any) =>
+        `<tr><td>${METHOD_LABELS[pm.type] || pm.type}</td><td class="num">${pm.count}</td><td class="num">${eur(pm.amount)}</td></tr>`
+      ).join('')
+
+      const payoutRows = s.payouts.length > 0 ? s.payouts.map((p: any) =>
+        `<tr><td>${new Date(p.date * 1000).toLocaleDateString('de-DE')}</td><td colspan="2">${p.description}</td><td class="num">${eur(p.amount)}</td></tr>`
+      ).join('') : '<tr><td colspan="4" class="empty">Keine Auszahlungen im Zeitraum</td></tr>'
+
+      const paypalSection = data.paypal.count > 0 ? `
+<div class="section">
+  <h2>PayPal</h2>
+  <table>
+    <tr><th>Position</th><th></th><th class="num">Betrag</th></tr>
+    <tr><td>Transaktionen</td><td></td><td class="num">${data.paypal.count}</td></tr>
+    <tr class="total-row"><td>Brutto-Einnahmen (PayPal)</td><td></td><td class="num">${eur(data.paypal.bruttoEinnahmen)}</td></tr>
+  </table>
+  <p style="font-size:10px;color:#aaa;margin-top:8px">PayPal-Gebühren sind nicht enthalten – bitte separat im PayPal Business-Konto prüfen.</p>
+</div>` : ''
+
+      const gesamtSection = (data.paypal.count > 0) ? `
+<div class="section">
+  <h2>Gesamtumsatz (Stripe + PayPal)</h2>
+  <table>
+    <tr><td>Stripe (netto nach Gebühren)</td><td class="num">${eur(s.amounts.nettoNachGebuehren)}</td></tr>
+    <tr><td>PayPal (brutto)</td><td class="num">${eur(data.paypal.bruttoEinnahmen)}</td></tr>
+    <tr class="total-row"><td>Gesamt (netto Stripe + PayPal brutto)</td><td class="num">${eur(data.gesamt.bruttoEinnahmen)}</td></tr>
+  </table>
+</div>` : ''
+
+      const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Monatsbericht ${monatLabel}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; color: #1a1a1a; padding: 40px; }
+  .header { border-bottom: 3px solid #4a5d54; padding-bottom: 16px; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; color: #4a5d54; font-weight: 700; }
+  .header .meta { font-size: 11px; color: #777; margin-top: 4px; }
+  .section { margin-bottom: 24px; }
+  .section h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #4a5d54; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 8px; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 7px 8px; border-bottom: 1px solid #f3f4f6; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .total-row td { font-weight: 700; border-top: 2px solid #4a5d54; border-bottom: none; font-size: 13px; }
+  .total-row td.num { color: #4a5d54; }
+  .separator-row td { border-top: 1px dashed #e5e7eb; border-bottom: none; }
+  .empty { color: #999; font-style: italic; }
+  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #aaa; }
+  .badge { display: inline-block; background: #f0f7f5; color: #4a5d54; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 11px; }
+  @media print { body { padding: 20px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Zahlungsbericht &ndash; ${monatLabel}</h1>
+  <div class="meta">
+    Zeitraum: ${fromDate} &ndash; ${toDate} &nbsp;&bull;&nbsp;
+    Erstellt: ${new Date().toLocaleString('de-DE')} &nbsp;&bull;&nbsp;
+    <span class="badge">Eiscaf&eacute; Simonetti</span>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Stripe &ndash; Umsatz&uuml;bersicht</h2>
+  <table>
+    <tr><th>Position</th><th></th><th class="num">Betrag</th></tr>
+    <tr><td>Transaktionen gesamt</td><td></td><td class="num">${s.transactions.total}</td></tr>
+    <tr><td>Erstattungen (Refunds)</td><td></td><td class="num">${s.transactions.refunded}</td></tr>
+    <tr class="separator-row"><td colspan="3"></td></tr>
+    <tr><td>Brutto-Einnahmen</td><td></td><td class="num">${eur(s.amounts.bruttoEinnahmen)}</td></tr>
+    <tr><td>./. Erstattungen</td><td></td><td class="num">&minus; ${eur(s.amounts.erstattungen)}</td></tr>
+    <tr><td>Netto-Umsatz</td><td></td><td class="num">${eur(s.amounts.nettoUmsatz)}</td></tr>
+    <tr><td>./. Stripe-Geb&uuml;hren</td><td></td><td class="num">&minus; ${eur(s.amounts.stripeFees)}</td></tr>
+    <tr class="total-row"><td>Netto nach Geb&uuml;hren</td><td></td><td class="num">${eur(s.amounts.nettoNachGebuehren)}</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Stripe &ndash; Zahlungsmethoden</h2>
+  <table>
+    <tr><th>Methode</th><th class="num">Anzahl</th><th class="num">Betrag (netto)</th></tr>
+    ${methodRows || '<tr><td colspan="3" class="empty">Keine Zahlungen</td></tr>'}
+  </table>
+</div>
+
+<div class="section">
+  <h2>Stripe &ndash; Auszahlungen (im Monat angekommen)</h2>
+  <table>
+    <tr><th>Datum</th><th colspan="2">Beschreibung</th><th class="num">Betrag</th></tr>
+    ${payoutRows}
+    ${s.payouts.length > 0 ? `<tr class="total-row"><td colspan="3">Gesamt Auszahlungen</td><td class="num">${eur(s.payouts.reduce((sum: number, p: any) => sum + p.amount, 0))}</td></tr>` : ''}
+  </table>
+</div>
+
+${paypalSection}
+${gesamtSection}
+
+<div class="footer">
+  Alle Betr&auml;ge in EUR inkl. MwSt. (Bruttobetr&auml;ge) &bull;
+  Stripe-Geb&uuml;hren sind Nettogeb&uuml;hren &bull;
+  Dieses Dokument wurde automatisch aus Stripe &amp; Supabase generiert.
+</div>
+<script>window.onload = () => window.print()</script>
+</body>
+</html>`
+
+      const win = window.open('', '_blank')
+      if (win) { win.document.write(html); win.document.close() }
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2.5 bg-gray-50 rounded-xl">
+          <FileText size={20} className="text-[#4a5d54]" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Stripe Monatsbericht</h2>
+          <p className="text-xs text-gray-400">PDF für Steuerberater</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <input
+          type="month"
+          value={month}
+          onChange={e => setMonth(e.target.value)}
+          max={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`}
+          className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4a5d54]/20"
+        />
+        <button
+          onClick={handleDownload}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-[#4a5d54] text-white rounded-xl text-sm font-semibold hover:bg-[#3d4e46] transition disabled:opacity-60"
+        >
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+          {loading ? 'Wird geladen…' : 'PDF öffnen'}
+        </button>
+        {error && <span className="text-xs text-red-500">{error}</span>}
+      </div>
+    </div>
+  )
+}
 
 interface Order {
   id: string
@@ -222,6 +415,9 @@ export default function Reports({ session }: { session: Session | null }) {
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         <PwaInstallCount />
+
+        {/* Stripe Monatsbericht */}
+        <StripePdfButton session={session} />
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
