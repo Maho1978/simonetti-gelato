@@ -2,6 +2,19 @@
 
 const LOGO_URL = 'https://www.eiscafe-simonetti.de/images/simonetti-logo.jpg'
 
+async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) return false
+  const { createClient } = await import('@supabase/supabase-js')
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+  const { data: { user }, error } = await sb.auth.getUser(auth.slice(7))
+  if (error || !user) return false
+  return user.email === process.env.ADMIN_EMAIL || user.user_metadata?.role === 'admin'
+}
+
 async function sendBrevoEmail(to: string, subject: string, html: string): Promise<any> {
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -256,6 +269,12 @@ function emailNewOrderAdmin(order: any): string {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  // Zugriff: entweder internes Secret (Server-zu-Server vom Stripe-Webhook)
+  // oder ein gültiger Admin-Token (Admin-Seiten). Sonst kein Mailversand.
+  const secret = req.headers['x-internal-secret']
+  const isInternal = !!process.env.INTERNAL_API_SECRET && secret === process.env.INTERNAL_API_SECRET
+  if (!isInternal && !await verifyAdmin(req)) return res.status(403).json({ error: 'Forbidden' })
 
   const { type, order, recipientEmail } = req.body
   if (!type || !order) return res.status(400).json({ error: 'Missing type or order' })

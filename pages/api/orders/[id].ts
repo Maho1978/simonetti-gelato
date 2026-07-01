@@ -8,6 +8,14 @@ const supabaseAdmin = createClient(
 
 const POINTS_PER_EUR = 10
 
+async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) return false
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(auth.slice(7))
+  if (error || !user) return false
+  return user.email === process.env.ADMIN_EMAIL || user.user_metadata?.role === 'admin'
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -15,6 +23,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const updateData = req.body
 
   if (!id) return res.status(400).json({ error: 'Missing order id' })
+
+  // Admin darf alles. Nicht-Admin (z.B. Checkout bei Zahlungsabbruch) darf
+  // AUSSCHLIESSLICH eine noch unbezahlte Bestellung stornieren — sonst Forbidden.
+  // Verhindert Manipulation von Summe/Items/Status/„bezahlt" fremder Orders.
+  if (!await verifyAdmin(req)) {
+    const keys = Object.keys(updateData || {})
+    const onlyCancel = keys.length === 1 && updateData.status === 'STORNIERT'
+    if (!onlyCancel) return res.status(403).json({ error: 'Forbidden' })
+    const { data: cur } = await supabaseAdmin
+      .from('orders')
+      .select('payment_status')
+      .eq('id', id)
+      .single()
+    if (!cur || cur.payment_status === 'paid') return res.status(403).json({ error: 'Forbidden' })
+  }
 
   const { data, error } = await supabaseAdmin
     .from('orders')

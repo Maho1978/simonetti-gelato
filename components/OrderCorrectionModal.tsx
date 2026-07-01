@@ -165,9 +165,13 @@ export default function OrderCorrectionModal({
     }
     const newLog = Array.isArray(order.correction_log) ? [...order.correction_log, correctionEntry] : [correctionEntry]
 
+    const { data: { session } } = await supabase.auth.getSession()
     const patchRes = await fetch(`/api/orders/${order.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
       body: JSON.stringify({
         items: updatedItems,
         total: newTotal,

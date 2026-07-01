@@ -44,6 +44,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { user_id, reward_key } = req.body
     if (!user_id || !reward_key) return res.status(400).json({ error: 'Missing params' })
 
+    // IDOR-Schutz: nur der eingeloggte Nutzer darf SEINE eigenen Punkte einlösen.
+    const auth = req.headers.authorization
+    if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' })
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(auth.slice(7))
+    if (authErr || !user || user.id !== user_id) return res.status(403).json({ error: 'Forbidden' })
+
     const { data: tier } = await supabase
       .from('loyalty_tiers')
       .select('*')

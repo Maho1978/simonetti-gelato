@@ -472,8 +472,10 @@ export default function SettingsPage() {
         items: [{ quantity: 2, name: 'Gemischtes Eis', price: 6.50, selectedFlavors: ['Schokolade', 'Vanille'] }],
         payment_method: 'stripe'
       }
+      const { data: { session } } = await supabase.auth.getSession()
       const response = await fetch('/api/emails/send-order-notification', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
         body: JSON.stringify({ type: typeKey, order: testOrder, recipientEmail: testEmailAddress })
       })
       const result = await response.json()

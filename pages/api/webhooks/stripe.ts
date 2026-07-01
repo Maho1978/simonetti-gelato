@@ -210,7 +210,10 @@ async function sendEmail(type: string, order: any, recipientEmail: string) {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://eiscafe-simonetti.de'
     await fetch(`${baseUrl}/api/emails/send-order-notification`, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-secret': process.env.INTERNAL_API_SECRET || '',
+      },
       body:    JSON.stringify({ type, order, recipientEmail }),
     })
   } catch (err) {
