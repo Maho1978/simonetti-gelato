@@ -30,7 +30,23 @@ async function requireAuthenticatedDriver(req: NextApiRequest, res: NextApiRespo
   return data.id
 }
 
+// ── App-Secret (vorbereitet, Übergangsmodus) ──
+// Zusätzliche Schicht: die Fahrer-App schickt später den Header
+// `x-driver-app-secret` mit dem Wert der Env-Var DRIVER_APP_SECRET.
+// Aktiv wird die Prüfung ERST, wenn DRIVER_APP_SECRET_ENFORCE === 'true'
+// gesetzt ist — bis dahin läuft die aktuell ausgerollte App unverändert.
+function driverAppSecretOk(req: NextApiRequest): boolean {
+  const expected = process.env.DRIVER_APP_SECRET
+  if (!expected) return true // nicht konfiguriert → kein Check
+  return req.headers['x-driver-app-secret'] === expected
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Scharfschalten: DRIVER_APP_SECRET_ENFORCE=true (nachdem die App den Header sendet).
+  if (process.env.DRIVER_APP_SECRET_ENFORCE === 'true' && !driverAppSecretOk(req)) {
+    return res.status(403).json({ error: 'Forbidden' })
+  }
+
   if (req.method === 'POST') {
     const authDriverId = await requireAuthenticatedDriver(req, res)
     if (!authDriverId) return
