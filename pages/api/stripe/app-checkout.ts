@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { amount, orderData } = req.body
     if (!amount || amount < 0.5) return res.status(400).json({ error: 'Ungültiger Betrag' })
 
-    // Serverseitige Preis-Untergrenze — BEOBACHTUNGS-MODUS (nur Log, blockiert nicht)
+    // Serverseitige Preis-Untergrenze (fail-open bei internen Fehlern)
     const floorCheck = await checkOrderFloor({
       items: orderData?.items || [],
       subtotal: orderData?.subtotal,
@@ -24,7 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       voucherCode: orderData?.voucher_code,
     })
     if (!floorCheck.ok) {
-      console.error(`🚨 PREIS-CHECK App (nur Log): total=${orderData?.total || amount} < floor=${floorCheck.floor} — Order wird trotzdem angelegt`)
+      console.error(`🚨 App-Order abgelehnt (Preisprüfung): total=${orderData?.total || amount} < floor=${floorCheck.floor}`)
+      return res.status(400).json({ error: 'Preisprüfung fehlgeschlagen. Bitte Warenkorb neu laden.' })
     }
 
     const appUrl = 'https://www.eiscafe-simonetti.de'

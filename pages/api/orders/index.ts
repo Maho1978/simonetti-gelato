@@ -38,13 +38,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status,
       } = req.body
 
-      // Serverseitige Preis-Untergrenze gegen manipulierte Totals.
-      // BEOBACHTUNGS-MODUS: loggt Verdachtsfälle, blockiert (noch) NICHT —
-      // um False-Positives (z.B. Produkt-Varianten mit eigenem Preis) an echtem
-      // Traffic auszuschließen, bevor auf Blockieren umgestellt wird.
+      // Serverseitige Preis-Untergrenze: blockiert manipulierte Totals
+      // (Cart nutzt products.price als Basis → false-positive-sicher).
+      // Fail-open bei internen Fehlern (Checkout bricht nie durch die Prüfung).
       const floorCheck = await checkOrderFloor({ items, subtotal, total, voucherCode: voucher_code })
       if (!floorCheck.ok) {
-        console.error(`🚨 PREIS-CHECK (nur Log): total=${total} < floor=${floorCheck.floor} (base=${floorCheck.baseSum}, discount=${floorCheck.discount}) — Order wird trotzdem angelegt`)
+        console.error(`🚨 Order abgelehnt (Preisprüfung): total=${total} < floor=${floorCheck.floor} (base=${floorCheck.baseSum}, discount=${floorCheck.discount})`)
+        return res.status(400).json({ error: 'Preisprüfung fehlgeschlagen. Bitte Warenkorb neu laden und erneut versuchen.' })
       }
 
       const { data, error } = await supabaseAdmin
