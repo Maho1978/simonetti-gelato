@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { checkOrderFloor } from '@/lib/validateOrderPricing'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-06-24.dahlia' })
 const supabaseAdmin = createClient(
@@ -14,6 +15,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { amount, orderData } = req.body
     if (!amount || amount < 0.5) return res.status(400).json({ error: 'Ungültiger Betrag' })
+
+    // Serverseitige Preis-Untergrenze — BEOBACHTUNGS-MODUS (nur Log, blockiert nicht)
+    const floorCheck = await checkOrderFloor({
+      items: orderData?.items || [],
+      subtotal: orderData?.subtotal,
+      total: Number(orderData?.total || amount),
+      voucherCode: orderData?.voucher_code,
+    })
+    if (!floorCheck.ok) {
+      console.error(`🚨 PREIS-CHECK App (nur Log): total=${orderData?.total || amount} < floor=${floorCheck.floor} — Order wird trotzdem angelegt`)
+    }
 
     const appUrl = 'https://www.eiscafe-simonetti.de'
 

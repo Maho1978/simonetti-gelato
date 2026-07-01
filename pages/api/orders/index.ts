@@ -1,5 +1,6 @@
 ﻿import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { checkOrderFloor } from '@/lib/validateOrderPricing'
 
 // Hilfsfunktion: Bestellnummer generieren z.B. "SIM-2024-0042"
 function generateOrderNumber(): string {
@@ -36,6 +37,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         order_type,
         status,
       } = req.body
+
+      // Serverseitige Preis-Untergrenze gegen manipulierte Totals.
+      // BEOBACHTUNGS-MODUS: loggt Verdachtsfälle, blockiert (noch) NICHT —
+      // um False-Positives (z.B. Produkt-Varianten mit eigenem Preis) an echtem
+      // Traffic auszuschließen, bevor auf Blockieren umgestellt wird.
+      const floorCheck = await checkOrderFloor({ items, subtotal, total, voucherCode: voucher_code })
+      if (!floorCheck.ok) {
+        console.error(`🚨 PREIS-CHECK (nur Log): total=${total} < floor=${floorCheck.floor} (base=${floorCheck.baseSum}, discount=${floorCheck.discount}) — Order wird trotzdem angelegt`)
+      }
 
       const { data, error } = await supabaseAdmin
         .from('orders')
