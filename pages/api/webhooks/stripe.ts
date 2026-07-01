@@ -83,12 +83,20 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const { data: existing } = await supabase
     .from('orders')
-    .select('payment_status')
+    .select('payment_status, total')
     .eq('id', orderId)
     .single()
 
   if (existing?.payment_status === 'paid') {
     console.log(`ℹ️  checkout.session.completed: Bestellung ${orderId} bereits bezahlt, skip.`)
+    return
+  }
+
+  // Betrags-Verifikation: gezahlter Betrag MUSS der Bestellsumme entsprechen.
+  const expectedCents = Math.round(Number(existing?.total || 0) * 100)
+  if (expectedCents > 0 && session.amount_total != null && session.amount_total !== expectedCents) {
+    console.error(`🚨 Betrags-Mismatch Bestellung ${orderId}: bezahlt ${session.amount_total}, erwartet ${expectedCents} — NICHT als bezahlt markiert`)
+    await supabase.from('orders').update({ payment_status: 'amount_mismatch' }).eq('id', orderId)
     return
   }
 
@@ -128,12 +136,22 @@ async function onPaymentSucceeded(pi: Stripe.PaymentIntent) {
 
   const { data: existing } = await supabase
     .from('orders')
-    .select('payment_status')
+    .select('payment_status, total')
     .eq('id', orderId)
     .single()
 
   if (existing?.payment_status === 'paid') {
     console.log(`ℹ️  payment_intent.succeeded: Bestellung ${orderId} bereits bezahlt, skip.`)
+    return
+  }
+
+  // Betrags-Verifikation: gezahlter Betrag MUSS der Bestellsumme entsprechen.
+  // Verhindert Preis-Manipulation (Unterbezahlung wird NICHT als bezahlt markiert).
+  const expectedCents = Math.round(Number(existing?.total || 0) * 100)
+  const paidCents = pi.amount_received ?? pi.amount
+  if (expectedCents > 0 && paidCents !== expectedCents) {
+    console.error(`🚨 Betrags-Mismatch Bestellung ${orderId}: bezahlt ${paidCents}, erwartet ${expectedCents} — NICHT als bezahlt markiert`)
+    await supabase.from('orders').update({ payment_status: 'amount_mismatch' }).eq('id', orderId)
     return
   }
 
