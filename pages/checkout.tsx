@@ -38,6 +38,7 @@ interface AppliedVoucher {
   discount_type: 'percentage' | 'fixed'
   discount_value: number
   discountAmount: number
+  free_delivery?: boolean
 }
 
 interface ShopTimes { isOpen: boolean; openFrom: string; openUntil: string }
@@ -60,7 +61,7 @@ async function validateVoucher(code: string, subtotal: number): Promise<{ vouche
   if (subtotal < data.min_order_value) return { voucher: null, error: `Mindestbestellwert für diesen Gutschein: ${data.min_order_value.toFixed(2)} €` }
   const raw = data.discount_type === 'percentage' ? Math.min(subtotal * (data.discount_value / 100), subtotal) : Math.min(data.discount_value, subtotal)
   const discountAmount = Math.round(raw * 10) / 10
-  return { voucher: { id: data.id, code: data.code, discount_type: data.discount_type, discount_value: data.discount_value, discountAmount: parseFloat(discountAmount.toFixed(2)) }, error: null }
+  return { voucher: { id: data.id, code: data.code, discount_type: data.discount_type, discount_value: data.discount_value, discountAmount: parseFloat(discountAmount.toFixed(2)), free_delivery: data.free_delivery === true }, error: null }
 }
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
@@ -370,7 +371,10 @@ export default function Checkout({ session }: { session: Session | null }) {
   }
 
   const subtotal   = cart.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity), 0)
-  const discount   = (voucher?.discountAmount || 0) + (loyalty?.discountAmount || 0)
+  // free_delivery-Gutscheine ziehen die Liefergebühr ab — nur bei Lieferung (bei Abholung ist effectiveDeliveryFee 0)
+  const freeDeliveryDiscount = voucher?.free_delivery ? effectiveDeliveryFee : 0
+  const voucherDiscount = (voucher?.discountAmount || 0) + freeDeliveryDiscount
+  const discount   = voucherDiscount + (loyalty?.discountAmount || 0)
   const roundTo10Cents = (val: number) => Math.round(val * 10) / 10
   const grandTotal  = roundTo10Cents(Math.max(0, subtotal - discount + effectiveDeliveryFee + tip))
   const amountCents = Math.round(grandTotal * 100)
@@ -387,7 +391,7 @@ export default function Checkout({ session }: { session: Session | null }) {
       customer_phone:    phone || null,
       items:             cart,
       subtotal,
-      discount:          voucher?.discountAmount || 0,
+      discount:          voucherDiscount,
       voucher_code:      voucher?.code || null,
       voucher_id:        voucher?.id   || null,
       delivery_fee:      effectiveDeliveryFee,
@@ -520,7 +524,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                 </div>
                 <div className="mt-5 pt-4 border-t border-gray-100 space-y-2.5">
                   <div className="flex justify-between text-sm text-gray-500"><span>Zwischensumme</span><span>{subtotal.toFixed(2)} €</span></div>
-                  {voucher && <div className="flex justify-between text-sm font-semibold text-green-600"><span>Gutschein ({voucher.code})</span><span>- {voucher.discountAmount.toFixed(2)} EUR</span></div>}
+                  {voucher && <div className="flex justify-between text-sm font-semibold text-green-600"><span>Gutschein ({voucher.code}){voucher.free_delivery ? ' · Gratis Lieferung' : ''}</span><span>- {voucherDiscount.toFixed(2)} EUR</span></div>}
                   {loyalty && <div className="flex justify-between text-sm font-semibold text-amber-600"><span>Treuepunkte: {loyalty.label}</span><span>- {loyalty.discountAmount.toFixed(2)} EUR</span></div>}
                   {orderType === 'delivery' && <div className="flex justify-between text-sm text-gray-500"><span>🚗 Liefergebühr</span><span>{deliveryFee.toFixed(2)} €</span></div>}
                   {orderType === 'pickup'   && <div className="flex justify-between text-sm font-semibold text-green-600"><span>🏪 Abholung</span><span>Kostenlos</span></div>}
