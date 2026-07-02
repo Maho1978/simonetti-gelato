@@ -9,6 +9,7 @@ interface Voucher {
   code: string
   discount_type: 'percentage' | 'fixed'
   discount_value: number
+  free_delivery: boolean
   min_order_value: number
   max_uses: number
   current_uses: number
@@ -27,6 +28,7 @@ function VouchersContent() {
     code: '',
     discount_type: 'percentage' as 'percentage' | 'fixed',
     discount_value: 10,
+    free_delivery: false,
     min_order_value: 0,
     max_uses: 100,
     valid_until: '',
@@ -73,7 +75,9 @@ function VouchersContent() {
     const data = {
       code: formData.code.toUpperCase(),
       discount_type: formData.discount_type,
-      discount_value: formData.discount_value,
+      // Bei Gratis-Lieferung kommt der Rabatt aus free_delivery, nicht aus dem Wert
+      discount_value: formData.free_delivery ? 0 : formData.discount_value,
+      free_delivery: formData.free_delivery,
       min_order_value: formData.min_order_value,
       max_uses: formData.max_uses,
       valid_until: formData.valid_until || null,
@@ -98,6 +102,7 @@ function VouchersContent() {
       code: voucher.code,
       discount_type: voucher.discount_type,
       discount_value: voucher.discount_value,
+      free_delivery: voucher.free_delivery === true,
       min_order_value: voucher.min_order_value,
       max_uses: voucher.max_uses,
       valid_until: voucher.valid_until ? voucher.valid_until.split('T')[0] : '',
@@ -128,6 +133,7 @@ function VouchersContent() {
       code: '',
       discount_type: 'percentage',
       discount_value: 10,
+      free_delivery: false,
       min_order_value: 0,
       max_uses: 100,
       valid_until: '',
@@ -174,10 +180,10 @@ function VouchersContent() {
 
               <div className="mb-4">
                 <div className="text-4xl font-bold text-[#4a5d54]">
-                  {voucher.discount_type === 'percentage' ? `${voucher.discount_value}%` : `${voucher.discount_value}€`}
+                  {voucher.free_delivery ? '🚗' : voucher.discount_type === 'percentage' ? `${voucher.discount_value}%` : `${voucher.discount_value}€`}
                 </div>
                 <div className="text-xs uppercase tracking-widest text-[#8da399] font-bold">
-                  {voucher.discount_type === 'percentage' ? 'Rabatt' : 'Festbetrag'}
+                  {voucher.free_delivery ? 'Gratis Lieferung' : voucher.discount_type === 'percentage' ? 'Rabatt' : 'Festbetrag'}
                 </div>
               </div>
 
@@ -253,24 +259,36 @@ function VouchersContent() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <button type="button" onClick={() => setFormData({ ...formData, discount_type: 'percentage' })}
-                  className={`p-4 rounded-xl border-2 transition font-bold ${formData.discount_type === 'percentage' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}>
+              <div className="grid grid-cols-3 gap-3">
+                <button type="button" onClick={() => setFormData({ ...formData, discount_type: 'percentage', free_delivery: false })}
+                  className={`p-4 rounded-xl border-2 transition font-bold ${!formData.free_delivery && formData.discount_type === 'percentage' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}>
                   Prozent (%)
                 </button>
-                <button type="button" onClick={() => setFormData({ ...formData, discount_type: 'fixed' })}
-                  className={`p-4 rounded-xl border-2 transition font-bold ${formData.discount_type === 'fixed' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}>
+                <button type="button" onClick={() => setFormData({ ...formData, discount_type: 'fixed', free_delivery: false })}
+                  className={`p-4 rounded-xl border-2 transition font-bold ${!formData.free_delivery && formData.discount_type === 'fixed' ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}>
                   Festbetrag (€)
+                </button>
+                <button type="button" onClick={() => setFormData({ ...formData, free_delivery: true, discount_type: 'fixed', discount_value: 0 })}
+                  className={`p-4 rounded-xl border-2 transition font-bold ${formData.free_delivery ? 'border-[#4a5d54] bg-[#f9f8f4]' : 'border-gray-50 text-gray-400'}`}>
+                  🚗 Gratis Lieferung
                 </button>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Wert</label>
-                  <input type="number" required value={formData.discount_value}
-                    onChange={e => setFormData({ ...formData, discount_value: parseFloat(e.target.value) })}
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]" />
-                </div>
+                {formData.free_delivery ? (
+                  <div className="md:col-span-1 flex items-end">
+                    <p className="text-sm text-gray-500 bg-[#f9f8f4] rounded-xl px-4 py-3 w-full">
+                      Zieht die Liefergebühr ab (nur bei Lieferung, nicht bei Abholung).
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Wert</label>
+                    <input type="number" required value={formData.discount_value}
+                      onChange={e => setFormData({ ...formData, discount_value: parseFloat(e.target.value) })}
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 font-bold outline-none focus:border-[#4a5d54]" />
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-black uppercase tracking-widest text-[#8da399] mb-2">Mindestumsatz</label>
                   <input type="number" value={formData.min_order_value}
