@@ -819,9 +819,11 @@ export default function KanbanPage() {
       }
     }
 
-    // Auto-Delete nach 1 Stunde
+    // Auto-Delete nach 1 Stunde — NUR unbezahlte Zahlungsabbrüche (AUSSTEHEND, nicht paid).
+    // NIEMALS OFFEN löschen: OFFEN = bezahlt (Webhook) oder Bar-Bestellung — sonst
+    // verschwindet eine bezahlte Bestellung, wenn 1h niemand aufs Kanban schaut.
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-    const toDelete = data.filter(o => (o.status === 'OFFEN' || o.status === 'AUSSTEHEND') && new Date(o.created_at) < oneHourAgo)
+    const toDelete = data.filter(o => o.status === 'AUSSTEHEND' && o.payment_status !== 'paid' && new Date(o.created_at) < oneHourAgo)
     for (const o of toDelete) { await supabase.from('orders').delete().eq('id', o.id) }
 
     data.forEach(o => knownIds.current.add(o.id))
