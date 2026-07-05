@@ -47,12 +47,16 @@ export default function AGB() {
             </p>
             <p className="text-gray-700 leading-relaxed mb-4">
               <strong>Zahlungsarten:</strong><br />
+              - Link (Stripe)<br />
+              - Google Pay<br />
+              - Apple Pay<br />
+              - Amazon Pay<br />
               - Kreditkarte (Visa, Mastercard)<br />
               - SEPA-Lastschrift<br />
               - giropay<br />
               - Sofort-Überweisung<br />
-              - Apple Pay / Google Pay<br />
-              - PayPal
+              - PayPal<br />
+              - Barzahlung bei Lieferung
             </p>
           </section>
 
