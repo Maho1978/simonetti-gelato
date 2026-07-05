@@ -98,6 +98,75 @@ export default function Datenschutz() {
                 https://www.paypal.com/de/webapps/mpp/ua/privacy-full
               </a>
             </p>
+            <h3 className="text-xl font-semibold mb-3 mt-6" style={{ color: '#4a5d54' }}>Amazon Pay</h3>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Auf unserer Website nutzen wir den Zahlungsdienst „Amazon Pay" der Amazon Payments Europe s.c.a.,
+              38 avenue John F. Kennedy, L-1855 Luxembourg.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Bei Zahlung über Amazon Pay werden im Rahmen der Vertragsabwicklung folgende Daten an Amazon Payments
+              Europe s.c.a. übermittelt: Name, Anschrift, E-Mail-Adresse, Bestellinformationen und Zahlungsdaten.
+              Die Übermittlung erfolgt zum Zweck der Zahlungsabwicklung.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Rechtsgrundlage für die Übermittlung ist Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) sowie
+              Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer sicheren und effizienten Zahlungsabwicklung).
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Amazon Payments Europe s.c.a. kann Daten an Konzernunternehmen (einschließlich Amazon.com Inc. in den USA)
+              übermitteln. Für Datenübermittlungen in die USA besteht ein Angemessenheitsbeschluss der EU-Kommission
+              (EU-US Data Privacy Framework vom 10.07.2023). Ergänzend hat Amazon Standardvertragsklauseln
+              (Art. 46 Abs. 2 lit. c DSGVO) implementiert.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Amazon setzt beim Bezahlvorgang Cookies, um den Login-Status zu speichern und die Sicherheit der
+              Transaktion zu gewährleisten.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Datenschutzerklärung:
+              <a href="https://pay.amazon.eu/help/201751600" target="_blank" className="text-blue-600 hover:underline ml-1">
+                https://pay.amazon.eu/help/201751600
+              </a>
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6" style={{ color: '#4a5d54' }}>Apple Pay</h3>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Wir bieten Apple Pay als Zahlungsmethode an. Die Zahlungsabwicklung erfolgt über unseren
+              Zahlungsdienstleister Stripe.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Anbieter: Apple Distribution International Ltd., Hollyhill Industrial Estate, Cork, Irland
+              (für EU-Nutzer; Muttergesellschaft: Apple Inc., One Apple Park Way, Cupertino, CA 95014, USA)<br />
+              Datenschutzerklärung:
+              <a href="https://www.apple.com/de/legal/privacy/" target="_blank" className="text-blue-600 hover:underline ml-1">
+                https://www.apple.com/de/legal/privacy/
+              </a>
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Bei Nutzung von Apple Pay werden Zahlungsdaten tokenisiert und verschlüsselt übertragen. Apple erhält
+              keine vollständigen Kartendaten. Die Datenverarbeitung erfolgt auf Basis von Art. 6 Abs. 1 lit. b DSGVO
+              (Vertragserfüllung). Für Datenübermittlungen in die USA gilt das EU-US Data Privacy Framework
+              (Angemessenheitsbeschluss der EU-Kommission vom 10.07.2023).
+            </p>
+
+            <h3 className="text-xl font-semibold mb-3 mt-6" style={{ color: '#4a5d54' }}>Google Pay</h3>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Wir bieten Google Pay als Zahlungsmethode an. Die Zahlungsabwicklung erfolgt über unseren
+              Zahlungsdienstleister Stripe.
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Anbieter: Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland<br />
+              Datenschutzerklärung:
+              <a href="https://policies.google.com/privacy" target="_blank" className="text-blue-600 hover:underline ml-1">
+                https://policies.google.com/privacy
+              </a>
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Bei Nutzung von Google Pay werden Zahlungsdaten tokenisiert und verschlüsselt verarbeitet. Google erhält
+              keine vollständigen Kartendaten. Die Datenverarbeitung erfolgt auf Basis von Art. 6 Abs. 1 lit. b DSGVO
+              (Vertragserfüllung).
+            </p>
+
             <h3 className="text-xl font-semibold mb-3 mt-6" style={{ color: '#4a5d54' }}>Supabase</h3>
             <p className="text-gray-700 leading-relaxed mb-4">
               Wir nutzen Supabase zur Speicherung von Bestelldaten, Kundendaten und Loyalitätspunkten.
@@ -215,7 +284,7 @@ export default function Datenschutz() {
         </div>
 
         <div className="mt-12 pt-8 border-t" style={{ borderColor: '#e5e7eb' }}>
-          <p className="text-sm text-gray-500 mb-4">Stand: Juni 2026</p>
+          <p className="text-sm text-gray-500 mb-4">Stand: Juli 2026</p>
           <div className="flex gap-4">
             <Link href="/agb" className="text-sm hover:underline" style={{ color: '#4a5d54' }}>
               AGB
