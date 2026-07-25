@@ -250,6 +250,8 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [minimumOrder, setMinimumOrder] = useState(15.00)
   const [paypalClientId, setPaypalClientId] = useState('')
   const paypalOrderIdRef = useRef<string | null>(null)
+  const [cashLoading, setCashLoading] = useState(false)
+  const [cashError, setCashError]     = useState('')
   const [orderType, setOrderType]       = useState<'delivery' | 'pickup'>('delivery')
   const [pickupEnabled, setPickupEnabled] = useState(false)
   const [deliveryZones, setDeliveryZones] = useState<{ id: string; zip: string; city: string; enabled: boolean }[]>([{ id: '1', zip: '40764', city: 'Langenfeld', enabled: true }])
@@ -407,7 +409,11 @@ export default function Checkout({ session }: { session: Session | null }) {
       order_type:        orderType,
       status:            'OFFEN',
     }
-    await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) })
+    const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      throw new Error(d?.error || 'Bestellung konnte nicht angelegt werden. Bitte erneut versuchen.')
+    }
     if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
     if (loyalty?.points_used && session?.user?.id) {
       await supabase.from('loyalty_transactions').insert({
@@ -482,15 +488,22 @@ export default function Checkout({ session }: { session: Session | null }) {
 
   const handleCashOrder = async () => {
     if (!isFormValid || !agbAccepted) return
+    setCashLoading(true); setCashError('')
     try {
       const statusData: ShopStatusData = await fetch('/api/shop-status').then(r => r.json())
       const typeOpen = orderType === 'pickup' ? statusData.pickup?.isOpen : statusData.delivery?.isOpen
       if (!typeOpen && !statusData.isPreorder) {
-        alert(`${orderType === 'pickup' ? 'Abholung' : 'Lieferung'} ist momentan nicht verfügbar.`)
+        setCashError(`${orderType === 'pickup' ? 'Abholung' : 'Lieferung'} ist momentan nicht verfügbar.`)
+        setCashLoading(false)
         return
       }
     } catch {}
-    await saveOrder('cash-' + Date.now(), 'cash', cashNote)
+    try {
+      await saveOrder('cash-' + Date.now(), 'cash', cashNote)
+    } catch (err: any) {
+      setCashError(err.message || 'Bestellung fehlgeschlagen. Bitte erneut versuchen.')
+      setCashLoading(false)
+    }
   }
 
   const isFormValid = orderType === 'pickup'
@@ -907,10 +920,16 @@ export default function Checkout({ session }: { session: Session | null }) {
                             {!isFormValid ? '⚠️ Bitte zuerst alle Pflichtfelder ausfüllen' : '⚠️ Bitte AGB akzeptieren'}
                           </div>
                         )}
-                        <button type="button" onClick={handleCashOrder} disabled={!isFormValid || !agbAccepted || shopOpenForType === false}
-                          className={`w-full py-4 text-base font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${!isFormValid || !agbAccepted || shopOpenForType === false ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-sm'}`}>
-                          <Banknote size={20} />
-                          {shopOpenForType === false ? 'Diese Option ist gerade geschlossen' : `Jetzt bestellen · ${grandTotal.toFixed(2)} € bar`}
+                        {cashError && (
+                          <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm">
+                            <AlertCircle size={16} /> {cashError}
+                          </div>
+                        )}
+                        <button type="button" onClick={handleCashOrder} disabled={!isFormValid || !agbAccepted || shopOpenForType === false || cashLoading}
+                          className={`w-full py-4 text-base font-bold rounded-2xl transition-all flex items-center justify-center gap-2 ${!isFormValid || !agbAccepted || shopOpenForType === false || cashLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 active:scale-[0.98] shadow-sm'}`}>
+                          {cashLoading
+                            ? <><div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />Bestellung wird angelegt...</>
+                            : <><Banknote size={20} />{shopOpenForType === false ? 'Diese Option ist gerade geschlossen' : `Jetzt bestellen · ${grandTotal.toFixed(2)} € bar`}</>}
                         </button>
                       </div>
                     )}
