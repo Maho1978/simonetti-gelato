@@ -5,6 +5,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 import { Session } from '@supabase/supabase-js'
 import PwaInstallBanner from '@/components/PwaInstallBanner'
+import { Analytics } from '@vercel/analytics/next'
 
 export default function App({ Component, pageProps }: AppProps) {
   const [session, setSession] = useState<Session | null>(null)
@@ -39,6 +40,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <>
       <Component {...pageProps} session={session} />
       <PwaInstallBanner />
+      <Analytics />
     </>
   )
 }
