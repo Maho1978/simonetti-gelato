@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 // v2.2 - hausnr fix, street autocomplete removed
 import { useRouter } from 'next/router'
 import { Session } from '@supabase/supabase-js'
@@ -249,6 +249,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [deliveryFee, setDeliveryFee]   = useState(3.00)
   const [minimumOrder, setMinimumOrder] = useState(15.00)
   const [paypalClientId, setPaypalClientId] = useState('')
+  const paypalOrderIdRef = useRef<string | null>(null)
   const [orderType, setOrderType]       = useState<'delivery' | 'pickup'>('delivery')
   const [pickupEnabled, setPickupEnabled] = useState(false)
   const [deliveryZones, setDeliveryZones] = useState<{ id: string; zip: string; city: string; enabled: boolean }[]>([{ id: '1', zip: '40764', city: 'Langenfeld', enabled: true }])
@@ -414,6 +415,65 @@ export default function Checkout({ session }: { session: Session | null }) {
         points: -loyalty.points_used,
         reason: 'redemption',
       })
+    }
+    localStorage.removeItem('simonetti-cart')
+    localStorage.removeItem('cart')
+    router.push('/order-success')
+  }
+
+  // PayPal: Bestellung wird angelegt BEVOR bezahlt wird (status AUSSTEHEND,
+  // wie beim Stripe-Flow) — so existiert sie in der DB, egal was danach mit
+  // dem Browser passiert. Gibt die Order-ID zurück, die als custom_id an
+  // PayPal mitgegeben wird, damit Client-Confirm & Webhook sie wiederfinden.
+  const createPendingPaypalOrder = async (): Promise<string> => {
+    const orderData = {
+      user_id:           session?.user?.id || null,
+      guest_email:       isGuest ? email : null,
+      customer_name:     name,
+      customer_email:    isGuest ? email : session?.user?.email,
+      customer_phone:    phone || null,
+      items:              cart,
+      subtotal,
+      discount:          voucherDiscount,
+      voucher_code:      voucher?.code || null,
+      voucher_id:        voucher?.id   || null,
+      delivery_fee:      effectiveDeliveryFee,
+      tip,
+      total:             grandTotal,
+      delivery_address:  orderType === 'pickup' ? null : { name, street: `${street} ${hausnr}`.trim(), zip, city },
+      notes:             [notes, loyalty?.note || ''].filter(Boolean).join(' | ') || null,
+      payment_method:    'paypal',
+      payment_status:    'pending',
+      order_type:        orderType,
+      status:            'AUSSTEHEND',
+    }
+    const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(orderData) })
+    if (!res.ok) throw new Error('Bestellung konnte nicht angelegt werden')
+    const { order } = await res.json()
+    return order.id as string
+  }
+
+  // Nach actions.order.capture() ist das Geld bereits bei PayPal eingegangen.
+  // Dieser Aufruf ist reine UX-Beschleunigung (sofortige Bestätigung) — die
+  // eigentliche Absicherung übernimmt der PayPal-Webhook server-seitig, auch
+  // wenn dieser Request selbst fehlschlägt (Tab zu, Netz weg etc.).
+  const finalizePaypalOrder = async (orderId: string, captureId: string) => {
+    if (voucher?.id) await supabase.rpc('increment_voucher_uses', { voucher_id: voucher.id })
+    if (loyalty?.points_used && session?.user?.id) {
+      await supabase.from('loyalty_transactions').insert({
+        user_id: session.user.id,
+        points: -loyalty.points_used,
+        reason: 'redemption',
+      })
+    }
+    try {
+      await fetch('/api/paypal/confirm-capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, captureId }),
+      })
+    } catch (e) {
+      console.error('confirm-capture Aufruf fehlgeschlagen (Webhook holt es nach):', e)
     }
     localStorage.removeItem('simonetti-cart')
     localStorage.removeItem('cart')
@@ -801,8 +861,18 @@ export default function Checkout({ session }: { session: Session | null }) {
                           )}
                           <div className={(!isFormValid || !agbAccepted) ? 'opacity-40 pointer-events-none' : ''}>
                             <PayPalButtons style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' }} disabled={!isFormValid || !agbAccepted}
-                              createOrder={(_data, actions) => actions.order.create({ intent: 'CAPTURE', purchase_units: [{ amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) }, description: 'Eiscafe Simonetti Bestellung' }] })}
-                              onApprove={async (_data, actions) => { const order = await actions.order!.capture(); const captureId = (order as any)?.purchase_units?.[0]?.payments?.captures?.[0]?.id as string | undefined; await saveOrder(order.id || 'paypal-' + Date.now(), 'paypal', undefined, captureId) }}
+                              createOrder={async (_data, actions) => {
+                                const orderId = await createPendingPaypalOrder()
+                                paypalOrderIdRef.current = orderId
+                                return actions.order.create({ intent: 'CAPTURE', purchase_units: [{ custom_id: orderId, amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) }, description: 'Eiscafe Simonetti Bestellung' }] })
+                              }}
+                              onApprove={async (_data, actions) => {
+                                const order = await actions.order!.capture()
+                                const captureId = (order as any)?.purchase_units?.[0]?.payments?.captures?.[0]?.id as string | undefined
+                                const orderId = paypalOrderIdRef.current
+                                if (!orderId || !captureId) { console.error('PayPal: orderId/captureId fehlt nach Capture', { orderId, captureId }); return }
+                                await finalizePaypalOrder(orderId, captureId)
+                              }}
                               onError={err => console.error('PayPal error:', err)} />
                           </div>
                         </div>
