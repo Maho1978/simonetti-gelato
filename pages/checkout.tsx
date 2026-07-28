@@ -244,6 +244,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [showStripe, setShowStripe]     = useState(true)
   const [showPayPal, setShowPayPal]     = useState(false)
   const [showCash, setShowCash]         = useState(false)
+  const [cashNeedsAccount, setCashNeedsAccount] = useState(false)
   const [expressHidden, setExpressHidden] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'cash'>('stripe')
   const [deliveryFee, setDeliveryFee]   = useState(3.00)
@@ -314,8 +315,17 @@ export default function Checkout({ session }: { session: Session | null }) {
         if (data.delivery_fee    != null) setDeliveryFee(data.delivery_fee)
         if (data.min_order_value != null) setMinimumOrder(data.min_order_value)
         if (data.pickup_enabled)          setPickupEnabled(true)
-        if (data.cash_payment_enabled && !isGuest) {
-          supabase.auth.getSession().then(({ data: { session: s } }) => { if (s) setShowCash(true) })
+        // Barzahlung bewusst nur für registrierte Kunden. Gästen zeigen wir stattdessen
+        // einen Hinweis, dass es die Option mit Konto gibt.
+        if (data.cash_payment_enabled) {
+          if (isGuest) {
+            setCashNeedsAccount(true)
+          } else {
+            supabase.auth.getSession().then(({ data: { session: s } }) => {
+              if (s) setShowCash(true)
+              else setCashNeedsAccount(true)
+            })
+          }
         }
         if (data.delivery_zones?.length) setDeliveryZones(data.delivery_zones)
         if (data.upsell_enabled) setUpsellEnabled(true)
@@ -842,6 +852,23 @@ export default function Checkout({ session }: { session: Session | null }) {
                         </button>
                       ))}
                     </div>
+
+                    {cashNeedsAccount && !showCash && (
+                      <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-start gap-2">
+                        <Banknote size={16} className="text-green-700 shrink-0 mt-0.5" />
+                        <p className="text-xs text-green-800">
+                          <strong>Lieber bar bezahlen?</strong> Barzahlung ist mit einem Kundenkonto möglich.{' '}
+                          <button
+                            type="button"
+                            onClick={() => router.push('/checkout-login')}
+                            className="underline font-bold hover:text-green-900"
+                          >
+                            Jetzt anmelden oder registrieren
+                          </button>{' '}
+                          – dein Warenkorb bleibt erhalten.
+                        </p>
+                      </div>
+                    )}
 
                     <AgbCheckbox accepted={agbAccepted} onChange={setAgbAccepted} />
                     {!agbAccepted && (
