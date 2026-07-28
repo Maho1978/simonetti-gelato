@@ -120,6 +120,7 @@ export default function CheckoutLoginPage() {
                   Vorteile:
                 </p>
                 <ul className="text-sm text-gray-700 space-y-2 mb-6">
+                  <li>💵 <strong>Barzahlung möglich</strong> (nur mit Konto)</li>
                   <li>✅ Bestellhistorie einsehen</li>
                   <li>✅ Schnellere Wiederbestellungen</li>
                   <li>✅ Gespeicherte Lieferadresse</li>
