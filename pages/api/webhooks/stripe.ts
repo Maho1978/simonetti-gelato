@@ -14,6 +14,39 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Warnt das Team per Telegram, wenn eine Zahlung auf einer bereits abgelehnten/
+// stornierten Bestellung eintrifft (Personal hat abgelehnt, während die Zahlung
+// noch unterwegs war). Analoge Absicherung wie in lib/paypalConfirm.ts, 31.07.2026
+// nach einem echten Vorfall ergänzt.
+async function alertPaidAfterRejection(order: any): Promise<void> {
+  try {
+    const [toggleRes, settingsRes] = await Promise.all([
+      supabase.from('feature_toggles').select('enabled').eq('id', 'telegram_notify').single(),
+      supabase.from('shop_settings').select('notify_settings').eq('id', 'main').single(),
+    ])
+    if (!toggleRes.data?.enabled) return
+
+    const notify = settingsRes.data?.notify_settings || {}
+    const token  = notify.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || ''
+    const chatId = notify.telegram_chat_id   || process.env.TELEGRAM_CHAT_ID   || ''
+    if (!token || !chatId) return
+
+    const orderNr = order.order_number || (order.id || '').slice(-6).toUpperCase()
+    const text = `⚠️ *ZAHLUNG NACH ABLEHNUNG/STORNO*\n\n` +
+      `Bestellung #${orderNr} war *${order.status}*, jetzt ist die Zahlung eingegangen (${(order.total || 0).toFixed(2)} €).\n` +
+      `👤 ${order.customer_name || 'Gast'}${order.customer_phone ? ` · 📞 ${order.customer_phone}` : ''}\n\n` +
+      `Bitte prüfen: Kunde beliefern oder Geld erstatten?`
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+    })
+  } catch (err) {
+    console.error('Telegram-Warnung (paid-after-rejection) fehlgeschlagen:', err)
+  }
+}
+
 // Raw Body lesen (nötig für stripe.webhooks.constructEvent)
 async function getRawBody(req: NextApiRequest): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -83,7 +116,7 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const { data: existing } = await supabase
     .from('orders')
-    .select('payment_status, total')
+    .select('payment_status, total, status')
     .eq('id', orderId)
     .single()
 
@@ -91,6 +124,7 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
     console.log(`ℹ️  checkout.session.completed: Bestellung ${orderId} bereits bezahlt, skip.`)
     return
   }
+  const wasRejectedOrCancelled = existing?.status === 'ABGELEHNT' || existing?.status === 'STORNIERT'
 
   // Betrags-Verifikation: gezahlter Betrag MUSS der Bestellsumme entsprechen.
   const expectedCents = Math.round(Number(existing?.total || 0) * 100)
@@ -107,7 +141,7 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
   const { data: order, error } = await supabase
     .from('orders')
     .update({
-      status:              'OFFEN',
+      status:              wasRejectedOrCancelled ? existing!.status : 'OFFEN',
       payment_status:      'paid',
       stripe_session_id:   session.id,
       payment_intent_id:   paymentIntentId ?? null,
@@ -122,11 +156,12 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (error) { console.error('DB-Fehler checkout.session.completed:', error); throw error }
 
-  console.log(`✅ Bestellung ${orderId} bezahlt & auf OFFEN gesetzt`)
+  console.log(`✅ Bestellung ${orderId} bezahlt${wasRejectedOrCancelled ? ` (Status ${existing!.status} bewusst NICHT überschrieben)` : ' & auf OFFEN gesetzt'}`)
 
   await Promise.allSettled([
-    order?.customer_email && sendEmail('order_confirmed',  order, order.customer_email),
+    !wasRejectedOrCancelled && order?.customer_email && sendEmail('order_confirmed', order, order.customer_email),
     sendEmail('new_order_admin', order, process.env.ADMIN_EMAIL || 'info@eiscafe-simonetti.de'),
+    wasRejectedOrCancelled && alertPaidAfterRejection(order),
   ])
 }
 
@@ -136,7 +171,7 @@ async function onPaymentSucceeded(pi: Stripe.PaymentIntent) {
 
   const { data: existing } = await supabase
     .from('orders')
-    .select('payment_status, total')
+    .select('payment_status, total, status')
     .eq('id', orderId)
     .single()
 
@@ -144,6 +179,7 @@ async function onPaymentSucceeded(pi: Stripe.PaymentIntent) {
     console.log(`ℹ️  payment_intent.succeeded: Bestellung ${orderId} bereits bezahlt, skip.`)
     return
   }
+  const wasRejectedOrCancelled = existing?.status === 'ABGELEHNT' || existing?.status === 'STORNIERT'
 
   // Betrags-Verifikation: gezahlter Betrag MUSS der Bestellsumme entsprechen.
   // Verhindert Preis-Manipulation (Unterbezahlung wird NICHT als bezahlt markiert).
@@ -158,7 +194,7 @@ async function onPaymentSucceeded(pi: Stripe.PaymentIntent) {
   const { data: order, error } = await supabase
     .from('orders')
     .update({
-      status:            'OFFEN',
+      status:            wasRejectedOrCancelled ? existing!.status : 'OFFEN',
       payment_status:    'paid',
       payment_intent_id: pi.id,
       payment_method:    pi.payment_method_types?.[0] || 'card',
@@ -169,7 +205,12 @@ async function onPaymentSucceeded(pi: Stripe.PaymentIntent) {
     .single()
 
   if (error) { console.error('DB-Fehler payment_intent.succeeded:', error); throw error }
-  console.log(`💳 PaymentIntent succeeded für Bestellung ${orderId}`)
+  console.log(`💳 PaymentIntent succeeded für Bestellung ${orderId}${wasRejectedOrCancelled ? ` (Status ${existing!.status} bewusst NICHT überschrieben)` : ''}`)
+
+  if (wasRejectedOrCancelled) {
+    await alertPaidAfterRejection(order)
+    return
+  }
 
   // E-Mails nur senden wenn kein Stripe Checkout Session (App-Flow nutzt checkout.session.completed)
   if (order && !order.stripe_session_id) {

@@ -23,6 +23,39 @@ async function getPayPalToken(): Promise<string | null> {
   return data.access_token || null
 }
 
+// Warnt das Team per Telegram, wenn eine Zahlung auf einer bereits abgelehnten/
+// stornierten Bestellung eintrifft — das passiert, wenn Personal ablehnt, während
+// die Zahlung noch unterwegs war (echter Fall 31.07.2026, Order SIM-2026-3944).
+// Ohne diese Warnung fällt so ein Fall nur durch Zufall auf.
+async function alertPaidAfterRejection(order: any): Promise<void> {
+  try {
+    const [toggleRes, settingsRes] = await Promise.all([
+      supabaseAdmin.from('feature_toggles').select('enabled').eq('id', 'telegram_notify').single(),
+      supabaseAdmin.from('shop_settings').select('notify_settings').eq('id', 'main').single(),
+    ])
+    if (!toggleRes.data?.enabled) return
+
+    const notify = settingsRes.data?.notify_settings || {}
+    const token  = notify.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || ''
+    const chatId = notify.telegram_chat_id   || process.env.TELEGRAM_CHAT_ID   || ''
+    if (!token || !chatId) return
+
+    const orderNr = order.order_number || (order.id || '').slice(-6).toUpperCase()
+    const text = `⚠️ *ZAHLUNG NACH ABLEHNUNG/STORNO*\n\n` +
+      `Bestellung #${orderNr} war *${order.status}*, jetzt ist die Zahlung eingegangen (${(order.total || 0).toFixed(2)} €).\n` +
+      `👤 ${order.customer_name || 'Gast'}${order.customer_phone ? ` · 📞 ${order.customer_phone}` : ''}\n\n` +
+      `Bitte prüfen: Kunde beliefern oder Geld erstatten?`
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+    })
+  } catch (err) {
+    console.error('Telegram-Warnung (paid-after-rejection) fehlgeschlagen:', err)
+  }
+}
+
 async function sendEmail(type: string, order: any, recipientEmail: string) {
   if (!recipientEmail || !order) return
   try {
@@ -92,9 +125,16 @@ export async function confirmPaypalCapture(orderId: string, captureId: string): 
 
   if (updateErr) return { ok: false, reason: updateErr.message }
 
+  const wasRejectedOrCancelled = order.status === 'ABGELEHNT' || order.status === 'STORNIERT'
+
   await Promise.allSettled([
-    updated?.customer_email && sendEmail('order_confirmed', updated, updated.customer_email),
+    // Keine automatische "Bestellung bestätigt"-Mail, wenn die Order bereits abgelehnt/
+    // storniert war - das könnte eine bewusste Ablehnung gewesen sein (z.B. Artikel
+    // nicht verfügbar), nur die Zahlung kam zufällig trotzdem noch rein. Team entscheidet
+    // nach der Telegram-Warnung, ob beliefert oder erstattet wird.
+    !wasRejectedOrCancelled && updated?.customer_email && sendEmail('order_confirmed', updated, updated.customer_email),
     sendEmail('new_order_admin', updated, process.env.ADMIN_EMAIL || 'info@eiscafe-simonetti.de'),
+    wasRejectedOrCancelled && alertPaidAfterRejection(updated),
   ])
 
   return { ok: true, alreadyPaid: false, order: updated }
