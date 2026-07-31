@@ -1141,6 +1141,10 @@ function ExpressCheckoutForm({ session, isGuest, cart, total, subtotal, shopOpen
   const router   = useRouter()
   const [walletVisible, setWalletVisible] = useState(false)
   const [error, setError]                 = useState('')
+  // Synchrone Sperre gegen doppelte Bestellanlage bei mehrfachem onConfirm-Aufruf
+  // (gleicher Fehlerklasse wie der PayPal-createOrder-Bug) - kein setState, weil
+  // das erst beim naechsten Render greift und ein schnelles Doppel-Feuern nicht abfängt.
+  const confirmInFlightRef = useRef(false)
 
   useEffect(() => {
     if (elements && amountCents > 0) elements.update({ amount: amountCents })
@@ -1171,6 +1175,8 @@ function ExpressCheckoutForm({ session, isGuest, cart, total, subtotal, shopOpen
 
   const handleConfirm = async () => {
     if (!stripe || !elements) return
+    if (confirmInFlightRef.current) return
+    confirmInFlightRef.current = true
     setError('')
     let pendingOrderId: string | null = null
     try {
@@ -1230,6 +1236,8 @@ function ExpressCheckoutForm({ session, isGuest, cart, total, subtotal, shopOpen
         try { await fetch(`/api/orders/${pendingOrderId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'STORNIERT' }) }) } catch {}
       }
       setError(err.message || 'Zahlung fehlgeschlagen')
+    } finally {
+      confirmInFlightRef.current = false
     }
   }
 

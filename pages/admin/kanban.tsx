@@ -40,7 +40,10 @@ async function refundOrderFull(order: any): Promise<{ ok: boolean; error?: strin
   const isCash = order.payment_method === 'cash' || (order.payment_intent_id || '').startsWith('cash-')
   const already = Number(order.refund_amount || 0)
   const refundAmount = +(Number(order.total || 0) - already).toFixed(2)
-  if (isCash || refundAmount <= 0) return { ok: true, refunded: 0 }
+  // Nie bezahlte Bestellungen (z.B. AUSSTEHEND-Duplikate) haben nichts zu erstatten -
+  // ohne diesen Check versuchte cancelOrder() bisher trotzdem einen Refund-Call, der mit
+  // 422 "Keine PayPal-Referenz" scheiterte und die Stornierung komplett blockierte.
+  if (isCash || refundAmount <= 0 || order.payment_status !== 'paid') return { ok: true, refunded: 0 }
   const { data: { session } } = await supabase.auth.getSession()
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` }
   const isPayPal = order.payment_method === 'paypal'
