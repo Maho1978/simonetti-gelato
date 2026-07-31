@@ -5,6 +5,30 @@
 
 import { supabaseAdmin } from '../../../lib/supabaseAdmin'
 
+// ── Auth-Check fuer GET: nur Admin darf Fahrer-Positionen abfragen ──
+// War komplett ungeschuetzt - jeder, der eine driver_id kennt/raet, konnte die
+// Live-Position abfragen. Gefunden bei Nachaudit 31.07.2026. Kunden-App nutzt
+// direktes Supabase-Realtime auf driver_locations (eigene RLS), Fahrer-App nutzt
+// nur POST/DELETE - kein legitimer Aufrufer braucht GET ohne Admin-Rechte.
+async function requireAdmin(req, res) {
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return false
+  }
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(auth.slice(7))
+  if (error || !user) {
+    res.status(401).json({ error: 'Unauthorized' })
+    return false
+  }
+  const isAdmin = user.email === process.env.ADMIN_EMAIL || user.user_metadata?.role === 'admin'
+  if (!isAdmin) {
+    res.status(403).json({ error: 'Forbidden - Admin access required' })
+    return false
+  }
+  return true
+}
+
 // ── Auth-Check: x-driver-id Header gegen drivers-Tabelle prüfen ──
 async function requireAuthenticatedDriver(req, res) {
   const headerDriverId = req.headers['x-driver-id']
@@ -69,6 +93,8 @@ export default async function handler(req, res) {
 
   } else if (req.method === 'GET') {
     // ── Position eines Fahrers abrufen (für Admin-Map) ──────
+    if (!(await requireAdmin(req, res))) return
+
     const { driver_id } = req.query
 
     if (!driver_id) {
