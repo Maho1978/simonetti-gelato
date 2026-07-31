@@ -251,6 +251,7 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [minimumOrder, setMinimumOrder] = useState(15.00)
   const [paypalClientId, setPaypalClientId] = useState('')
   const paypalOrderIdRef = useRef<string | null>(null)
+  const paypalOrderTotalRef = useRef<number | null>(null)
   const [cashLoading, setCashLoading] = useState(false)
   const [cashError, setCashError]     = useState('')
   const [orderType, setOrderType]       = useState<'delivery' | 'pickup'>('delivery')
@@ -902,8 +903,15 @@ export default function Checkout({ session }: { session: Session | null }) {
                           <div className={(!isFormValid || !agbAccepted) ? 'opacity-40 pointer-events-none' : ''}>
                             <PayPalButtons style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' }} disabled={!isFormValid || !agbAccepted}
                               createOrder={async (_data, actions) => {
-                                const orderId = await createPendingPaypalOrder()
+                                // PayPals SDK kann createOrder mehrfach fuer denselben Checkout-Versuch
+                                // aufrufen (z.B. Doppelklick, langsames Popup) - vorhandene AUSSTEHEND-Order
+                                // wiederverwenden statt jedes Mal eine neue anzulegen. Nur bei echter
+                                // Warenkorb-/Preisaenderung seit dem letzten Versuch neu anlegen.
+                                const orderId = (paypalOrderIdRef.current && paypalOrderTotalRef.current === grandTotal)
+                                  ? paypalOrderIdRef.current
+                                  : await createPendingPaypalOrder()
                                 paypalOrderIdRef.current = orderId
+                                paypalOrderTotalRef.current = grandTotal
                                 return actions.order.create({ intent: 'CAPTURE', purchase_units: [{ custom_id: orderId, amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) }, description: 'Eiscafe Simonetti Bestellung' }] })
                               }}
                               onApprove={async (_data, actions) => {
