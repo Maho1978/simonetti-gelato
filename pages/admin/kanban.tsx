@@ -13,6 +13,7 @@ import {
   ChangeDriverDropdown,
 } from '@/components/KanbanTracking'
 import OrderCorrectionModal from '@/components/OrderCorrectionModal'
+import { kanbanSpalte, loestAlarmAus } from '@/lib/orderVisibility'
 
 const COLUMNS: { id: string; title: string; color: string; border: string; icon: string; hidden?: boolean }[] = [
   { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-50',   border: 'border-blue-200',   icon: '👨‍🍳' },
@@ -816,8 +817,9 @@ export default function KanbanPage() {
         !knownIds.current.has(o.id) &&
         // Nur echte Bestellungen alarmieren. Ein unbezahltes AUSSTEHEND ist nur ein
         // laufender Zahlungsversuch — der loeste bisher Ton + Popup aus und lockte das
-        // Personal dazu, eine nie bezahlte Bestellung zuzubereiten.
-        (o.status === 'OFFEN' || (o.status === 'AUSSTEHEND' && o.payment_status === 'paid')) &&
+        // Personal dazu, eine nie bezahlte Bestellung zuzubereiten. Regel + Tests:
+        // lib/orderVisibility.ts
+        loestAlarmAus(o) &&
         (!firstLoad || new Date(o.created_at).getTime() > recentCutoff)
       )
       if (newOnes.length > 0) {
@@ -845,14 +847,10 @@ export default function KanbanPage() {
 
     const grouped: Record<string, any[]> = { OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] }
     data.forEach(o => {
-      // AUSSTEHEND = Platzhalter-Order, die VOR der Zahlung angelegt wird (Stripe/PayPal/
-      // Apple Pay). Solange nicht bezahlt wurde, ist das ein laufender oder abgebrochener
-      // Zahlungsversuch — KEINE Bestellung und keine Arbeit für die Küche. Landete bisher
-      // direkt in der Spalte "In Bearbeitung", weshalb Personal zweimal dasselbe zubereitet
-      // hat (SIM-2026-9410/3273, SIM-2026-3528/1408). Bar-Bestellungen sind davon nicht
-      // betroffen: die werden als OFFEN angelegt, nicht als AUSSTEHEND.
-      if (o.status === 'AUSSTEHEND' && o.payment_status !== 'paid') return
-      const s = (o.status === 'AUSSTEHEND' || o.status === 'OFFEN') ? 'IN_BEARBEITUNG' : (o.status || 'IN_BEARBEITUNG'); if (grouped[s]) grouped[s].push(o)
+      // Unbezahlte AUSSTEHEND-Platzhalter sind KEINE Arbeit für die Küche und liefern
+      // hier null. Regel + Regressionstests: lib/orderVisibility.ts
+      const s = kanbanSpalte(o)
+      if (s && grouped[s]) grouped[s].push(o)
     })
     setOrders(grouped)
     setLoading(false)
