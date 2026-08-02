@@ -16,6 +16,13 @@ export default function OrderSuccess() {
   const orderId       = router.query.order as string | undefined
 
   useEffect(() => {
+    // Bestellung ist durch — gemerkte PayPal-Order-Referenz aus dem Checkout
+    // aufräumen. Bleibt sie liegen (z.B. PayPal geklickt, dann doch per Karte
+    // gezahlt), könnte ein späterer Checkout im selben Tab eine längst
+    // gelöschte Order-ID wiederverwenden. Key muss zu PAYPAL_PENDING_KEY in
+    // checkout.tsx passen.
+    try { sessionStorage.removeItem('simonetti-pending-paypal-order') } catch {}
+
     // Prüfen ob Bewertungssystem aktiv
     fetch('/api/features/reviews')
       .then(r => r.json())
