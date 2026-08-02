@@ -793,9 +793,13 @@ export default function KanbanPage() {
   const volumeRef  = useRef(soundVolume)
   const showAllRef = useRef(showAllDays)
   const popupRef = useRef(popupOrder)
-  // AudioContext beim ersten Klick entsperren
+  // AudioContext entsperren. Bewusst bei JEDEM Klick versucht (nicht nur dem
+  // ersten): getAudioCtx() prüft intern den state und ruft resume() nur bei
+  // Bedarf auf — nach einem Neuladen des Fensters (z.B. Browser-Speicherschoner)
+  // ist der Context wieder gesperrt, ohne dass die Seite komplett neu montiert
+  // werden muss. Kein Overhead: getAudioCtx() ist ein günstiger State-Check.
   useEffect(() => {
-    const unlock = () => { getAudioCtx(); document.removeEventListener('click', unlock) }
+    const unlock = () => { getAudioCtx() }
     document.addEventListener('click', unlock)
     return () => document.removeEventListener('click', unlock)
   }, [])
@@ -871,6 +875,22 @@ export default function KanbanPage() {
     loadWhatsAppToggle()
     const iv = setInterval(loadOrders, 15000)
     return () => clearInterval(iv)
+  }, [loadOrders])
+
+  // Browser drosseln/pausieren Timer in Fenstern, die eine Weile nicht die aktive
+  // Auswahl waren (Tab-Wechsel, Speicherschoner-Neuladen, gesperrter Bildschirm) —
+  // der 15-Sekunden-Takt oben läuft dann nicht zuverlässig weiter. Sobald das
+  // Fenster wieder aktiv wird, sofort nachladen statt auf den nächsten Takt zu
+  // warten. Live beobachtet 02.08.: neue Bestellung kam erst nach manuellem
+  // Neuladen der Seite ins Kanban.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') loadOrders() }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
   }, [loadOrders])
 
   useEffect(() => { loadOrders() }, [showAllDays, loadOrders])
