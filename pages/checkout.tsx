@@ -11,6 +11,8 @@ import { AlertCircle, Tag, X, Check, Loader2, CreditCard, User, Clock, Plus, Min
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
+const PAYPAL_PENDING_KEY = 'simonetti-pending-paypal-order'
+
 interface CartItem {
   id: string
   name: string
@@ -252,6 +254,20 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [paypalClientId, setPaypalClientId] = useState('')
   const paypalOrderIdRef = useRef<string | null>(null)
   const paypalOrderTotalRef = useRef<number | null>(null)
+
+  // Überlebt einen Seiten-Reload: sonst verliert der Ref beim Neuladen den Bezug
+  // zur schon angelegten AUSSTEHEND-Order und ein erneuter PayPal-Klick legt eine
+  // zweite Order für denselben Warenkorb an (Duplikat, live beobachtet 02.08.).
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(PAYPAL_PENDING_KEY)
+      if (raw) {
+        const { id, total } = JSON.parse(raw)
+        paypalOrderIdRef.current = id
+        paypalOrderTotalRef.current = total
+      }
+    } catch {}
+  }, [])
   const [cashLoading, setCashLoading] = useState(false)
   const [cashError, setCashError]     = useState('')
   const [orderType, setOrderType]       = useState<'delivery' | 'pickup'>('delivery')
@@ -469,6 +485,31 @@ export default function Checkout({ session }: { session: Session | null }) {
     const { order } = await res.json()
     return order.id as string
   }
+
+  // Storniert eine angelegte, aber nie bezahlte PayPal-Order — z.B. wenn der Kunde
+  // das PayPal-Popup schließt oder auf eine andere Zahlart wechselt. Ohne das blieb
+  // die Order als AUSSTEHEND liegen, bis Personal sie versehentlich mit annahm
+  // (SIM-2026-9410, SIM-2026-3528). Kein Await nötig — Fire-and-forget, blockiert
+  // die UI nicht.
+  const cancelPendingPaypalOrder = () => {
+    const id = paypalOrderIdRef.current
+    if (!id) return
+    paypalOrderIdRef.current = null
+    paypalOrderTotalRef.current = null
+    try { sessionStorage.removeItem(PAYPAL_PENDING_KEY) } catch {}
+    fetch(`/api/orders/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'STORNIERT' }),
+    }).catch(() => {})
+  }
+
+  // Sobald eine andere Zahlart gewählt wird, ist eine evtl. schon angelegte
+  // PayPal-Order verwaist — sofort stornieren statt sie liegen zu lassen.
+  useEffect(() => {
+    if (paymentMethod !== 'paypal' && paypalOrderIdRef.current) {
+      cancelPendingPaypalOrder()
+    }
+  }, [paymentMethod])
 
   // Nach actions.order.capture() ist das Geld bereits bei PayPal eingegangen.
   // Dieser Aufruf ist reine UX-Beschleunigung (sofortige Bestätigung) — die
@@ -841,6 +882,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                           agbAccepted={agbAccepted} amountCents={amountCents}
                           isFormValid={isFormValid}
                           onHide={() => setExpressHidden(true)}
+                          onBeforeStart={cancelPendingPaypalOrder}
                         />
                       </Elements>
                     )}
@@ -912,6 +954,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                                   : await createPendingPaypalOrder()
                                 paypalOrderIdRef.current = orderId
                                 paypalOrderTotalRef.current = grandTotal
+                                try { sessionStorage.setItem(PAYPAL_PENDING_KEY, JSON.stringify({ id: orderId, total: grandTotal })) } catch {}
                                 return actions.order.create({ intent: 'CAPTURE', purchase_units: [{ custom_id: orderId, amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) }, description: 'Eiscafe Simonetti Bestellung' }] })
                               }}
                               onApprove={async (_data, actions) => {
@@ -919,8 +962,12 @@ export default function Checkout({ session }: { session: Session | null }) {
                                 const captureId = (order as any)?.purchase_units?.[0]?.payments?.captures?.[0]?.id as string | undefined
                                 const orderId = paypalOrderIdRef.current
                                 if (!orderId || !captureId) { console.error('PayPal: orderId/captureId fehlt nach Capture', { orderId, captureId }); return }
+                                paypalOrderIdRef.current = null
+                                paypalOrderTotalRef.current = null
+                                try { sessionStorage.removeItem(PAYPAL_PENDING_KEY) } catch {}
                                 await finalizePaypalOrder(orderId, captureId)
                               }}
+                              onCancel={() => cancelPendingPaypalOrder()}
                               onError={err => console.error('PayPal error:', err)} />
                           </div>
                         </div>
@@ -1128,13 +1175,13 @@ function StripeForm({ session, isGuest, cart, total, subtotal, shopOpenForType, 
 // ExpressCheckoutForm — Apple Pay / Google Pay über den Tabs
 // Braucht eigenen Elements-Provider (separat vom StripeForm-Provider)
 // ─────────────────────────────────────────────────────────────────────────────
-function ExpressCheckoutForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, loyalty, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted, amountCents, isFormValid, onHide }: {
+function ExpressCheckoutForm({ session, isGuest, cart, total, subtotal, shopOpenForType, minimumOrder, deliveryFee, voucher, loyalty, tip, name, email, phone, street, zip, city, notes, orderType, isPreorder, agbAccepted, amountCents, isFormValid, onHide, onBeforeStart }: {
   session: Session | null; isGuest: boolean; cart: CartItem[]; total: number; subtotal: number
   shopOpenForType: boolean | null; minimumOrder: number; deliveryFee: number
   voucher: AppliedVoucher | null; loyalty: AppliedLoyalty | null
   tip: number; name: string; email: string; phone: string; street: string; zip: string; city: string; notes: string
   orderType: string; isPreorder: boolean; agbAccepted: boolean; amountCents: number
-  isFormValid: boolean; onHide: () => void
+  isFormValid: boolean; onHide: () => void; onBeforeStart: () => void
 }) {
   const stripe   = useStripe()
   const elements = useElements()
@@ -1178,6 +1225,10 @@ function ExpressCheckoutForm({ session, isGuest, cart, total, subtotal, shopOpen
     if (confirmInFlightRef.current) return
     confirmInFlightRef.current = true
     setError('')
+    // Apple Pay/Google Pay sitzt oberhalb der Zahlart-Tabs und läuft unabhängig
+    // vom paymentMethod-Status — eine zuvor per PayPal-Klick angelegte, nie
+    // bezahlte Order würde sonst nicht storniert, wenn hier direkt bezahlt wird.
+    onBeforeStart()
     let pendingOrderId: string | null = null
     try {
       const orderData = {
