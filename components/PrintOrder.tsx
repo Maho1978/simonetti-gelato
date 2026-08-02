@@ -1,4 +1,5 @@
 import { Printer } from 'lucide-react'
+import { formatAddress, itemFlavors, itemExtras, itemLineTotal } from '@/lib/orderFormat'
 
 interface Order {
   id: string
@@ -6,7 +7,9 @@ interface Order {
   customer_name: string
   customer_phone: string
   customer_email: string
-  delivery_address: string
+  // JSONB aus der DB ({street, zip, city, name}) — NICHT direkt rendern,
+  // sondern immer durch formatAddress schicken.
+  delivery_address: any
   items: any[]
   subtotal: number
   delivery_fee: number
@@ -137,7 +140,7 @@ export default function PrintOrder({ order }: PrintOrderProps) {
               {order.customer_name}
             </div>
             <div style={{ fontSize: '11px', marginTop: '2px' }}>
-              {order.delivery_address}
+              {formatAddress(order.delivery_address)}
             </div>
             <div style={{ fontSize: '12px', fontWeight: 'bold', marginTop: '3px' }}>
               Tel: {order.customer_phone}
@@ -177,30 +180,30 @@ export default function PrintOrder({ order }: PrintOrderProps) {
                     {item.quantity}x {item.name}
                   </div>
                   <div style={{ whiteSpace: 'nowrap', marginLeft: '10px' }}>
-                    {(item.price * item.quantity).toFixed(2)} EUR
+                    {itemLineTotal(item).toFixed(2)} EUR
                   </div>
                 </div>
 
-                {/* Sorten */}
-                {item.flavors && item.flavors.length > 0 && (
-                  <div style={{ 
-                    fontSize: '10px',
+                {/* Sorten — Bestelldaten liefern selectedFlavors, nicht flavors */}
+                {itemFlavors(item).length > 0 && (
+                  <div style={{
+                    fontSize: '11px',
                     marginLeft: '15px',
                     marginBottom: '2px',
-                    fontStyle: 'italic'
+                    fontWeight: 'bold'
                   }}>
-                    Sorten: {item.flavors.join(', ')}
+                    Sorten: {itemFlavors(item).join(', ')}
                   </div>
                 )}
 
                 {/* Extras */}
-                {item.extras && item.extras.length > 0 && (
-                  <div style={{ 
-                    fontSize: '10px',
+                {itemExtras(item).length > 0 && (
+                  <div style={{
+                    fontSize: '11px',
                     marginLeft: '15px',
-                    fontStyle: 'italic'
+                    fontWeight: 'bold'
                   }}>
-                    Extras: {item.extras.map((e: any) => e.name).join(', ')}
+                    Extras: {itemExtras(item).join(', ')}
                   </div>
                 )}
 

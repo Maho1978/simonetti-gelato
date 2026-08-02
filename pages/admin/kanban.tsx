@@ -221,6 +221,12 @@ function printOrder(order: any) {
     if (extrasWithPrice.length === 0 && item.extras.length > 0) {
       itemsHtml += `<tr><td></td><td colspan="2" class="item-detail">Extras: ${item.extras.join(', ')}</td></tr>`
     }
+    // Artikel-Anmerkung des Kunden ("ohne Sahne", "weniger süß"). Wird im Warenkorb
+    // pro Artikel erfasst (MiniCart) und stand bisher NIRGENDS auf dem Bon — die
+    // Küche hat solche Wünsche nie zu sehen bekommen. Bewusst auffällig gesetzt.
+    if (item.notes) {
+      itemsHtml += `<tr><td></td><td colspan="2" class="item-note">>> ${item.notes}</td></tr>`
+    }
   }
 
   const discountHtml = discount > 0 ? `<tr class="total-row"><td colspan="2">Gutschein${order.voucher_code ? ` (${order.voucher_code})` : ''}</td><td>${(-discount).toFixed(2)}</td></tr>` : ''
@@ -250,6 +256,7 @@ function printOrder(order: any) {
   .item-name { font-size: 15px; font-weight: 900; padding-left: 4px; padding-right: 4px; word-break: break-word; }
   .item-price { width: 38px; font-size: 15px; font-weight: 900; text-align: right; white-space: nowrap; }
   .item-detail { font-size: 12px; font-weight: bold; padding-left: 26px; padding-bottom: 3px; padding-top: 1px; color: #000; line-height: 1.6; }
+  .item-note { font-size: 13px; font-weight: bold; padding-left: 26px; padding-bottom: 3px; padding-top: 2px; color: #000; line-height: 1.5; border: 2px solid #000; background: #eee; }
   .total-row td { font-size: 13px; padding: 1px 0; }
   .total-row td:last-child { text-align: right; white-space: nowrap; }
   .grand-label { font-size: 20px; font-weight: 900; }
@@ -406,6 +413,7 @@ function NewOrderPopup({ order, onAccept, onReject, onLater }: {
                       <span className="font-bold text-gray-900">{item.quantity}x {item.name || item.productName}</span>
                       {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-400">🍦 {item.selectedFlavors.join(', ')}</div>}
                       {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-400">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
+                      {item.notes && <div className="text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 mt-1 inline-block">💬 {item.notes}</div>}
                     </div>
                     <span className="text-gray-500 font-semibold ml-2">{((item.price || 0) * item.quantity).toFixed(2)}€</span>
                   </div>
@@ -544,6 +552,7 @@ function OrderDetailPopup({ order, drivers, onClose, onAccept, onReject, onMoveL
                     <span className="font-bold text-gray-900">{item.quantity}x {item.name || item.productName}</span>
                     {item.selectedFlavors?.length > 0 && <div className="text-xs text-gray-500 mt-0.5">🍦 {item.selectedFlavors.join(', ')}</div>}
                     {item.selectedExtras?.length > 0 && <div className="text-xs text-gray-500">➕ {item.selectedExtras.map((e: any) => e.name || e).join(', ')}</div>}
+                    {item.notes && <div className="text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 mt-1 inline-block">💬 {item.notes}</div>}
                   </div>
                   <span className="font-bold text-gray-700 ml-4">{((item.totalPrice || item.price * item.quantity) || 0).toFixed(2)} €</span>
                 </div>

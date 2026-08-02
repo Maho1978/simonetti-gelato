@@ -54,6 +54,7 @@ function formatItems(items: any[]): string {
           <strong style="color:#2d2d2d;">${item.quantity}x ${item.name}</strong>
           ${flavors ? `<br><span style="font-size:12px;color:#8da399;">🍦 ${flavors}</span>` : ''}
           ${extras  ? `<br><span style="font-size:12px;color:#8da399;">➕ ${extras}</span>`  : ''}
+          ${item.notes ? `<br><span style="font-size:12px;color:#92400e;font-weight:bold;">💬 ${item.notes}</span>` : ''}
         </td>
         <td style="padding:10px 0;border-bottom:1px solid #f0ede8;text-align:right;white-space:nowrap;vertical-align:top;">
           <strong>${lineTotal} €</strong>
