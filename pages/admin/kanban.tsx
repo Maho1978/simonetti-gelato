@@ -814,7 +814,10 @@ export default function KanbanPage() {
       const recentCutoff = Date.now() - 10 * 60 * 1000
       const newOnes = data.filter(o =>
         !knownIds.current.has(o.id) &&
-        (o.status === 'OFFEN' || o.status === 'AUSSTEHEND') &&
+        // Nur echte Bestellungen alarmieren. Ein unbezahltes AUSSTEHEND ist nur ein
+        // laufender Zahlungsversuch — der loeste bisher Ton + Popup aus und lockte das
+        // Personal dazu, eine nie bezahlte Bestellung zuzubereiten.
+        (o.status === 'OFFEN' || (o.status === 'AUSSTEHEND' && o.payment_status === 'paid')) &&
         (!firstLoad || new Date(o.created_at).getTime() > recentCutoff)
       )
       if (newOnes.length > 0) {
@@ -841,7 +844,16 @@ export default function KanbanPage() {
     isFirstLoad.current = false
 
     const grouped: Record<string, any[]> = { OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] }
-    data.forEach(o => { const s = (o.status === 'AUSSTEHEND' || o.status === 'OFFEN') ? 'IN_BEARBEITUNG' : (o.status || 'IN_BEARBEITUNG'); if (grouped[s]) grouped[s].push(o) })
+    data.forEach(o => {
+      // AUSSTEHEND = Platzhalter-Order, die VOR der Zahlung angelegt wird (Stripe/PayPal/
+      // Apple Pay). Solange nicht bezahlt wurde, ist das ein laufender oder abgebrochener
+      // Zahlungsversuch — KEINE Bestellung und keine Arbeit für die Küche. Landete bisher
+      // direkt in der Spalte "In Bearbeitung", weshalb Personal zweimal dasselbe zubereitet
+      // hat (SIM-2026-9410/3273, SIM-2026-3528/1408). Bar-Bestellungen sind davon nicht
+      // betroffen: die werden als OFFEN angelegt, nicht als AUSSTEHEND.
+      if (o.status === 'AUSSTEHEND' && o.payment_status !== 'paid') return
+      const s = (o.status === 'AUSSTEHEND' || o.status === 'OFFEN') ? 'IN_BEARBEITUNG' : (o.status || 'IN_BEARBEITUNG'); if (grouped[s]) grouped[s].push(o)
+    })
     setOrders(grouped)
     setLoading(false)
   }, [])
