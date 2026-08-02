@@ -653,6 +653,8 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
   const isDelivered = status === 'GELIEFERT'
   const isOffen     = status === 'OFFEN'
   const isPickup    = order.order_type === 'pickup'
+  const isCash      = order.payment_method === 'cash' || (order.payment_intent_id || '').startsWith('cash-')
+  const isUnpaid    = !isCash && order.payment_status !== 'paid'
 
   return (
     <div className={`bg-white rounded-xl p-3 shadow-sm border-2 hover:shadow-md transition mb-2 text-xs
@@ -666,6 +668,7 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
           <div className="font-bold text-xs text-gray-500">#{order.order_number || order.id?.slice(-6).toUpperCase()}</div>
           <div className="font-bold text-lg text-gray-900">{(order.total || 0).toFixed(2)}€</div>
           {isPickup && <div className="text-xs font-bold text-purple-600 bg-purple-50 rounded-full px-2 py-0.5 mt-0.5">🏪 Abholung</div>}
+          {!isDelivered && isUnpaid && <div className="text-xs font-bold text-red-700 bg-red-100 rounded-full px-2 py-0.5 mt-0.5">⚠️ Nicht bezahlt</div>}
         </div>
         <button onClick={onMoveRight} disabled={colIdx >= 3 || isDelivered}
           className={`p-1.5 rounded-lg transition ${colIdx < 3 && !isDelivered ? 'hover:bg-gray-100 text-gray-700' : 'text-gray-200 cursor-not-allowed'}`}>
@@ -871,13 +874,28 @@ export default function KanbanPage() {
     }
   }
 
+  // Warnt vor dem Annehmen, wenn eine Karten-/PayPal-Bestellung noch NICHT bezahlt ist.
+  // Bar ist ausgenommen - die ist absichtlich "pending" bis zur Übergabe. Grund: zweimal
+  // (31.07. + 02.08.) wurde eine unbezahlte Bestellung versehentlich angenommen und in
+  // die Küche gegeben, während die tatsächlich bezahlte Order unbeachtet liegen blieb.
+  const confirmUnpaidAccept = (order: any): boolean => {
+    const isCash = order.payment_method === 'cash' || (order.payment_intent_id || '').startsWith('cash-')
+    if (isCash || order.payment_status === 'paid') return true
+    return window.confirm(
+      `⚠️ Diese Bestellung ist NICHT als bezahlt markiert (${order.payment_method}, Status: ${order.payment_status}).\n\n` +
+      `Trotzdem annehmen und zubereiten?`
+    )
+  }
+
   const acceptFromPopup = async (order: any, prepTime: number, deliveryTime: number) => {
+    if (!confirmUnpaidAccept(order)) return
     const ok = await apiUpdateOrder(order.id, { status: 'IN_BEARBEITUNG', prep_time: prepTime, delivery_time: deliveryTime })
     if (ok) { await sendEmail('order_confirmed', order); await sendTelegram(order); await sendPush(order, 'IN_BEARBEITUNG'); closePopup(); loadOrders() }
   }
 
   const acceptOrder = async (orderId: string) => {
     const order = [...(orders['OFFEN'] || []), ...(orders['IN_BEARBEITUNG'] || [])].find(o => o.id === orderId) || Object.values(orders).flat().find(o => o.id === orderId)
+    if (order && !confirmUnpaidAccept(order)) return
     const ok = await apiUpdateOrder(orderId, { status: 'IN_BEARBEITUNG' })
     if (ok) { if (order) await sendEmail('order_confirmed', order); loadOrders() }
   }
