@@ -503,9 +503,22 @@ export default function Checkout({ session }: { session: Session | null }) {
     }).catch(() => {})
   }
 
-  // Sobald eine andere Zahlart gewählt wird, ist eine evtl. schon angelegte
-  // PayPal-Order verwaist — sofort stornieren statt sie liegen zu lassen.
+  // Sobald der Kunde AKTIV eine andere Zahlart wählt, ist eine evtl. schon angelegte
+  // PayPal-Order verwaist — dann stornieren statt sie liegen zu lassen.
+  //
+  // Der erste Lauf wird bewusst übersprungen: useEffect feuert auch beim ersten
+  // Rendern, und die Standard-Zahlart ist 'stripe'. Ohne diese Sperre hätte jedes
+  // Laden der Seite eine per sessionStorage wiederhergestellte PayPal-Order sofort
+  // storniert — genau das ist bei SIM-2026-6144 (02.08., 23,40 €) passiert: PayPal
+  // nutzt auf dem Handy eine Weiterleitung statt eines Popups, beim Zurückkommen
+  // wird die Seite neu aufgebaut und die Bestellung war storniert, bevor die Kundin
+  // zahlen konnte.
+  const zahlartWechselGeprueft = useRef(false)
   useEffect(() => {
+    if (!zahlartWechselGeprueft.current) {
+      zahlartWechselGeprueft.current = true
+      return
+    }
     if (paymentMethod !== 'paypal' && paypalOrderIdRef.current) {
       cancelPendingPaypalOrder()
     }
