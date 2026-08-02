@@ -12,6 +12,8 @@ import { AlertCircle, Tag, X, Check, Loader2, CreditCard, User, Clock, Plus, Min
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 const PAYPAL_PENDING_KEY = 'simonetti-pending-paypal-order'
+// Muss deutlich unter den 60 Min. des Kanban-Auto-Delete liegen (siehe Restore-Effekt)
+const PAYPAL_PENDING_MAX_AGE_MS = 45 * 60 * 1000
 
 interface CartItem {
   id: string
@@ -254,17 +256,30 @@ export default function Checkout({ session }: { session: Session | null }) {
   const [paypalClientId, setPaypalClientId] = useState('')
   const paypalOrderIdRef = useRef<string | null>(null)
   const paypalOrderTotalRef = useRef<number | null>(null)
+  // Wann die gemerkte Order angelegt/zuletzt benutzt wurde — für die 45-Min.-Frist
+  // auch ohne Seiten-Reload (Tab bleibt offen, Auto-Delete räumt die Order weg).
+  const paypalOrderTsRef = useRef<number>(0)
 
   // Überlebt einen Seiten-Reload: sonst verliert der Ref beim Neuladen den Bezug
   // zur schon angelegten AUSSTEHEND-Order und ein erneuter PayPal-Klick legt eine
   // zweite Order für denselben Warenkorb an (Duplikat, live beobachtet 02.08.).
+  //
+  // Einträge älter als 45 Min. werden verworfen: das Kanban löscht unbezahlte
+  // AUSSTEHEND-Orders nach 60 Min. automatisch. Ohne diese Frist könnte ein
+  // alter Eintrag eine bereits gelöschte Order-ID wiederverwenden — die Zahlung
+  // käme dann bei PayPal an, fände aber keine Bestellung mehr in der DB.
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(PAYPAL_PENDING_KEY)
       if (raw) {
-        const { id, total } = JSON.parse(raw)
-        paypalOrderIdRef.current = id
-        paypalOrderTotalRef.current = total
+        const { id, total, ts } = JSON.parse(raw)
+        if (typeof ts === 'number' && Date.now() - ts < PAYPAL_PENDING_MAX_AGE_MS) {
+          paypalOrderIdRef.current = id
+          paypalOrderTotalRef.current = total
+          paypalOrderTsRef.current = ts
+        } else {
+          sessionStorage.removeItem(PAYPAL_PENDING_KEY)
+        }
       }
     } catch {}
   }, [])
@@ -496,6 +511,7 @@ export default function Checkout({ session }: { session: Session | null }) {
     if (!id) return
     paypalOrderIdRef.current = null
     paypalOrderTotalRef.current = null
+    paypalOrderTsRef.current = 0
     try { sessionStorage.removeItem(PAYPAL_PENDING_KEY) } catch {}
     fetch(`/api/orders/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -961,13 +977,17 @@ export default function Checkout({ session }: { session: Session | null }) {
                                 // PayPals SDK kann createOrder mehrfach fuer denselben Checkout-Versuch
                                 // aufrufen (z.B. Doppelklick, langsames Popup) - vorhandene AUSSTEHEND-Order
                                 // wiederverwenden statt jedes Mal eine neue anzulegen. Nur bei echter
-                                // Warenkorb-/Preisaenderung seit dem letzten Versuch neu anlegen.
-                                const orderId = (paypalOrderIdRef.current && paypalOrderTotalRef.current === grandTotal)
-                                  ? paypalOrderIdRef.current
-                                  : await createPendingPaypalOrder()
+                                // Warenkorb-/Preisaenderung ODER wenn die gemerkte Order aelter als
+                                // 45 Min. ist (Kanban-Auto-Delete raeumt nach 60 Min. weg) neu anlegen.
+                                // ts ist bewusst die ANLAGE-Zeit der Order und wird bei Wiederverwendung
+                                // NICHT aufgefrischt — sonst wuerde die Frist am Auto-Delete vorbeilaufen.
+                                const fresh = paypalOrderTsRef.current > 0 && Date.now() - paypalOrderTsRef.current < PAYPAL_PENDING_MAX_AGE_MS
+                                const reuse = !!paypalOrderIdRef.current && paypalOrderTotalRef.current === grandTotal && fresh
+                                const orderId = reuse ? paypalOrderIdRef.current! : await createPendingPaypalOrder()
+                                if (!reuse) paypalOrderTsRef.current = Date.now()
                                 paypalOrderIdRef.current = orderId
                                 paypalOrderTotalRef.current = grandTotal
-                                try { sessionStorage.setItem(PAYPAL_PENDING_KEY, JSON.stringify({ id: orderId, total: grandTotal })) } catch {}
+                                try { sessionStorage.setItem(PAYPAL_PENDING_KEY, JSON.stringify({ id: orderId, total: grandTotal, ts: paypalOrderTsRef.current })) } catch {}
                                 return actions.order.create({ intent: 'CAPTURE', purchase_units: [{ custom_id: orderId, amount: { currency_code: 'EUR', value: grandTotal.toFixed(2) }, description: 'Eiscafe Simonetti Bestellung' }] })
                               }}
                               onApprove={async (_data, actions) => {
@@ -977,6 +997,7 @@ export default function Checkout({ session }: { session: Session | null }) {
                                 if (!orderId || !captureId) { console.error('PayPal: orderId/captureId fehlt nach Capture', { orderId, captureId }); return }
                                 paypalOrderIdRef.current = null
                                 paypalOrderTotalRef.current = null
+                                paypalOrderTsRef.current = 0
                                 try { sessionStorage.removeItem(PAYPAL_PENDING_KEY) } catch {}
                                 await finalizePaypalOrder(orderId, captureId)
                               }}

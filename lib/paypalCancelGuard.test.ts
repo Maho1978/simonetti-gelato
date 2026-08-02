@@ -44,3 +44,36 @@ describe('PayPal-Storno darf nicht beim Laden der Seite feuern', () => {
     expect(src).toMatch(/onCancel=\{\(\) => cancelPendingPaypalOrder\(\)\}/)
   })
 })
+
+describe('45-Min.-Frist gegen Wiederverwendung geloeschter Orders', () => {
+  // Kanban-Auto-Delete raeumt unbezahlte AUSSTEHEND-Orders nach 60 Min. weg.
+  // Eine aeltere gemerkte Order-ID darf deshalb nie wiederverwendet werden -
+  // die Zahlung kaeme sonst bei PayPal an, faende aber keine Bestellung mehr.
+
+  it('Frist ist definiert und liegt unter den 60 Min. des Auto-Delete', () => {
+    const m = src.match(/PAYPAL_PENDING_MAX_AGE_MS = (\d+) \* 60 \* 1000/)
+    expect(m).not.toBeNull()
+    expect(Number(m![1])).toBeLessThan(60)
+  })
+
+  it('Restore aus sessionStorage prueft die Frist und raeumt abgelaufene Eintraege weg', () => {
+    expect(src).toMatch(/Date\.now\(\) - ts < PAYPAL_PENDING_MAX_AGE_MS/)
+  })
+
+  it('Wiederverwendung im createOrder-Callback prueft die Frist ebenfalls (Tab-offen-Fall, kein Reload)', () => {
+    expect(src).toMatch(/paypalOrderTsRef\.current < PAYPAL_PENDING_MAX_AGE_MS|Date\.now\(\) - paypalOrderTsRef\.current < PAYPAL_PENDING_MAX_AGE_MS/)
+  })
+
+  it('ts wird bei Wiederverwendung NICHT aufgefrischt (sonst laeuft die Frist am Auto-Delete vorbei)', () => {
+    // Nur bei NEU angelegter Order darf der Zeitstempel gesetzt werden.
+    expect(src).toMatch(/if \(!reuse\) paypalOrderTsRef\.current = Date\.now\(\)/)
+    // Persistiert wird der Anlage-Zeitstempel, nicht Date.now()
+    expect(src).toMatch(/ts: paypalOrderTsRef\.current/)
+  })
+
+  it('order-success raeumt den gemerkten Eintrag nach JEDER erfolgreichen Bestellung ab', () => {
+    const fs = require('fs'); const path = require('path')
+    const success = fs.readFileSync(path.join(__dirname, '..', 'pages', 'order-success.tsx'), 'utf8')
+    expect(success).toMatch(/removeItem\('simonetti-pending-paypal-order'\)/)
+  })
+})
