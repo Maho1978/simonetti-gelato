@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { supabase } from '@/lib/supabase'
 import AdminLayout from '@/components/AdminLayout'
 import PrintOrder from '@/components/PrintOrder'
+import { formatAddress } from '@/lib/orderFormat'
 import { ArrowLeft, Printer, CheckCircle, Truck, Clock } from 'lucide-react'
 
 export default function OrderDetailPage() {
@@ -146,7 +147,7 @@ export default function OrderDetailPage() {
                 <p><strong>Name:</strong> {order.customer_name}</p>
                 <p><strong>Telefon:</strong> {order.customer_phone}</p>
                 <p><strong>Email:</strong> {order.customer_email}</p>
-                <p><strong>Adresse:</strong> {order.delivery_address}</p>
+                <p><strong>Adresse:</strong> {formatAddress(order.delivery_address)}</p>
                 {order.notes && (
                   <p><strong>Anmerkungen:</strong> {order.notes}</p>
                 )}

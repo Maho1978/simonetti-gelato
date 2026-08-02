@@ -22,7 +22,9 @@ function buildMessage(order: any): string {
 
   const items = (order.items || []).map((i: any) => {
     const flavors = (i.flavors || i.selectedFlavors || []).join(', ')
-    return `  • ${i.quantity}x ${i.name}${flavors ? ` (${flavors})` : ''} – ${((i.totalPrice || i.price * i.quantity) || 0).toFixed(2)} €`
+    // Artikel-Wunsch des Kunden ("ohne Sahne") — wird im Warenkorb pro Artikel erfasst
+    const itemNote = i.notes ? `\n    💬 ${i.notes}` : ''
+    return `  • ${i.quantity}x ${i.name}${flavors ? ` (${flavors})` : ''} – ${((i.totalPrice || i.price * i.quantity) || 0).toFixed(2)} €${itemNote}`
   }).join('\n')
 
   const notes = order.notes ? `\n💬 Anmerkung: ${order.notes}` : ''
