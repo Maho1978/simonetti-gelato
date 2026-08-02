@@ -695,6 +695,11 @@ function OrderCard({ order, colIdx, onMoveLeft, onMoveRight, onMarkDelivered, on
           <span className="text-gray-500">{(order.items || []).reduce((s: number, i: any) => s + i.quantity, 0)} Artikel</span>
         </div>
       </div>
+      {order.notes && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-2 py-1.5 mb-2 text-xs text-yellow-800">
+          💬 {order.notes}
+        </div>
+      )}
       {isOffen && (
         <div className="space-y-1.5 mb-1.5">
           <button onClick={onAccept}
