@@ -1,47 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { buildNewOrderMessage } from '@/lib/telegramNotify'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-
-function formatAddress(addr: any): string {
-  if (!addr) return '–'
-  if (typeof addr === 'string') return addr
-  return [addr.street, addr.zip && addr.city ? `${addr.zip} ${addr.city}` : addr.city].filter(Boolean).join(', ')
-}
-
-function buildMessage(order: any): string {
-  const orderNr   = order.order_number || order.id?.slice(-6).toUpperCase()
-  const time      = new Date(order.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })
-  const type      = order.order_type === 'pickup' ? '🏪 Abholung' : '🚗 Lieferung'
-  const payment   = order.payment_method === 'cash' ? '💵 Bar' : order.payment_method === 'paypal' ? '🅿️ PayPal' : '💳 Karte'
-  const total     = (order.total || 0).toFixed(2)
-  const tip       = order.tip > 0 ? `\n💝 Trinkgeld: ${order.tip.toFixed(2)} €` : ''
-
-  const items = (order.items || []).map((i: any) => {
-    const flavors = (i.flavors || i.selectedFlavors || []).join(', ')
-    // Artikel-Wunsch des Kunden ("ohne Sahne") — wird im Warenkorb pro Artikel erfasst
-    const itemNote = i.notes ? `\n    💬 ${i.notes}` : ''
-    return `  • ${i.quantity}x ${i.name}${flavors ? ` (${flavors})` : ''} – ${((i.totalPrice || i.price * i.quantity) || 0).toFixed(2)} €${itemNote}`
-  }).join('\n')
-
-  const notes = order.notes ? `\n💬 Anmerkung: ${order.notes}` : ''
-  const addr  = order.order_type !== 'pickup' ? `\n📍 ${formatAddress(order.delivery_address)}` : ''
-
-  return `🔔 *NEUE BESTELLUNG #${orderNr}*
-
-⏰ ${time} Uhr · ${type} · ${payment}
-👤 *${order.customer_name || 'Gast'}*${order.customer_phone ? ` · 📞 ${order.customer_phone}` : ''}${addr}
-
-🛒 *Bestellte Artikel:*
-${items}${notes}
-
-💰 *Gesamt: ${total} €*${tip}
-
-👉 [Zum Kanban](https://www.eiscafe-simonetti.de/admin/kanban)`
-}
 
 async function verifyAdmin(req: NextApiRequest): Promise<boolean> {
   const auth = req.headers.authorization
@@ -77,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ success: false, error: 'Telegram credentials not configured' })
     }
 
-    const text = buildMessage(order)
+    const text = buildNewOrderMessage(order)
 
     const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: 'POST',

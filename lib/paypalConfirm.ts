@@ -5,6 +5,7 @@
 // Sicherheitsnetz) aufgerufen. Beide Wege verifizieren die Capture
 // unabhängig direkt bei PayPal — nichts wird ungeprüft übernommen.
 import { supabaseAdmin } from './supabaseAdmin'
+import { sendNewOrderTelegram } from './telegramNotify'
 
 const PAYPAL_BASE = process.env.PAYPAL_MODE === 'live'
   ? 'https://api-m.paypal.com'
@@ -134,6 +135,7 @@ export async function confirmPaypalCapture(orderId: string, captureId: string): 
     // nach der Telegram-Warnung, ob beliefert oder erstattet wird.
     !wasRejectedOrCancelled && updated?.customer_email && sendEmail('order_confirmed', updated, updated.customer_email),
     sendEmail('new_order_admin', updated, process.env.ADMIN_EMAIL || 'info@eiscafe-simonetti.de'),
+    !wasRejectedOrCancelled && sendNewOrderTelegram(updated),
     wasRejectedOrCancelled && alertPaidAfterRejection(updated),
   ])
 

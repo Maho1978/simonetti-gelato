@@ -1,6 +1,7 @@
 ﻿import type { NextApiRequest, NextApiResponse } from 'next'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { checkOrderFloor } from '@/lib/validateOrderPricing'
+import { sendNewOrderTelegram } from '@/lib/telegramNotify'
 
 // Hilfsfunktion: Bestellnummer generieren z.B. "SIM-2024-0042"
 function generateOrderNumber(): string {
@@ -77,6 +78,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .single()
 
       if (error) throw error
+
+      // Sofort-Telegram-Alarm nur für Barzahlung: die ist ab Anlage schon eine
+      // echte Bestellung (bezahlt wird bei Übergabe). Karte/PayPal alarmieren
+      // erst bei bestätigter Zahlung (lib/paypalConfirm.ts, webhooks/stripe.ts) —
+      // sonst würde jeder abgebrochene Zahlungsversuch Personal alarmieren.
+      if (data.payment_method === 'cash') void sendNewOrderTelegram(data)
 
       res.status(200).json({ order: data })
     } catch (error: any) {

@@ -77,20 +77,6 @@ async function sendEmail(type: string, order: any) {
   } catch (e) {}
 }
 
-async function sendTelegram(order: any) {
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    await fetch('/api/telegram/notify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session?.access_token ?? ''}`,
-      },
-      body: JSON.stringify({ order }),
-    })
-  } catch (e) {}
-}
-
 async function sendPush(order: any, status: string) {
   if (!order?.user_id) return
   try {
@@ -929,7 +915,9 @@ export default function KanbanPage() {
   const acceptFromPopup = async (order: any, prepTime: number, deliveryTime: number) => {
     if (!confirmUnpaidAccept(order)) return
     const ok = await apiUpdateOrder(order.id, { status: 'IN_BEARBEITUNG', prep_time: prepTime, delivery_time: deliveryTime })
-    if (ok) { await sendEmail('order_confirmed', order); await sendTelegram(order); await sendPush(order, 'IN_BEARBEITUNG'); closePopup(); loadOrders() }
+    // Kein sendTelegram() mehr hier: der Alarm feuert jetzt serverseitig direkt bei
+    // Bestelleingang/Zahlungsbestätigung (lib/telegramNotify.ts) — sonst doppelt.
+    if (ok) { await sendEmail('order_confirmed', order); await sendPush(order, 'IN_BEARBEITUNG'); closePopup(); loadOrders() }
   }
 
   const acceptOrder = async (orderId: string) => {
@@ -1011,7 +999,9 @@ export default function KanbanPage() {
     if (newStatus === 'AN_FAHRER' && !order.assigned_at) updateData.assigned_at = new Date().toISOString()
     const ok = await apiUpdateOrder(orderId, updateData)
     if (ok) {
-      if (newStatus === 'IN_BEARBEITUNG') { await sendEmail('order_confirmed', order); await sendTelegram(order); await sendPush(order, 'IN_BEARBEITUNG') }
+      // Kein sendTelegram() mehr hier: der Alarm feuert jetzt serverseitig direkt bei
+      // Bestelleingang/Zahlungsbestätigung (lib/telegramNotify.ts) — sonst doppelt.
+      if (newStatus === 'IN_BEARBEITUNG') { await sendEmail('order_confirmed', order); await sendPush(order, 'IN_BEARBEITUNG') }
       if (newStatus === 'AN_FAHRER')      { await sendEmail('order_out_for_delivery', order); await sendPush(order, 'UNTERWEGS') }
       loadOrders()
     }

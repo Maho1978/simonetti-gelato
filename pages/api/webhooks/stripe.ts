@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { sendNewOrderTelegram } from '@/lib/telegramNotify'
 
 // ⚠️ PFLICHT: bodyParser aus – Stripe braucht rohen Request-Body zur Signaturprüfung
 export const config = { api: { bodyParser: false } }
@@ -161,6 +162,7 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
   await Promise.allSettled([
     !wasRejectedOrCancelled && order?.customer_email && sendEmail('order_confirmed', order, order.customer_email),
     sendEmail('new_order_admin', order, process.env.ADMIN_EMAIL || 'info@eiscafe-simonetti.de'),
+    !wasRejectedOrCancelled && order && sendNewOrderTelegram(order),
     wasRejectedOrCancelled && alertPaidAfterRejection(order),
   ])
 }
@@ -217,6 +219,7 @@ async function onPaymentSucceeded(pi: Stripe.PaymentIntent) {
     await Promise.allSettled([
       order.customer_email && sendEmail('order_confirmed', order, order.customer_email),
       sendEmail('new_order_admin', order, process.env.ADMIN_EMAIL || 'info@eiscafe-simonetti.de'),
+      sendNewOrderTelegram(order),
     ])
   }
 }
