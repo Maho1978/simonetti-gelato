@@ -17,6 +17,11 @@ export interface OrderLike {
   payment_method?: string | null
 }
 
+export interface AlarmOrder extends OrderLike {
+  id: string
+  created_at?: string | null
+}
+
 /**
  * Ein unbezahlter AUSSTEHEND-Platzhalter ist kein echter Auftrag.
  *
@@ -45,4 +50,39 @@ export function kanbanSpalte(order: OrderLike): string | null {
  */
 export function loestAlarmAus(order: OrderLike): boolean {
   return order.status === 'OFFEN' || (order.status === 'AUSSTEHEND' && order.payment_status === 'paid')
+}
+
+/** Nach dieser Zeit ohne Annahme schlaegt eine offene Bestellung erneut Alarm. */
+export const ERINNERUNG_NACH_MS = 3 * 60 * 1000
+
+/**
+ * Welche Bestellungen sollen bei diesem Ladevorgang Popup + Ton ausloesen?
+ *
+ * Zwei Faelle:
+ *  1. Neu — noch nie gesehen (weder im laufenden Polling noch vor einem Neuladen).
+ *  2. Wiedervorlage — laengst gesehen, aber immer noch nicht angenommen. Ohne das
+ *     bleibt eine einmal weggeklickte oder waehrend eines Tab-Neuladens verpasste
+ *     Bestellung fuer immer still liegen (Vorfall SIM-2026-5473, 05.08.2026:
+ *     Bestellung kam 14:44, Telegram lief, im Café hat sie niemand gesehen).
+ *
+ * Bewusst KEINE Alters-Obergrenze: frueher galt beim ersten Laden eine 10-Minuten-
+ * Frist, die genau diese Bestellung verschluckt hat. Massgeblich ist allein, ob sie
+ * noch unbearbeitet ist.
+ */
+export function zuAlarmierendeBestellungen<T extends AlarmOrder>(
+  orders: T[],
+  opts: {
+    bekannteIds: Set<string>
+    zuletztErinnert: Map<string, number>
+    jetzt: number
+  }
+): T[] {
+  const { bekannteIds, zuletztErinnert, jetzt } = opts
+  return orders.filter((o) => {
+    if (!loestAlarmAus(o)) return false
+    if (!bekannteIds.has(o.id)) return true
+
+    const zuletzt = zuletztErinnert.get(o.id) ?? new Date(o.created_at || 0).getTime()
+    return jetzt - zuletzt >= ERINNERUNG_NACH_MS
+  })
 }

@@ -13,7 +13,7 @@ import {
   ChangeDriverDropdown,
 } from '@/components/KanbanTracking'
 import OrderCorrectionModal from '@/components/OrderCorrectionModal'
-import { kanbanSpalte, loestAlarmAus } from '@/lib/orderVisibility'
+import { kanbanSpalte, loestAlarmAus, zuAlarmierendeBestellungen } from '@/lib/orderVisibility'
 
 const COLUMNS: { id: string; title: string; color: string; border: string; icon: string; hidden?: boolean }[] = [
   { id: 'IN_BEARBEITUNG', title: 'In Bearbeitung', color: 'bg-blue-50',   border: 'border-blue-200',   icon: '👨‍🍳' },
@@ -772,6 +772,8 @@ export default function KanbanPage() {
   const [correctionOrder, setCorrectionOrder] = useState<any>(null)
 
   const knownIds    = useRef<Set<string>>(new Set())
+  // Wann zuletzt für eine noch offene Bestellung Alarm geschlagen wurde (Wiedervorlage).
+  const zuletztErinnert = useRef<Map<string, number>>(new Map())
   const popupQueue  = useRef<any[]>([])
 
   const soundRef   = useRef(soundEnabled)
@@ -805,21 +807,17 @@ export default function KanbanPage() {
     if (error || !data) return
 
     {
-      // Alarm für neue, noch nicht angenommene Bestellungen (Status OFFEN/AUSSTEHEND).
-      // Beim ERSTEN Laden (Seite frisch geöffnet / Tab nach Speicherschoner neu geladen)
-      // galt hier eine 10-Minuten-Frist. Die hat am 05.08.2026 eine echte, noch offene
-      // Bestellung (SIM-2026-5473, 14:44) verschluckt: Telegram kam, das Team im Café hat
-      // sie am Kanban aber nie gesehen. Maßgeblich ist jetzt nur noch, ob die Bestellung
-      // noch unbearbeitet ist — eine offene Bestellung MUSS alarmieren, egal wie alt.
-      const newOnes = data.filter(o =>
-        !knownIds.current.has(o.id) &&
-        // Nur echte Bestellungen alarmieren. Ein unbezahltes AUSSTEHEND ist nur ein
-        // laufender Zahlungsversuch — der loeste bisher Ton + Popup aus und lockte das
-        // Personal dazu, eine nie bezahlte Bestellung zuzubereiten. Regel + Tests:
-        // lib/orderVisibility.ts
-        loestAlarmAus(o)
-      )
+      // Welche Bestellungen Popup + Ton auslösen, entscheidet bewusst
+      // lib/orderVisibility.ts (dort durch Regressionstests abgesichert) — inklusive
+      // Wiedervorlage für noch nicht angenommene Bestellungen.
+      const jetzt = Date.now()
+      const newOnes = zuAlarmierendeBestellungen(data, {
+        bekannteIds: knownIds.current,
+        zuletztErinnert: zuletztErinnert.current,
+        jetzt,
+      })
       if (newOnes.length > 0) {
+        newOnes.forEach(o => zuletztErinnert.current.set(o.id, jetzt))
         if (soundRef.current) playSound(volumeRef.current)
         setNewOrderBanner(true)
         setTimeout(() => setNewOrderBanner(false), 5000)
@@ -827,9 +825,12 @@ export default function KanbanPage() {
           setPopupOrder(newOnes[0])
           if (newOnes.length > 1) popupQueue.current = [...popupQueue.current, ...newOnes.slice(1)]
         } else {
-          popupQueue.current = [...popupQueue.current, ...newOnes]
+          const offeneIds = new Set(popupQueue.current.map((q: any) => q.id))
+          popupQueue.current = [...popupQueue.current, ...newOnes.filter(o => o.id !== popupRef.current?.id && !offeneIds.has(o.id))]
         }
       }
+      // Angenommene/abgeschlossene Bestellungen brauchen keine Wiedervorlage mehr.
+      data.forEach(o => { if (!loestAlarmAus(o)) zuletztErinnert.current.delete(o.id) })
     }
 
     // Auto-Delete nach 1 Stunde — NUR unbezahlte Zahlungsabbrüche (AUSSTEHEND, nicht paid).

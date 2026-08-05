@@ -1,4 +1,10 @@
-import { kanbanSpalte, loestAlarmAus, istUnbezahlterZahlungsversuch } from './orderVisibility'
+import {
+  kanbanSpalte,
+  loestAlarmAus,
+  istUnbezahlterZahlungsversuch,
+  zuAlarmierendeBestellungen,
+  ERINNERUNG_NACH_MS,
+} from './orderVisibility'
 
 // Regressionstest zu den doppelt zubereiteten Bestellungen vom 31.07./02.08.2026.
 // Wenn ein kuenftiger Umbau unbezahlte Platzhalter-Orders wieder als Kuechen-Arbeit
@@ -51,5 +57,68 @@ describe('Kanban-Sichtbarkeit', () => {
       expect(kanbanSpalte(order)).toBe(spalte)
       expect(loestAlarmAus(order)).toBe(false)
     })
+  })
+})
+
+// Regressionstests zum Vorfall SIM-2026-5473 (05.08.2026): Bestellung kam 14:44,
+// Telegram lief korrekt, aber im Kanban blieb Popup + Ton aus — eine 10-Minuten-
+// Frist beim Seitenaufruf hatte die Bestellung stillschweigend unterdrückt.
+describe('Popup-/Ton-Alarm im Kanban', () => {
+  const jetzt = new Date('2026-08-05T15:00:00Z').getTime()
+  const offeneBestellung = (id: string, minutenAlt: number) => ({
+    id,
+    status: 'OFFEN',
+    payment_status: 'paid',
+    payment_method: 'paypal',
+    created_at: new Date(jetzt - minutenAlt * 60 * 1000).toISOString(),
+  })
+
+  const leer = () => ({ bekannteIds: new Set<string>(), zuletztErinnert: new Map<string, number>(), jetzt })
+
+  it('alarmiert eine neue Bestellung', () => {
+    const orders = [offeneBestellung('a', 0)]
+    expect(zuAlarmierendeBestellungen(orders, leer()).map(o => o.id)).toEqual(['a'])
+  })
+
+  it('alarmiert eine noch offene Bestellung auch, wenn sie beim Laden schon alt ist', () => {
+    // Kern des Vorfalls: Tab wurde neu geladen, Bestellung war da schon >10 Min alt.
+    const orders = [offeneBestellung('alt', 42)]
+    expect(zuAlarmierendeBestellungen(orders, leer()).map(o => o.id)).toEqual(['alt'])
+  })
+
+  it('alarmiert eine bereits gesehene Bestellung nicht sofort erneut', () => {
+    const orders = [offeneBestellung('a', 5)]
+    const opts = {
+      bekannteIds: new Set(['a']),
+      zuletztErinnert: new Map([['a', jetzt - 30 * 1000]]),
+      jetzt,
+    }
+    expect(zuAlarmierendeBestellungen(orders, opts)).toEqual([])
+  })
+
+  it('erinnert erneut, wenn eine offene Bestellung zu lange unangenommen liegt', () => {
+    // Sicherheitsnetz: einmal weggeklickt oder übersehen darf nicht "für immer still".
+    const orders = [offeneBestellung('vergessen', 30)]
+    const opts = {
+      bekannteIds: new Set(['vergessen']),
+      zuletztErinnert: new Map([['vergessen', jetzt - ERINNERUNG_NACH_MS - 1000]]),
+      jetzt,
+    }
+    expect(zuAlarmierendeBestellungen(orders, opts).map(o => o.id)).toEqual(['vergessen'])
+  })
+
+  it('erinnert NICHT mehr, sobald die Bestellung angenommen wurde', () => {
+    const orders = [{ ...offeneBestellung('angenommen', 30), status: 'IN_BEARBEITUNG' }]
+    const opts = {
+      bekannteIds: new Set(['angenommen']),
+      zuletztErinnert: new Map([['angenommen', jetzt - ERINNERUNG_NACH_MS - 1000]]),
+      jetzt,
+    }
+    expect(zuAlarmierendeBestellungen(orders, opts)).toEqual([])
+  })
+
+  it('alarmiert nie für unbezahlte Zahlungsversuche', () => {
+    const orders = [{ id: 'phantom', status: 'AUSSTEHEND', payment_status: 'pending', created_at: new Date(jetzt).toISOString() }]
+    expect(zuAlarmierendeBestellungen(orders, leer())).toEqual([])
   })
 })
