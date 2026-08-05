@@ -772,7 +772,6 @@ export default function KanbanPage() {
   const [correctionOrder, setCorrectionOrder] = useState<any>(null)
 
   const knownIds    = useRef<Set<string>>(new Set())
-  const isFirstLoad = useRef(true)
   const popupQueue  = useRef<any[]>([])
 
   const soundRef   = useRef(soundEnabled)
@@ -807,19 +806,18 @@ export default function KanbanPage() {
 
     {
       // Alarm für neue, noch nicht angenommene Bestellungen (Status OFFEN/AUSSTEHEND).
-      // Bei laufendem Polling: alle neuen. Beim ERSTEN Laden (Seite frisch geöffnet/
-      // neu geladen): nur kürzlich eingegangene (< 10 Min) — so wird ein Test bzw. eine
-      // Bestellung, die kurz vor dem Öffnen kam, nicht verschluckt.
-      const firstLoad = isFirstLoad.current
-      const recentCutoff = Date.now() - 10 * 60 * 1000
+      // Beim ERSTEN Laden (Seite frisch geöffnet / Tab nach Speicherschoner neu geladen)
+      // galt hier eine 10-Minuten-Frist. Die hat am 05.08.2026 eine echte, noch offene
+      // Bestellung (SIM-2026-5473, 14:44) verschluckt: Telegram kam, das Team im Café hat
+      // sie am Kanban aber nie gesehen. Maßgeblich ist jetzt nur noch, ob die Bestellung
+      // noch unbearbeitet ist — eine offene Bestellung MUSS alarmieren, egal wie alt.
       const newOnes = data.filter(o =>
         !knownIds.current.has(o.id) &&
         // Nur echte Bestellungen alarmieren. Ein unbezahltes AUSSTEHEND ist nur ein
         // laufender Zahlungsversuch — der loeste bisher Ton + Popup aus und lockte das
         // Personal dazu, eine nie bezahlte Bestellung zuzubereiten. Regel + Tests:
         // lib/orderVisibility.ts
-        loestAlarmAus(o) &&
-        (!firstLoad || new Date(o.created_at).getTime() > recentCutoff)
+        loestAlarmAus(o)
       )
       if (newOnes.length > 0) {
         if (soundRef.current) playSound(volumeRef.current)
@@ -842,7 +840,6 @@ export default function KanbanPage() {
     for (const o of toDelete) { await supabase.from('orders').delete().eq('id', o.id) }
 
     data.forEach(o => knownIds.current.add(o.id))
-    isFirstLoad.current = false
 
     const grouped: Record<string, any[]> = { OFFEN: [], IN_BEARBEITUNG: [], AN_FAHRER: [], GELIEFERT: [] }
     data.forEach(o => {
